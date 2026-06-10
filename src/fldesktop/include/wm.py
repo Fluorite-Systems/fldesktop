@@ -1,0 +1,461 @@
+from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout,
+                               QLabel, QPushButton, QMenu,
+                               QGraphicsDropShadowEffect)
+from PySide6.QtCore import (Qt, QPoint, QSize, QPropertyAnimation,
+                            QParallelAnimationGroup, QEasingCurve,
+                            Signal)
+from PySide6.QtGui import QIcon, QAction
+
+from fldesktop.include.widgets.surface import Surface
+
+
+class Overlay(QLabel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, 
+                        False)
+        self.setObjectName("overlay")
+        self.setStyleSheet(
+            "background-color: rgba(0, 0, 0, 50)"
+        )
+    
+    def mousePressEvent(self, event):
+        self.parent().mousePressEvent(event)
+        
+    def enterEvent(self, event):
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        return super().enterEvent(event)
+
+
+class Window(Surface):
+    on_close = Signal()
+
+    def __init__(self, widget: QWidget, name: str, pkgname: str,
+                    parent: QWidget, identificator: int,
+                    comm, icon: QIcon, size: tuple = (400, 400)
+                ):
+        super().__init__(comm, parent)
+
+        self.setObjectName("surface")
+
+        print("aaa")
+        self.widget = widget
+        self.name = name
+        self.pkgname = pkgname
+        self.id = identificator
+        self.comm = comm
+        self.qicon = icon
+
+        self.sidebar = None
+
+        # Focusing overlay
+        self.overlay = Overlay(self)
+        self.overlay.setObjectName("ov")
+        self.overlay.show()
+        self.overlay.lower()
+
+        # Setup gui
+        self.resize(size[0], size[1])
+        self.move(
+            (parent.width() - size[0]) // 2,
+            (parent.height() - size[1]) // 2
+        ) # idk why it doesnt work
+        self.raise_()
+        self.show()
+        self.setMouseTracking(True)
+
+        # Setup shadows
+        self.shadow = QGraphicsDropShadowEffect()
+        self.shadow.setBlurRadius(20)
+        self.shadow.setXOffset(3)
+        self.shadow.setYOffset(4)
+        self.shadow.setColor(Qt.black)
+        #self.setGraphicsEffect(self.shadow)
+
+        # Layouts
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(3, 3, 3, 3)
+        self.layout.setSpacing(1)
+        self.tlayout = QHBoxLayout() # Title layout
+        self.tlayout.setContentsMargins(0, 0, 0, 0)
+        self.layout.addLayout(self.tlayout)
+
+        # Title widgets
+        self.icon = QLabel(pixmap = icon.pixmap(QSize(24, 244)))
+        self.title = QLabel(self.name)
+        self.iconify_btn = QPushButton(icon=QIcon.fromTheme("window-minimize"))
+        self.maximize_btn = QPushButton(icon=QIcon.fromTheme("window-maximize"))
+        self.close_btn = QPushButton(icon=QIcon.fromTheme("window-close"))
+        self.iconify_btn.clicked.connect(self.toggle_minimized)
+        self.maximize_btn.clicked.connect(self.toggle_maximized)
+        self.close_btn.clicked.connect(self.close_window)
+
+        self.tlayout.addWidget(self.icon)
+        self.tlayout.addSpacing(3)
+        self.tlayout.addWidget(self.title)
+
+        self.tlayout.addStretch()
+        
+        for i in [self.iconify_btn, self.maximize_btn, self.close_btn]:
+            self.tlayout.addWidget(i)
+            i.setObjectName("flatbtn")
+            i.setFlat(True)
+            i.setFixedSize(24, 24)
+
+        self.layout.addWidget(self.widget)
+        
+        self.widget.setMouseTracking(True)
+
+        self.cur_mapping = {
+            "l": Qt.CursorShape.SizeHorCursor,
+            "tl": Qt.CursorShape.SizeFDiagCursor,
+            "t": Qt.CursorShape.SizeVerCursor,
+            "tr": Qt.CursorShape.SizeBDiagCursor,
+            "r": Qt.CursorShape.SizeHorCursor,
+            "br": Qt.CursorShape.SizeFDiagCursor,
+            "b": Qt.CursorShape.SizeVerCursor,
+            "bl": Qt.CursorShape.SizeBDiagCursor,
+            "": Qt.CursorShape.ArrowCursor
+        }
+        self.prev_cur_rd = ""
+
+        # Animations
+        self.anim_group = QParallelAnimationGroup(self)
+        self.anim_size = QPropertyAnimation(self, b"size")
+        self.anim_size.setEasingCurve(QEasingCurve.Type.OutQuart)
+        self.anim_size.setDuration(300)
+        self.anim_pos = QPropertyAnimation(self, b"pos")
+        self.anim_pos.setEasingCurve(QEasingCurve.Type.OutQuart)
+        self.anim_pos.setDuration(300)
+        self.anim_group.addAnimation(self.anim_size)
+        self.anim_group.addAnimation(self.anim_pos)
+    
+        # General window management flags
+        self.minimized = False
+        self.maximized = False
+        self.prev_pos_mx = None
+        self.prev_size_mx = None
+        self.prev_pos_mi = None
+        self.prev_size_mi = None
+
+        # Geometry management flags
+        self.resizing_allowed = True
+        self.resizing = False
+        self.dragging = False
+        self.resizing_dir = ""
+        self.resize_handle_size = 5  # Size of the resize handle
+        self.resize_start_pos = QPoint(0, 0)  # Initial position of the mouse
+        self.resize_start_size = QSize(600, 400)  # Initial size of the square
+        self.drag_start_pos = QPoint(0, 0)  # Initial position for dragging
+        self.min_size = QSize(100, 100)
+    
+    def close_window(self):
+        "Closes the window"
+        self.on_close.emit()
+        self.comm.send("dock", "remove_running", self.id)
+        self.close()
+    
+    def open_animation(self):
+        "Animation on open"
+        anim = QPropertyAnimation
+
+    def replace_widget(self, new_widget: QWidget):
+        self.layout.removeWidget(self.widget)
+        self.layout.addWidget(new_widget)
+        new_widget.setMouseTracking(True)
+        self.widget = new_widget
+    
+    def toggle_minimized(self):
+        if not self.minimized:
+            self.prev_pos_mi = self.pos()
+            self.prev_size_mi = self.size()
+            self.animate_minimize()
+            self.minimized = True
+            self.comm.send(
+                "panel", "add_minimized", self.qicon, self.toggle_minimized
+            )
+            self.comm.send("wm", "change_focus")
+        else:
+            self.animate_unminimize()
+            self.minimized = False
+            self.comm.send("wm", "change_focus", self.id)
+    
+    def toggle_maximized(self):
+        if not self.maximized:
+            self.prev_pos_mx = self.pos()
+            self.prev_size_mx = self.size()
+            self.animate_maximize()
+            self.maximize_btn.setIcon(QIcon.fromTheme("window-restore"))
+
+            self.maximized = True
+        else:
+            self.animate_unmaximize()
+
+            self.maximize_btn.setIcon(QIcon.fromTheme("window-maximize"))
+
+            self.maximized = False
+        
+    def animate_minimize(self):
+        self.comm.send("panel", "raise")
+        self.anim_pos.setStartValue(self.pos())
+        self.anim_pos.setEndValue(QPoint(0, 0))
+        self.anim_size.setStartValue(self.size())
+        self.anim_size.setEndValue(QSize(0, 0))
+        self.anim_group.start()
+
+    def animate_maximize(self):
+        self.anim_pos.setStartValue(self.pos())
+        self.anim_pos.setEndValue(QPoint(0, 26))
+        self.anim_size.setStartValue(self.size())
+        self.anim_size.setEndValue(
+            QSize(self.parent().size().width(),
+                    self.parent().size().height() - 26)
+        )
+        self.anim_group.start()
+
+    def animate_unminimize(self):
+        self.anim_pos.setStartValue(self.pos())
+        self.anim_pos.setEndValue(self.prev_pos_mi)
+        self.anim_size.setStartValue(self.size())
+        self.anim_size.setEndValue(self.prev_size_mi)
+        self.anim_group.start()
+    
+    def animate_unmaximize(self):
+        self.anim_pos.setStartValue(self.pos())
+        self.anim_pos.setEndValue(self.prev_pos_mx)
+        self.anim_size.setStartValue(self.size())
+        self.anim_size.setEndValue(self.prev_size_mx)
+        self.anim_group.start()
+        
+    def get_resizing_dir(self, x, y) -> str:
+        w = self.width()
+        h = self.height()
+
+        resizing_dir = ""
+
+        if x <= self.resize_handle_size and\
+            y <= self.resize_handle_size:
+            resizing_dir = "tl"
+        elif x <= self.resize_handle_size and\
+            y >= h - self.resize_handle_size:
+            resizing_dir = "bl"
+        elif x >= w - self.resize_handle_size and\
+            y <= self.resize_handle_size:
+            resizing_dir = "tr"
+        elif x >= w - self.resize_handle_size and\
+            y >= h - self.resize_handle_size:
+            resizing_dir = "br"
+        elif x <= self.resize_handle_size:
+            resizing_dir = "l"
+        elif x >= w - self.resize_handle_size:
+            resizing_dir = "r"
+        elif y <= self.resize_handle_size:
+            resizing_dir = "t"
+        elif y >= h - self.resize_handle_size:
+            resizing_dir = "b"
+        
+        return resizing_dir
+    
+    def mousePressEvent(self, event):
+        self.raise_()
+        # Change focus
+        if self.comm.request("wm", "get_focus") != self.id:
+            self.comm.send("wm", "change_focus", self.id)
+            self.comm.send("panel", "raise")
+            return
+        # Check if the mouse is close to the bottom-right corner for resizing
+        if not self.maximized:
+            x = event.pos().x()
+            y = event.pos().y()
+            self.resizing_dir = self.get_resizing_dir(x, y)
+            
+            if self.resizing_dir and self.resizing_allowed:
+                self.resizing = True
+                self.resize_start_pos = event.globalPos()
+                self.resize_start_size = self.size()
+
+            else:#if event.pos().y() < self.tlayout.sizeHint().height() + 5:
+                self.dragging = True
+                # Store the initial position of the mouse relative to the square
+                self.drag_start_pos = event.pos()
+    
+    def mouseMoveEvent(self, event): # Move window
+
+        if self.resizing_dir:
+            rd = self.resizing_dir
+        else:
+            rd = self.get_resizing_dir(event.pos().x(), event.pos().y())
+        
+        if rd != self.prev_cur_rd:
+            self.setCursor(self.cur_mapping[rd])
+            self.prev_cur_rd = rd
+        
+        if self.resizing:
+            # Calculate new width and height based on mouse movement
+            
+            new_width = self.width()
+            new_height = self.height()
+            new_x = self.x()
+            new_y = self.y()
+            
+            if "r" in self.resizing_dir:
+                new_width = self.resize_start_size.width() + \
+                    (event.globalPos().x() - self.resize_start_pos.x())
+            if "b" in self.resizing_dir:
+                new_height = self.resize_start_size.height() + \
+                    (event.globalPos().y() - self.resize_start_pos.y())
+            
+            if "l" in self.resizing_dir:
+                new_x = event.globalPos().x()
+                new_width = self.resize_start_size.width() + \
+                    (self.resize_start_pos.x() - new_x)
+            if "t" in self.resizing_dir:
+                new_y = event.globalPos().y()
+                new_height = self.resize_start_size.height() + \
+                    (self.resize_start_pos.y() - new_y)
+            
+            if new_width > self.min_size.width() and \
+                new_height > self.min_size.height():
+                self.move(new_x, new_y)
+                self.resize(new_width, new_height)
+                
+        elif self.dragging:
+            # Calculate the new position based on the mouse movement
+            delta = event.pos() - self.drag_start_pos
+            new_pos = self.pos() + delta
+            if new_pos.y() > 26:
+                self.move(new_pos)
+            else:
+                self.move(QPoint(new_pos.x(), 26))
+        
+    def mouseReleaseEvent(self, event):
+        if self.resizing:
+            self.resizing = False
+            self.resizing_dir = ""
+        elif self.dragging:
+            self.dragging = False
+        super().mouseReleaseEvent(event)
+    
+    def resizeEvent(self, event):
+        self.overlay.resize(self.size())
+        if self.sidebar:
+            self.sidebar.refresh(self.size())
+        return super().resizeEvent(event)
+
+
+class WindowManager:
+    def __init__(self, comm, desktop):
+
+        self.comm = comm
+        self.desktop = desktop
+        self.comm.register("wm", {
+            "create_window": self.create_window,
+            "close_window": self.close_window,
+            "change_focus": self.change_focus,
+            "get_focus": self.get_focus,
+            "set_window_menu": self.set_window_menu,
+            "set_window_sidebar": self.set_window_sidebar,
+            "append_window_title": self.append_window_title
+        })
+
+        self.windows = []
+        self.curid = 0
+
+        self.focus = None
+
+    
+    def create_window(self, params: dict):
+        "Creates an window"
+        print(params)
+
+        self.curid += 1
+
+        if params["icon"].isNull():
+            params["icon"] = QIcon.fromTheme("applications-other")
+        
+        if not "package" in params: params["package"] = "internal"
+
+        win = Window(
+            params["widget"], params["name"], params["package"],
+            self.desktop, self.curid, self.comm, params["icon"]
+        )
+        self.windows.append(win)
+
+        win.on_close.connect(lambda: self.windows.remove(win))
+
+        if "type" in params:
+            if params["type"] == "messagebox":
+                win.maximize_btn.hide()
+                win.iconify_btn.hide()
+                win.resize(300, 200)
+                win.resizing_allowed = False
+
+        self.change_focus(win.id)
+
+        return win.id, win.on_close
+
+    def close_window(self, id: int):
+        "Closes a window"
+
+        print("closin window", id)
+
+        for win in self.windows:
+            if win.id == id:
+                win.close_window()
+            
+    def change_focus(self, id: int = None):
+        "Change window focus"
+
+        for win in self.windows:
+            if win.id == self.focus:
+                win.overlay.show()
+                win.overlay.raise_()
+        
+        if id != None:
+            self.focus = id
+
+            for win in self.windows:
+                if win.id == id:
+                    win.raise_()
+                    win.overlay.lower()
+                    win.overlay.hide()
+                
+    def get_focus(self) -> int:
+        "Get focused window's ID"
+
+        return self.focus
+    
+    def set_window_menu(self, data: tuple):
+
+        btn = QPushButton()
+        btn.setObjectName("flatbtn")
+        btn.setFixedSize(24, 24)
+        btn.setIcon(QIcon.fromTheme("application-menu-symbolic"))
+        menu = data[1]
+        btn.clicked.connect(lambda: menu.exec(btn.mapToGlobal(QPoint(0, btn.height()))))
+        
+        for win in self.windows:
+            if win.id == data[0]:
+                win.tlayout.insertWidget(4, btn)
+    
+    def set_window_sidebar(self, winid: int, sidebar):
+        
+        for win in self.windows:
+            if win.id == winid:
+                nw = QWidget()
+                nl = QHBoxLayout(nw)
+                nl.setContentsMargins(0, 0, 0, 0)
+                nl.addWidget(sidebar)
+                nl.addWidget(win.widget)
+                win.replace_widget(nw)
+                win.sidebar = sidebar
+                sidebar.refresh(win.size())
+    
+    def append_window_title(self, id: int, title: str):
+
+        for win in self.windows:
+            if win.id == id:
+                if title:
+                    win.title.setText(f"{win.name} - {title}")
+                else:
+                    win.title.setText(win.name)
