@@ -10,6 +10,7 @@ from fldesktop.include.thememgr import SURFACE_PRESETS
 class Surface(QWidget):
     def __init__(self, comm, parent=None, tint: int=1):
         super().__init__(parent)
+
         self.comm = comm
         self._background = None
         self._cached = None
@@ -22,7 +23,7 @@ class Surface(QWidget):
 
         self._update_theming()
         
-        # Оптимизация отрисовки
+        # Optimizations
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
         self._redraw_timer = QTimer(interval=250, singleShot=True)
         self._redraw_timer.timeout.connect(self.update)
@@ -33,71 +34,66 @@ class Surface(QWidget):
         self._load_background()
 
     def _load_background(self):
-        """Загружает фон из comm"""
+        "Request background from surfacemgr"
+
         self._background = self.comm.request("surfacemgr", "get_pixmap")
         self._invalidate_cache()
         self.update()
     
     def _update_theming(self):
+        "Select theming preset from config"
+
         theme = self.comm.request("cfgmgr", "get", "theme")
         
         self.theme = SURFACE_PRESETS[theme] \
             if theme in SURFACE_PRESETS else SURFACE_PRESETS["neutral"]
     
     def _invalidate_cache(self):
-        """Сбрасывает кэш"""
+        "Invalidate cached contents"
+        
         self._cached = None
         self._cached_pos = None
         self._cached_size = None
     
     def _get_cropped(self) -> QPixmap:
-        """Вырезает нужную область с учетом отрицательных координат и выходов за границы"""
+        "Get cropped pixmap from background"
+
         if not self._background:
             return QPixmap(self.size())
         
-        # Получаем позицию виджета относительно окна
         pos_in_window = self.mapToGlobal(QPoint(0, 0))
         
-        # Проверяем кэш (учитываем позицию и размер)
+        # Check cache
         if (self._cached is not None and 
             self._cached_pos == pos_in_window and
             self._cached_size == self.size()):
             return self._cached
         
-        # Создаем результирующий pixmap с черным фоном
         blurred = QPixmap(self.size())
         blurred.fill(Qt.GlobalColor.black)
         
-        # Вычисляем область пересечения виджета с фоном
-        # Виджет может быть частично за пределами фона (отрицательные координаты)
         widget_rect = QRect(pos_in_window, self.size())
         background_rect = self._background.rect()
         
-        # Находим пересечение
         intersection = widget_rect.intersected(background_rect)
         
         if not intersection.isEmpty():
-            # Вырезаем из фона ту часть, которая попадает в виджет
-            # Относительные координаты в фоне
             src_x = intersection.x()
             src_y = intersection.y()
             src_width = intersection.width()
             src_height = intersection.height()
             
-            # Куда рисовать в виджете
-            # Если виджет находится левее/выше фона, то часть виджета не попадает в фон
             dst_x = max(0, -pos_in_window.x())
             dst_y = max(0, -pos_in_window.y())
             
-            # Вырезаем нужную часть из фона
             cropped_from_bg = self._background.copy(
                 src_x, src_y, src_width, src_height
             )
 
+            # Tint blurred background for some beauty
             tint = QColor(*self.theme["base_color"],
                     min(255, max(0, self.theme["base_alpha"] + self._tint)))
             
-            # Рисуем на результат
             painter = QPainter(blurred)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
@@ -106,7 +102,7 @@ class Surface(QWidget):
             painter.fillRect(blurred.rect(), tint)
             painter.end()
         
-        # Сохраняем в кэш
+        # Cache it
         self._cached = blurred
         self._cached_pos = pos_in_window
         self._cached_size = self.size()
@@ -114,7 +110,7 @@ class Surface(QWidget):
         return self._cached
     
     def paintEvent(self, event):
-        """Отрисовка виджета"""
+
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
@@ -124,9 +120,9 @@ class Surface(QWidget):
         if not cropped.isNull():
             painter.drawPixmap(0, 0, cropped)
         else:
-            # Fallback - если что-то пошло не так
+            # Fallback
             painter.fillRect(self.rect(), Qt.GlobalColor.black)
-    
+
     def update(self):
         self._invalidate_cache()
         super().update()

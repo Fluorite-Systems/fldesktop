@@ -36,7 +36,7 @@ class Menu(Surface):
         self.shadow.setXOffset(3)
         self.shadow.setYOffset(4)
         self.shadow.setColor(Qt.black)
-        self.setGraphicsEffect(self.shadow)
+        #self.setGraphicsEffect(self.shadow)
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)

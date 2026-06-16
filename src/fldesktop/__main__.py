@@ -54,7 +54,7 @@ class Core:
 
         logging.info("Core initialized")
 
-        self.lockscreen.show_()
+        #self.lockscreen.show_()
         self.comm.send("fade_effect", "fadein")
 
         # Finally exec the app

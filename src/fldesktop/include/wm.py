@@ -7,6 +7,7 @@ from PySide6.QtCore import (Qt, QPoint, QSize, QPropertyAnimation,
 from PySide6.QtGui import QIcon, QAction
 
 from fldesktop.include.widgets.surface import Surface
+from fldesktop.include.widgets.animation import Animation
 
 
 class Overlay(QLabel):
@@ -38,7 +39,6 @@ class Window(Surface):
 
         self.setObjectName("surface")
 
-        print("aaa")
         self.widget = widget
         self.name = name
         self.pkgname = pkgname
@@ -59,9 +59,7 @@ class Window(Surface):
         self.move(
             (parent.width() - size[0]) // 2,
             (parent.height() - size[1]) // 2
-        ) # idk why it doesnt work
-        self.raise_()
-        self.show()
+        )
         self.setMouseTracking(True)
 
         # Setup shadows
@@ -123,12 +121,15 @@ class Window(Surface):
         self.anim_group = QParallelAnimationGroup(self)
         self.anim_size = QPropertyAnimation(self, b"size")
         self.anim_size.setEasingCurve(QEasingCurve.Type.OutQuart)
-        self.anim_size.setDuration(300)
+        self.anim_size.setDuration(150)
         self.anim_pos = QPropertyAnimation(self, b"pos")
         self.anim_pos.setEasingCurve(QEasingCurve.Type.OutQuart)
-        self.anim_pos.setDuration(300)
+        self.anim_pos.setDuration(150)
         self.anim_group.addAnimation(self.anim_size)
         self.anim_group.addAnimation(self.anim_pos)
+        self.anim_group.finished.connect(
+            lambda: self.set_children_frozen(False)
+        )
     
         # General window management flags
         self.minimized = False
@@ -143,28 +144,38 @@ class Window(Surface):
         self.resizing = False
         self.dragging = False
         self.resizing_dir = ""
-        self.resize_handle_size = 5  # Size of the resize handle
-        self.resize_start_pos = QPoint(0, 0)  # Initial position of the mouse
-        self.resize_start_size = QSize(600, 400)  # Initial size of the square
-        self.drag_start_pos = QPoint(0, 0)  # Initial position for dragging
+        self.resize_handle_size = 5
+        self.resize_start_pos = QPoint(0, 0)
+        self.resize_start_size = QSize(600, 400)
+        self.drag_start_pos = QPoint(0, 0)
         self.min_size = QSize(100, 100)
+
+        # Show window
+        self.animate_open()
     
     def close_window(self):
         "Closes the window"
+
+        Animation(
+            self.parent(), self.grab(), "wclose",
+            {"pos": self.pos(), "size": self.size()},
+            lambda: ...
+        )
         self.on_close.emit()
-        self.comm.send("dock", "remove_running", self.id)
-        self.close()
-    
-    def open_animation(self):
-        "Animation on open"
-        anim = QPropertyAnimation
+        self.close() 
 
     def replace_widget(self, new_widget: QWidget):
+
         self.layout.removeWidget(self.widget)
         self.layout.addWidget(new_widget)
         new_widget.setMouseTracking(True)
         self.widget = new_widget
-    
+   
+    def set_children_frozen(self, frozen: bool):
+        for i in self.findChildren(QWidget):
+            if i != self:
+                i.setUpdatesEnabled(not frozen)
+
     def toggle_minimized(self):
         if not self.minimized:
             self.prev_pos_mi = self.pos()
@@ -196,41 +207,64 @@ class Window(Surface):
             self.maximized = False
         
     def animate_minimize(self):
-        self.comm.send("panel", "raise")
-        self.anim_pos.setStartValue(self.pos())
-        self.anim_pos.setEndValue(QPoint(0, 0))
-        self.anim_size.setStartValue(self.size())
-        self.anim_size.setEndValue(QSize(0, 0))
-        self.anim_group.start()
+
+        self.hide()
+        anim = Animation(
+            self.parent(), self.grab(), "wminimize",
+            {"pos": self.pos(), "size": self.size()},
+            lambda: ...
+        )
 
     def animate_maximize(self):
-        self.anim_pos.setStartValue(self.pos())
-        self.anim_pos.setEndValue(QPoint(0, 26))
-        self.anim_size.setStartValue(self.size())
-        self.anim_size.setEndValue(
-            QSize(self.parent().size().width(),
-                    self.parent().size().height() - 26)
+        
+        pos = QPoint(0, 26)
+        size = QSize(self.parent().size().width(),
+                     self.parent().size().height() - 26)
+        self.hide()
+        self.resize(size)
+        self.move(pos)
+        anim = Animation(
+            self.parent(), self.grab(), "wmaximize",
+            {"pos": pos, "size": size},
+            self.show
         )
-        self.anim_group.start()
+        print(self.parent())
 
     def animate_unminimize(self):
-        self.anim_pos.setStartValue(self.pos())
-        self.anim_pos.setEndValue(self.prev_pos_mi)
-        self.anim_size.setStartValue(self.size())
-        self.anim_size.setEndValue(self.prev_size_mi)
-        self.anim_group.start()
+
+        anim = Animation(
+            self.parent(), self.grab(), "wunminimize",
+            {"pos": self.prev_pos_mi, "size": self.prev_size_mi},
+            self.show
+        )
+
     
     def animate_unmaximize(self):
-        self.anim_pos.setStartValue(self.pos())
-        self.anim_pos.setEndValue(self.prev_pos_mx)
-        self.anim_size.setStartValue(self.size())
-        self.anim_size.setEndValue(self.prev_size_mx)
-        self.anim_group.start()
         
+        self.hide()
+        self.resize(self.prev_size_mx)
+        self.move(self.prev_pos_mx)
+        anim = Animation(
+            self.parent(), self.grab(), "wunmaximize",
+            {"pos": self.prev_pos_mx, "size": self.prev_size_mx},
+            self.show
+        )
+    
+    def animate_open(self):
+
+        def on_finished(self):
+            self.show()
+            self.raise_()
+
+        Animation(
+            self.parent(), self.grab(), "wopen",
+            {"pos": self.pos(), "size": self.size()},
+            lambda: on_finished(self)
+        )
+
     def get_resizing_dir(self, x, y) -> str:
         w = self.width()
         h = self.height()
-
         resizing_dir = ""
 
         if x <= self.resize_handle_size and\
