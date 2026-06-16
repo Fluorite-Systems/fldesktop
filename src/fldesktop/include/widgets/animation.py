@@ -1,11 +1,11 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QPixmap, QPainter
-from PySide6.QtCore import (Qt, QPropertyAnimation, QParallelAnimationGroup,
+from PySide6.QtCore import (QPropertyAnimation, QParallelAnimationGroup,
                             QEasingCurve, QPoint, QSize)
 
 
 class Animation(QWidget):
-    def __init__(self, parent: QWidget, pixmap: QPixmap,
+    def __init__(self, comm, parent: QWidget, pixmap: QPixmap,
                  type: str, params: dict, on_finished):
         super().__init__(parent)
 
@@ -13,6 +13,7 @@ class Animation(QWidget):
 
         self.show()
         self.raise_()
+        comm.send("panel", "raise")
 
         self.animate(type, params, on_finished)
 
@@ -93,6 +94,8 @@ class Animation(QWidget):
             aps.setEndValue(params["size"])
 
         elif type == "wopen":
+            app.setDuration(250)
+            aps.setDuration(250)
             app.setStartValue(
                 QPoint(
                     params["pos"].x(),
@@ -108,6 +111,8 @@ class Animation(QWidget):
             aps.setEndValue(params["size"])
 
         elif type == "wclose":
+            app.setDuration(250)
+            aps.setDuration(250)
             app.setStartValue(params["pos"])
             app.setEndValue(
                 QPoint(
@@ -121,6 +126,29 @@ class Animation(QWidget):
                     params["size"].width(), 0
                 )
             )
+        
+        elif type == "mopen":
+            app.setStartValue(
+                QPoint(
+                    params["pos"].x(),
+                    -params["size"].height()
+                )
+            )
+            app.setEndValue(params["pos"])
+            aps.setStartValue(params["size"])
+            aps.setEndValue(params["size"])
+
+        elif type == "mclose":
+            app.setStartValue(params["pos"])
+            app.setEndValue(
+                QPoint(
+                    params["pos"].x(),
+                    -params["size"].height()
+                )
+            )
+            aps.setStartValue(params["size"])
+            aps.setEndValue(params["size"])
+
 
         ag.start()
 

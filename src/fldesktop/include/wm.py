@@ -117,20 +117,6 @@ class Window(Surface):
         }
         self.prev_cur_rd = ""
 
-        # Animations
-        self.anim_group = QParallelAnimationGroup(self)
-        self.anim_size = QPropertyAnimation(self, b"size")
-        self.anim_size.setEasingCurve(QEasingCurve.Type.OutQuart)
-        self.anim_size.setDuration(150)
-        self.anim_pos = QPropertyAnimation(self, b"pos")
-        self.anim_pos.setEasingCurve(QEasingCurve.Type.OutQuart)
-        self.anim_pos.setDuration(150)
-        self.anim_group.addAnimation(self.anim_size)
-        self.anim_group.addAnimation(self.anim_pos)
-        self.anim_group.finished.connect(
-            lambda: self.set_children_frozen(False)
-        )
-    
         # General window management flags
         self.minimized = False
         self.maximized = False
@@ -157,7 +143,7 @@ class Window(Surface):
         "Closes the window"
 
         Animation(
-            self.parent(), self.grab(), "wclose",
+            self.comm, self.parent(), self.grab(), "wclose",
             {"pos": self.pos(), "size": self.size()},
             lambda: ...
         )
@@ -209,8 +195,8 @@ class Window(Surface):
     def animate_minimize(self):
 
         self.hide()
-        anim = Animation(
-            self.parent(), self.grab(), "wminimize",
+        Animation(
+            self.comm, self.parent(), self.grab(), "wminimize",
             {"pos": self.pos(), "size": self.size()},
             lambda: ...
         )
@@ -223,8 +209,8 @@ class Window(Surface):
         self.hide()
         self.resize(size)
         self.move(pos)
-        anim = Animation(
-            self.parent(), self.grab(), "wmaximize",
+        Animation(
+            self.comm, self.parent(), self.grab(), "wmaximize",
             {"pos": pos, "size": size},
             self.show
         )
@@ -232,8 +218,8 @@ class Window(Surface):
 
     def animate_unminimize(self):
 
-        anim = Animation(
-            self.parent(), self.grab(), "wunminimize",
+        Animation(
+            self.comm, self.parent(), self.grab(), "wunminimize",
             {"pos": self.prev_pos_mi, "size": self.prev_size_mi},
             self.show
         )
@@ -244,8 +230,8 @@ class Window(Surface):
         self.hide()
         self.resize(self.prev_size_mx)
         self.move(self.prev_pos_mx)
-        anim = Animation(
-            self.parent(), self.grab(), "wunmaximize",
+        Animation(
+            self.comm, self.parent(), self.grab(), "wunmaximize",
             {"pos": self.prev_pos_mx, "size": self.prev_size_mx},
             self.show
         )
@@ -257,7 +243,7 @@ class Window(Surface):
             self.raise_()
 
         Animation(
-            self.parent(), self.grab(), "wopen",
+            self.comm, self.parent(), self.grab(), "wopen",
             {"pos": self.pos(), "size": self.size()},
             lambda: on_finished(self)
         )

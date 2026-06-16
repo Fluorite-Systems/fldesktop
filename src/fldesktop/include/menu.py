@@ -4,6 +4,7 @@ from PySide6.QtCore import (QPropertyAnimation, QEasingCurve,
                             QPoint, Qt, QParallelAnimationGroup)
 
 from fldesktop.include.widgets.surface import Surface
+from fldesktop.include.widgets.animation import Animation
 
 
 class Overlay(QWidget):
@@ -41,7 +42,6 @@ class Menu(Surface):
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.addWidget(widget)
-
         self.setObjectName("menu")
 
         self.hide()
@@ -56,10 +56,12 @@ class Menu(Surface):
 
     def open(self):
         "Opens menu with some anim"
-        self.show()
-        self.raise_()
-        self.desktop.panel.raise_()
-        self.setup_overlay()
+
+        def show(self):
+            self.show()
+            self.desktop.panel.raise_()
+            self.setup_overlay()
+            self.raise_()
 
         x = int(self.anchor.x() - \
                     (self.size().width() - self.anchor.size().width()) / 2)
@@ -68,38 +70,21 @@ class Menu(Surface):
         if x > self.desktop.size().width() - self.size().width():
             x = self.desktop.size().width() - self.size().width() - 4
 
-        y = 30
+        self.move(x, 30)
 
-        self.move(x, -self.size().height())
+        Animation(self.comm, self.parent(), self.grab(), "mopen",
+                  {"pos": self.pos(), "size": self.size()},
+                  lambda: show(self))
 
-        self.anim = QPropertyAnimation(self, b"pos")
-        self.anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-        self.anim.setEndValue(QPoint(x, y))
-        self.anim.setDuration(350)
-        self.anim.finished.connect(self.raise_)
-        self.anim.start()
-    
     def close_menu(self):
         "Close the menu with some anim"
 
         self.overlay.close()
-        self.desktop.panel.raise_()
+        self.hide()
 
-        y = -self.size().height()
-
-        self.anim = QParallelAnimationGroup()
-
-        self.anim1 = QPropertyAnimation(self, b"pos")
-        self.anim1.setEasingCurve(QEasingCurve.Type.InCubic)
-        self.anim1.setEndValue(QPoint(self.x(), y))
-        self.anim1.setDuration(350)
-
-        #self.anim2 = QPropertyAnimation(self, b"opacity")
-        #self.anim2.setEasingCurve(QEasingCurve.Type.InCubic)
-        #self.anim2.setEndValue(0.0)
-        ##self.anim2.setDuration(350)
-
-        self.anim.addAnimation(self.anim1)
-        #self.anim.addAnimation(self.anim2)
-        self.anim.finished.connect(self.hide)
-        self.anim.start()
+        #self.move(self.x(), -self.height())
+        
+        Animation(self.comm, self.parent(), self.grab(), "mclose",
+                  {"pos": self.pos(), "size": self.size()},
+                  lambda: ...
+        )
