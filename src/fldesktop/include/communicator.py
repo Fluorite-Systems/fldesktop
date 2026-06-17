@@ -37,6 +37,13 @@ class Communicator:
                 "action": action
             }
         )
+
+    def unsubscribe(self, action):
+        "Unsubscribe action from signal"
+
+        for i in self.signal_subs:
+            if i["action"] == action:
+                self.signal_subs.remove(i)
     
     def emit(self, signal: str, *args):
         "Emit a signal"

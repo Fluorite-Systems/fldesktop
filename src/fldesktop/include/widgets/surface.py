@@ -152,6 +152,11 @@ class Surface(QWidget):
         super().hideEvent(event)
         self.shadow.hide()
 
+    def closeEvent(self, event):
+        self.comm.unsubscribe(self._load_background)
+        self.comm.unsubscribe(self._update_theming)
+        super().closeEvent(event)
+
 
 class SurfaceManager(QObject):
     def __init__(self, comm):
