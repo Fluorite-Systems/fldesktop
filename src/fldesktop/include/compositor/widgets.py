@@ -1,10 +1,12 @@
 from PySide6.QtWidgets import (QVBoxLayout, QWidget, QHBoxLayout,
                                QLabel, QPushButton, QLineEdit,
                                QTextEdit, QTabWidget, QScrollArea,
-                               QSlider, QCheckBox, QRadioButton)
+                               QSlider, QCheckBox, QRadioButton,
+                               QListView)
 from PySide6.QtGui import (QIcon, QPainter, QPainterPath,
-                           QPixmap, QPen, QBrush, QFont)
-from PySide6.QtCore import QPointF, Qt
+                           QPixmap, QPen, QBrush, QFont,
+                           QStandardItemModel, QStandardItem)
+from PySide6.QtCore import QPointF, Qt, QSize
 
 from fldesktop.include.widgets.flowlayout import FlowLayout
 from fldesktop.include.widgets.terminal import Terminal as TerminalWidget
@@ -54,6 +56,7 @@ class Widget:
             "textedit": QTextEdit,
             "webview": IQWebEngineView,
             "slider": QSlider,
+            "listview": QListView,
             "terminal": TerminalWidget,
             "canvas": QWidget
         }
@@ -607,6 +610,55 @@ class WebView(Widget):
         self.qwidget.back()
 
 
+class ListView(Widget):
+    def __init__(self, runner, name, props, parent):
+        super().__init__(runner, name, props, parent)
+        self.type = "listview"
+
+        self.callables = {
+            "set_contents": self.set_contents
+        }
+
+        self._setup()
+
+        self.qwidget.setViewMode(QListView.ViewMode.IconMode)
+        self.qwidget.setIconSize(QSize(64, 64))
+        self.qwidget.setGridSize(QSize(100, 100))
+        self.qwidget.setResizeMode(QListView.ResizeMode.Adjust)
+        self.qwidget.setMovement(QListView.Movement.Snap)
+        self.qwidget.setSelectionRectVisible(True)
+        self.qwidget.setSelectionMode(QListView.ExtendedSelection)
+        self.qwidget.setSelectionBehavior(QListView.SelectItems)
+        self.qwidget.setEditTriggers(QListView.EditTrigger.NoEditTriggers)
+
+    def set_contents(self, contents: list):
+        model = QStandardItemModel()
+
+        print(contents)
+
+        for item in contents:
+            if type(item) != dict:
+                continue
+
+            if "title" in item:
+                title = str(item["title"])
+            else:
+                title = ""
+            
+            if "icon" in item:
+                icon = QIcon.fromTheme(str(item["icon"]))
+            else:
+                icon = QIcon.fromTheme("none")
+
+            qitem = QStandardItem(title)
+            qitem.setIcon(icon)
+
+            model.appendRow(qitem)
+
+        self.qwidget.setModel(model)
+
+
+
 class Terminal(Widget):
     def __init__(self, runner, name, props, parent):
         super().__init__(runner, name, props, parent)
@@ -648,6 +700,7 @@ widget_table = {
     "textedit": TextEdit,
     "entry": Entry,
     "slider": Slider,
+    "listview": ListView,
     "webview": WebView,
     "terminal": Terminal
 }
