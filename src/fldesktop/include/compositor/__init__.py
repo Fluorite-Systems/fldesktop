@@ -7,9 +7,6 @@ import logging
 from typing import Optional
 
 
-SOCKET_PATH = '/tmp/flos.socket'
-
-
 class ClientHandler:
     def __init__(self, connection: socket.socket, client_address: str, comm):
         self.connection = connection
@@ -130,7 +127,14 @@ class AppServer:
         self.comm = comm
         self.comm.register("appserver", {"stop": self.stop})
 
-        self.socket_path = SOCKET_PATH
+        if not "XDG_RUNTIME_DIR" in os.environ:
+            logging.fatal("XDG_RUNTIME_DIR is not specified!")
+            self.comm.send("osmgr", "crash")
+            
+        self.socket_path = os.path.join(
+            os.environ["XDG_RUNTIME_DIR"], "flos.socket"
+        )
+        
         self.server_socket: Optional[socket.socket] = None
 
         self._stop_event = threading.Event()

@@ -8,7 +8,7 @@ from fldesktop.include.widgets.fade_effect import FadeEffect
 
 
 class Desktop(QMainWindow):
-    def __init__(self, comm):
+    def __init__(self, comm) -> None:
         super().__init__()
 
         self.comm = comm
@@ -51,18 +51,21 @@ class Desktop(QMainWindow):
 
         self.show()
     
-    def reload(self):
+    def reload(self) -> None:
         "Reloads desktop (primarily bg)"
+
         self.comm.send("cfgmgr", "reload")
         self.bgp = QPixmap(self.comm.request("cfgmgr", "get", "background"))
         self.refresh_bg()
     
-    def get_instance(self):
+    def get_instance(self) -> Desktop:
         "Get desktop instance from comm"
+
         return self
     
-    def refresh_bg(self):
+    def refresh_bg(self) -> None:
         "Resizes background"
+
         self.bg.setGeometry(0, 0, self.size().width(), self.size().height())
 
         self.bg.setPixmap(self.bgp.scaled(self.size(), 
@@ -73,7 +76,8 @@ class Desktop(QMainWindow):
 
         self.comm.send("surfacemgr", "refresh")
     
-    def resizeEvent(self, event):
+    def resizeEvent(self, event) -> None:
+
         super().resizeEvent(event)
 
         self.panel.refresh_geometry()

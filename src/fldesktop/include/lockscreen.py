@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import (QWidget, QLabel, QLineEdit, QPushButton,
-                               QVBoxLayout, QHBoxLayout)
+                               QVBoxLayout, QHBoxLayout, QMenu)
 from PySide6.QtGui import (QIcon, QPixmap, QFont,
                            QShortcut, QKeySequence)
-from PySide6.QtCore import (Qt, QTimer, QTime, QDate, QLocale)
+from PySide6.QtCore import (Qt, QTimer, QTime, QDate, QLocale, QPoint)
 from fldesktop.include.widgets.surface import Surface
 import os
 
@@ -10,7 +10,7 @@ import pam
 
 
 class LockScreen(Surface):
-    def __init__(self, parent: QWidget, comm):
+    def __init__(self, parent: QWidget, comm) -> None:
         super().__init__(comm, parent, 5)
 
         self.parent = parent
@@ -26,7 +26,7 @@ class LockScreen(Surface):
 
         self.mlayout.addStretch()
         self.mlayout.addLayout(self.layout)
-        self.mlayout.addStretch()
+        self.mlayout.addStretch() 
 
         self.pwlayout = QHBoxLayout()
 
@@ -71,11 +71,39 @@ class LockScreen(Surface):
         
         self.pwedit.textChanged.connect(lambda: self.message.setText(""))
 
+        self.powerbtn = QPushButton(
+            self,
+            icon=QIcon.fromTheme("system-shutdown-symbolic"),
+            flat=True
+        )
+        self.powerbtn.setFixedSize(32, 32)
+        self.powerbtn.show()
+
+        self.powermenu = QMenu()
+
+        self.powerbtn.clicked.connect(
+            lambda: self.powermenu.exec(
+                self.powerbtn.mapToGlobal(
+                   self.powerbtn.pos()
+                )
+            )
+        )
+
+        actions = [
+            ("Sleep", "system-suspend-symbolic", lambda: ...),
+            ("shutdown", "system-shutdown-symbolic", lambda: ...),
+            ("reboot", "system-reboot-symbolic", lambda: ...)
+        ]
+
+        for i in actions:
+            a = self.powermenu.addAction(QIcon.fromTheme(i[1]), i[0])
+            a.triggered.connect(i[2])
+
         self.hide()
 
         self.clock_tick()
     
-    def clock_tick(self):
+    def clock_tick(self) -> None:
         "Refresh clock"
 
         time = QTime.currentTime()
@@ -86,24 +114,34 @@ class LockScreen(Surface):
         self.clock.setText(hrtime)
         self.date.setText(hrdate)
     
-    def show_(self):
+    def show_(self) -> None:
         "Show"
 
-        self.raise_()
-        self.show()
-        self.refresh_size()
+        if self.comm.request("loginmgr", "is_available"):
+            self.raise_()
+            self.show()
+            self.refresh_size()
+        else:
+            ...
     
-    def unlock(self):
+    def unlock(self) -> None:
         "Attempt an unlock"
 
-        if pam.authenticate(os.getlogin(), self.pwedit.text()):
+        if self.comm.request("loginmgr", "check_password", self.pwedit.text()): #pam.authenticate(os.getlogin(), self.pwedit.text()):
             self.hide()
             self.pwedit.setText(None)
         else:
             self.message.setText("Failed to unlock")
     
-    def refresh_size(self):
+    def refresh_size(self) -> None:
         "Refreshes size"
 
         self.setFixedSize(self.parent.size())
         self.move(0, 0)
+
+    def resizeEvent(self, event) -> None:
+        self.powerbtn.move(
+            self.width() - self.powerbtn.width(),
+            self.height() - self.powerbtn.height()
+        )
+        super().resizeEvent(event)

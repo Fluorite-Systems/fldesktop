@@ -1,9 +1,7 @@
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout,
                                QLabel, QPushButton, QMenu,
                                QGraphicsDropShadowEffect)
-from PySide6.QtCore import (Qt, QPoint, QSize, QPropertyAnimation,
-                            QParallelAnimationGroup, QEasingCurve,
-                            Signal)
+from PySide6.QtCore import (Qt, QPoint, QSize, Signal)
 from PySide6.QtGui import QIcon, QAction
 
 from fldesktop.include.widgets.surface import Surface
@@ -34,10 +32,12 @@ class Window(Surface):
     def __init__(self, widget: QWidget, name: str, pkgname: str,
                     parent: QWidget, identificator: int,
                     comm, icon: QIcon, size: tuple = (400, 400)
-                ):
+                ) -> None:
         super().__init__(comm, parent)
 
         self.setObjectName("surface")
+        self.setAttribute(Qt.WA_DeleteOnClose)
+
 
         self.widget = widget
         self.name = name

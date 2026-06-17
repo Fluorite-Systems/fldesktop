@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QApplication
 
 from fldesktop.include import (communicator, desktop, dialogs,
                      thememgr, pkgmgr, lockscreen, os_manager,
-                     configmgr, compositor, search, wm)
+                     configmgr, compositor, search, wm, loginmgr)
 from fldesktop.include.compositor.clientmgr import ClientManager
 from fldesktop.include.widgets.surface import SurfaceManager
 
@@ -10,7 +10,7 @@ import logging
 
 
 class Core:
-    def __init__(self):
+    def __init__(self) -> None:
         "There we will do desktop initialization"
 
         # Init the core first
@@ -33,6 +33,8 @@ class Core:
 
         self.search = search.Search(self.comm)
 
+        self.loginmgr = loginmgr.LoginManager(self.comm)
+
         # Setup theming
         self.theming = thememgr.ThemingManager(self.app, self.comm)
 
@@ -54,7 +56,7 @@ class Core:
 
         logging.info("Core initialized")
 
-        #self.lockscreen.show_()
+        self.lockscreen.show_()
         self.comm.send("fade_effect", "fadein")
 
         # Finally exec the app

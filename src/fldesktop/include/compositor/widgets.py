@@ -15,7 +15,7 @@ import locale
 
 
 class Widget:
-    def __init__(self, runner, name, props, parent):
+    def __init__(self, runner, name, props, parent) -> None:
         self._runner = runner
         self.name = name
         self.props = props
@@ -25,12 +25,12 @@ class Widget:
 
         self.callables = {}
     
-    def _setup(self):
+    def _setup(self) -> None:
         self._setup_layouting()
         self._runner.widgets[self.name] = self
         self.update_props()
 
-    def _setup_layouting(self):
+    def _setup_layouting(self) -> None:
         "Setups widget"
 
         # Im sorry...
@@ -60,6 +60,8 @@ class Widget:
 
         print(self.type)
 
+        # Create widget or layout
+
         if self.type in table_l:
             self.qlayout = table_l[self.type]()
         elif "stretch" in self.type:
@@ -70,6 +72,7 @@ class Widget:
                 self.qwidget = table_w[self.type]()
                 if self.type == "container":
                     container = QWidget()
+                    container.setAttribute(Qt.WA_DeleteOnClose)
                     self.qwidget.setWidgetResizable(True)
                     self.qwidget.setWidget(container)
                     if "direction" in self.props:
@@ -85,8 +88,9 @@ class Widget:
                         self.qlayout = QVBoxLayout()
                     container.setLayout(self.qlayout)
             else:
-                print("okr")
                 self.qwidget = QWidget()
+
+        # Place widget or layout in widget or layout
         
         if self.parent:
             print(self.parent.type, self.parent, self.name)
@@ -103,6 +107,7 @@ class Widget:
                     self.parent.qwidget.setLayout(self.qlayout)
         
         if hasattr(self, "qwidget"):
+            self.qwidget.setAttribute(Qt.WA_DeleteOnClose)
             if "width" in self.props:
                 if type(self.props["width"]) == int:
                     self.qwidget.setFixedWidth(self.props["width"])
@@ -115,50 +120,41 @@ class Widget:
                 self.qwidget.customContextMenuRequested.connect(
                     lambda p: menu.exec(self.qwidget.mapToGlobal(p))
                 )
-        
-        print("done")
 
     def update_props(self):
         pass
     
-    def update_children(self, tree: dict):
-        # Очистка layout - ПРАВИЛЬНЫЙ способ
+    def update_children(self, tree: dict) -> None:
+        "Replace children tree with a new one"
+
         if hasattr(self, "qlayout"):
-            # Используем while, а не for
             while self.qlayout.count():
-                item = self.qlayout.takeAt(0)  # Всегда берем первый элемент
+                item = self.qlayout.takeAt(0)
                 if item:
                     if widget := item.widget():
                         widget.deleteLater()
                     elif sub_layout := item.layout():
-                        # Очищаем вложенный layout
                         self.clear_layout_recursive(sub_layout)
-        
-        # Очистка всех виджетов
-        if hasattr(self, "qwidgetidk"):
-            # Получаем список ДО начала удаления
+
+        if hasattr(self, "qwidget"):
             children = self.qwidget.findChildren(QWidget)
             for widget in children:
-                # Пропускаем сам qwidget
                 if widget != self.qwidget:
                     widget.deleteLater()
-        
-        # Принудительная обработка событий
-        #QApplication.processEvents()
-        
-        # Теперь строим новое дерево
+
         self._runner.parser.build_tree_from_objects(tree, self)
 
-    def clear_layout_recursive(self, layout):
-        """Рекурсивная очистка layout"""
+    def clear_layout_recursive(self, layout) -> None:
+        "Recursive layout clean"
+
         while layout.count():
             item = layout.takeAt(0)
             if widget := item.widget():
-                widget.deleteLater()
+                widget.close()
             elif sub_layout := item.layout():
                 self.clear_layout_recursive(sub_layout)
     
-    def add_child(self, name: str, props: dict):
+    def add_child(self, name: str, props: dict) -> None:
 
         if name:
             self._runner.parser.build_tree_from_objects({
@@ -169,7 +165,7 @@ class Widget:
                 "pidor": props
             }, self)
     
-    def delete(self):
+    def delete(self) -> None:
         if self.parent:
             self.parent.children.remove(self)
             if hasattr(self.parent, "qlayout"):
@@ -181,7 +177,7 @@ class Widget:
         
         print("results", hasattr(self, "qwidget"))
     
-    def tr(self, base_text: str):
+    def tr(self, base_text: str) -> str:
         "Translate text"
         loc = locale.getlocale()[0]
 

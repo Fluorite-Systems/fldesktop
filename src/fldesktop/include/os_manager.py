@@ -14,7 +14,8 @@ class OSManager:
                 "poweroff": self.os_poweroff,
                 "reboot": self.os_reboot,
                 "suspend": self.os_suspend,
-                "logout": self.logout
+                "logout": self.logout,
+                "crash": self.crash
             }
         )
     
@@ -22,14 +23,14 @@ class OSManager:
         "Get data path (useful for testing)"
 
         prefixes = [
+            "/system/",
+            "/usr/lib/python3/dist-packages/fldesktop/",
+            "/",
+            "/home/",
             "~/",
             "./",
-            "../",
-            "/home/",
-            "/usr/lib/python3/dist-packages/fldesktop/",
-            "/usr/share/",
-            "/"
-        ]
+            "../"
+        ] # ^^^^^ Prefixes are sorted like this for security reasons
 
         for p in prefixes:
             path = p + postfix
@@ -67,3 +68,8 @@ class OSManager:
         self.comm.send("pkgmgr", "killall")
         self.comm.send("appserver", "stop")
         self.comm.send("pkgmgr", "unmount")
+    
+    def crash(self) -> None:
+        "Something in fldesktop went really wrong"
+        logging.info("Crashing...")
+        os._exit(1)

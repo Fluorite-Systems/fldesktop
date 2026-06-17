@@ -1,13 +1,15 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtCore import (QPropertyAnimation, QParallelAnimationGroup,
-                            QEasingCurve, QPoint, QSize)
+                            QEasingCurve, QPoint, QSize, Qt)
 
 
 class Animation(QWidget):
     def __init__(self, comm, parent: QWidget, pixmap: QPixmap,
                  type: str, params: dict, on_finished):
         super().__init__(parent)
+
+        self.setAttribute(Qt.WA_DeleteOnClose)
 
         self.pixmap = pixmap
 
@@ -33,122 +35,122 @@ class Animation(QWidget):
             lambda: self.finished_handler(on_finished)
         )
 
-        if type == "wmaximize":
-            app.setStartValue(
-                QPoint(
-                    params["pos"].x() + 50,
-                    params["pos"].y() + 50
+        match type:
+            case "wmaximize":
+                app.setStartValue(
+                    QPoint(
+                        params["pos"].x() + 50,
+                        params["pos"].y() + 50
+                    )
                 )
-            )
-            app.setEndValue(params["pos"])
-            aps.setStartValue(
-                QSize(
-                    params["size"].width() - 100,
-                    params["size"].height() - 100
+                app.setEndValue(params["pos"])
+                aps.setStartValue(
+                    QSize(
+                        params["size"].width() - 100,
+                        params["size"].height() - 100
+                    )
                 )
-            )
-            aps.setEndValue(params["size"])
+                aps.setEndValue(params["size"])
 
-        elif type == "wunmaximize":
-            app.setStartValue(
-                QPoint(
-                    params["pos"].x() - 50,
-                    params["pos"].y() - 50
+            case "wunmaximize":
+                app.setStartValue(
+                    QPoint(
+                        params["pos"].x() - 50,
+                        params["pos"].y() - 50
+                    )
                 )
-            )
-            app.setEndValue(params["pos"])
-            aps.setStartValue(
-                QSize(
-                    params["size"].width() + 100,
-                    params["size"].height() + 100
+                app.setEndValue(params["pos"])
+                aps.setStartValue(
+                    QSize(
+                        params["size"].width() + 100,
+                        params["size"].height() + 100
+                    )
                 )
-            )
-            aps.setEndValue(params["size"])
+                aps.setEndValue(params["size"])
 
 
-        elif type == "wminimize":
-            app.setStartValue(params["pos"])
-            app.setEndValue(
-                QPoint(
-                    params["pos"].x() // 2,
-                    params["pos"].y() // 2
+            case "wminimize":
+                app.setStartValue(params["pos"])
+                app.setEndValue(
+                    QPoint(
+                        params["pos"].x() // 2,
+                        params["pos"].y() // 2
+                    )
                 )
-            )
-            aps.setStartValue(params["size"])
-            aps.setEndValue(QSize(0, 0))
+                aps.setStartValue(params["size"])
+                aps.setEndValue(QSize(0, 0))
 
-        elif type == "wunminimize":
-            app.setStartValue(
-                QPoint(
-                    params["pos"].x() - 100,
-                    params["pos"].y() - 100
+            case "wunminimize":
+                app.setStartValue(
+                    QPoint(
+                        params["pos"].x() - 100,
+                        params["pos"].y() - 100
+                    )
                 )
-            )
-            app.setEndValue(params["pos"])
-            aps.setStartValue(
-                QSize(
-                    params["size"].width() - 100,
-                    params["size"].height() - 100
+                app.setEndValue(params["pos"])
+                aps.setStartValue(
+                    QSize(
+                        params["size"].width() - 100,
+                        params["size"].height() - 100
+                    )
                 )
-            )
-            aps.setEndValue(params["size"])
+                aps.setEndValue(params["size"])
 
-        elif type == "wopen":
-            app.setDuration(250)
-            aps.setDuration(250)
-            app.setStartValue(
-                QPoint(
-                    params["pos"].x(),
-                    params["pos"].y() + params["size"].width() // 2
+            case "wopen":
+                app.setDuration(250)
+                aps.setDuration(250)
+                app.setStartValue(
+                    QPoint(
+                        params["pos"].x(),
+                        params["pos"].y() + params["size"].width() // 2
+                    )
                 )
-            )
-            app.setEndValue(params["pos"])
-            aps.setStartValue(
-                QSize(
-                    params["size"].width(), 0
+                app.setEndValue(params["pos"])
+                aps.setStartValue(
+                    QSize(
+                        params["size"].width(), 0
+                    )
                 )
-            )
-            aps.setEndValue(params["size"])
+                aps.setEndValue(params["size"])
 
-        elif type == "wclose":
-            app.setDuration(250)
-            aps.setDuration(250)
-            app.setStartValue(params["pos"])
-            app.setEndValue(
-                QPoint(
-                    params["pos"].x(),
-                    params["pos"].y() + params["size"].height() // 2
+            case "wclose":
+                app.setDuration(250)
+                aps.setDuration(250)
+                app.setStartValue(params["pos"])
+                app.setEndValue(
+                    QPoint(
+                        params["pos"].x(),
+                        params["pos"].y() + params["size"].height() // 2
+                    )
                 )
-            )
-            aps.setStartValue(params["size"])
-            aps.setEndValue(
-                QSize(
-                    params["size"].width(), 0
+                aps.setStartValue(params["size"])
+                aps.setEndValue(
+                    QSize(
+                        params["size"].width(), 0
+                    )
                 )
-            )
-        
-        elif type == "mopen":
-            app.setStartValue(
-                QPoint(
-                    params["pos"].x(),
-                    -params["size"].height()
+            
+            case "mopen":
+                app.setStartValue(
+                    QPoint(
+                        params["pos"].x(),
+                        -params["size"].height()
+                    )
                 )
-            )
-            app.setEndValue(params["pos"])
-            aps.setStartValue(params["size"])
-            aps.setEndValue(params["size"])
+                app.setEndValue(params["pos"])
+                aps.setStartValue(params["size"])
+                aps.setEndValue(params["size"])
 
-        elif type == "mclose":
-            app.setStartValue(params["pos"])
-            app.setEndValue(
-                QPoint(
-                    params["pos"].x(),
-                    -params["size"].height()
+            case "mclose":
+                app.setStartValue(params["pos"])
+                app.setEndValue(
+                    QPoint(
+                        params["pos"].x(),
+                        -params["size"].height()
+                    )
                 )
-            )
-            aps.setStartValue(params["size"])
-            aps.setEndValue(params["size"])
-
+                aps.setStartValue(params["size"])
+                aps.setEndValue(params["size"])
 
         ag.start()
 
