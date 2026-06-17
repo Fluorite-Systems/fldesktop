@@ -73,4 +73,5 @@ class Volume(QWidget):
                 self.controller_name = match.group(2).strip()
                 self.volume = int(float(match.group(3)) * 100)
                 self.slider.setValue(self.volume)
-                self.set_volume()
+                self.set_volume()  
+                break
