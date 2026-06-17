@@ -72,7 +72,7 @@ class Widget:
                 self.qwidget = table_w[self.type]()
                 if self.type == "container":
                     container = QWidget()
-                    container.setAttribute(Qt.WA_DeleteOnClose)
+                    container.setAttribute(Qt.WA_DeleteOnClose, True)
                     self.qwidget.setWidgetResizable(True)
                     self.qwidget.setWidget(container)
                     if "direction" in self.props:
@@ -107,7 +107,7 @@ class Widget:
                     self.parent.qwidget.setLayout(self.qlayout)
         
         if hasattr(self, "qwidget"):
-            self.qwidget.setAttribute(Qt.WA_DeleteOnClose)
+            self.qwidget.setAttribute(Qt.WA_DeleteOnClose, True)
             if "width" in self.props:
                 if type(self.props["width"]) == int:
                     self.qwidget.setFixedWidth(self.props["width"])

@@ -3,6 +3,8 @@ from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtCore import (QPropertyAnimation, QParallelAnimationGroup,
                             QEasingCurve, QPoint, QSize, Qt)
 
+from fldesktop.include.widgets.shadow import Shadow
+
 
 class Animation(QWidget):
     def __init__(self, comm, parent: QWidget, pixmap: QPixmap,
@@ -11,9 +13,13 @@ class Animation(QWidget):
 
         self.setAttribute(Qt.WA_DeleteOnClose)
 
+        self.shadow = Shadow(parent)
+
         self.pixmap = pixmap
 
         self.show()
+        self.shadow.show()
+        self.shadow.raise_()
         self.raise_()
         comm.send("panel", "raise")
 
@@ -156,6 +162,7 @@ class Animation(QWidget):
 
     def finished_handler(self, callback):
         callback()
+        self.shadow.close()
         self.close()
 
     def paintEvent(self, event):
@@ -167,3 +174,11 @@ class Animation(QWidget):
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
 
         painter.drawPixmap(self.rect(), self.pixmap)
+
+    def moveEvent(self, event):
+        super().moveEvent(event)
+        self.shadow.move(event.pos())
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.shadow.resize(event.size())

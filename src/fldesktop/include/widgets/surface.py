@@ -5,10 +5,11 @@ from PySide6.QtCore import (Qt, QRect, QObject, QPoint, QTimer,
                             QRandomGenerator)
 
 from fldesktop.include.thememgr import SURFACE_PRESETS
+from fldesktop.include.widgets.shadow import Shadow
 
 
 class Surface(QWidget):
-    def __init__(self, comm, parent=None, tint: int=1):
+    def __init__(self, comm, parent: QWidget=None, tint: int=1):
         super().__init__(parent)
 
         self.comm = comm
@@ -22,9 +23,12 @@ class Surface(QWidget):
             self._tint = 0
 
         self._update_theming()
+
+        self.shadow = Shadow(parent)
         
         # Optimizations
-        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
+        self.setAttribute(Qt.WA_OpaquePaintEvent, True)
         self._redraw_timer = QTimer(interval=250, singleShot=True)
         self._redraw_timer.timeout.connect(self.update)
 
@@ -130,14 +134,23 @@ class Surface(QWidget):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._redraw_timer.start()
+        self.shadow.resize(event.size())
     
     def moveEvent(self, event):
         super().moveEvent(event)
         self._redraw_timer.start()
+        self.shadow.move(event.pos())
     
     def showEvent(self, event):
         super().showEvent(event)
         self.update()
+        self.shadow.show()
+        self.shadow.raise_()
+        self.raise_()
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        self.shadow.hide()
 
 
 class SurfaceManager(QObject):

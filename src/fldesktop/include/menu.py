@@ -1,7 +1,5 @@
-from PySide6.QtWidgets import (QWidget, QLabel, QVBoxLayout,
-                               QGraphicsDropShadowEffect)
-from PySide6.QtCore import (QPropertyAnimation, QEasingCurve,
-                            QPoint, Qt, QParallelAnimationGroup)
+from PySide6.QtWidgets import QWidget, QVBoxLayout
+from PySide6.QtCore import Qt
 
 from fldesktop.include.widgets.surface import Surface
 from fldesktop.include.widgets.animation import Animation
@@ -31,13 +29,6 @@ class Menu(Surface):
         self.anchor = anchor
 
         self.setFixedSize(widget.size())
-
-        self.shadow = QGraphicsDropShadowEffect()
-        self.shadow.setBlurRadius(20)
-        self.shadow.setXOffset(3)
-        self.shadow.setYOffset(4)
-        self.shadow.setColor(Qt.black)
-        #self.setGraphicsEffect(self.shadow)
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -81,7 +72,6 @@ class Menu(Surface):
 
         self.overlay.close()
         self.hide()
-
         #self.move(self.x(), -self.height())
         
         Animation(self.comm, self.parent(), self.grab(), "mclose",

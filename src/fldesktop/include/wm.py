@@ -62,14 +62,6 @@ class Window(Surface):
         )
         self.setMouseTracking(True)
 
-        # Setup shadows
-        self.shadow = QGraphicsDropShadowEffect()
-        self.shadow.setBlurRadius(20)
-        self.shadow.setXOffset(3)
-        self.shadow.setYOffset(4)
-        self.shadow.setColor(Qt.black)
-        #self.setGraphicsEffect(self.shadow)
-
         # Layouts
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(3, 3, 3, 3)
