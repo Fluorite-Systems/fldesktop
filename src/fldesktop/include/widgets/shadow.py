@@ -40,3 +40,5 @@ class Shadow(QPushButton): # QPushButton because it works
                 size.height() + 25 + 33
             )
         )
+
+        self.update()
