@@ -2,11 +2,13 @@ from PySide6.QtWidgets import (QVBoxLayout, QWidget, QHBoxLayout,
                                QLabel, QPushButton, QLineEdit,
                                QTextEdit, QTabWidget, QScrollArea,
                                QSlider, QCheckBox, QRadioButton,
-                               QListView)
+                               QListView, QTreeView, QFileSystemModel,
+                               QComboBox)
 from PySide6.QtGui import (QIcon, QPainter, QPainterPath,
                            QPixmap, QPen, QBrush, QFont,
-                           QStandardItemModel, QStandardItem)
-from PySide6.QtCore import QPointF, Qt, QSize
+                           QStandardItemModel, QStandardItem,
+                           QImageReader)
+from PySide6.QtCore import QPointF, Qt, QSize, QDir
 
 from fldesktop.include.widgets.flowlayout import FlowLayout
 from fldesktop.include.widgets.terminal import Terminal as TerminalWidget
@@ -14,10 +16,11 @@ from fldesktop.include.widgets.isolated_webengine import IQWebEngineView
 
 import base64
 import locale
+import logging
 
 
 class Widget:
-    def __init__(self, runner, name, props, parent) -> None:
+    def __init__(self, runner, name, props, parent):
         self._runner = runner
         self.name = name
         self.props = props
@@ -27,15 +30,20 @@ class Widget:
 
         self.callables = {}
     
-    def _setup(self) -> None:
+    def _setup(self):
         self._setup_layouting()
         self._runner.widgets[self.name] = self
         self.update_props()
 
-    def _setup_layouting(self) -> None:
+    def _setup_layouting(self):
         "Setups widget"
 
-        # Im sorry...
+        logging.debug(
+            f"Building {self.type} {self.name}; parent is {self.parent.name}"\
+                if self.parent else f"Building {self.type} {self.name}"
+        )
+        if self.parent:
+            logging.debug(f"Parent {self.parent.name} has {self.parent.children}")
 
         table_l = {
             "hlayout": QHBoxLayout,
@@ -57,13 +65,10 @@ class Widget:
             "webview": IQWebEngineView,
             "slider": QSlider,
             "listview": QListView,
+            "filetree": QTreeView,
             "terminal": TerminalWidget,
             "canvas": QWidget
         }
-
-        print(self.type)
-
-        # Create widget or layout
 
         if self.type in table_l:
             self.qlayout = table_l[self.type]()
@@ -75,7 +80,6 @@ class Widget:
                 self.qwidget = table_w[self.type]()
                 if self.type == "container":
                     container = QWidget()
-                    container.setAttribute(Qt.WA_DeleteOnClose, True)
                     self.qwidget.setWidgetResizable(True)
                     self.qwidget.setWidget(container)
                     if "direction" in self.props:
@@ -92,11 +96,8 @@ class Widget:
                     container.setLayout(self.qlayout)
             else:
                 self.qwidget = QWidget()
-
-        # Place widget or layout in widget or layout
         
         if self.parent:
-            print(self.parent.type, self.parent, self.name)
             if self.parent.type in ["app", "vlayout", "hlayout",
                                     "flayout", "container"]:
                 if "qwidget" in dir(self):
@@ -110,7 +111,6 @@ class Widget:
                     self.parent.qwidget.setLayout(self.qlayout)
         
         if hasattr(self, "qwidget"):
-            self.qwidget.setAttribute(Qt.WA_DeleteOnClose, True)
             if "width" in self.props:
                 if type(self.props["width"]) == int:
                     self.qwidget.setFixedWidth(self.props["width"])
@@ -127,60 +127,57 @@ class Widget:
     def update_props(self):
         pass
     
-    def update_children(self, tree: dict) -> None:
-        "Replace children tree with a new one"
+    def update_children(self, tree: dict):
 
-        if hasattr(self, "qlayout"):
-            while self.qlayout.count():
-                item = self.qlayout.takeAt(0)
-                if item:
-                    if widget := item.widget():
-                        widget.deleteLater()
-                    elif sub_layout := item.layout():
-                        self.clear_layout_recursive(sub_layout)
-
-        if hasattr(self, "qwidget"):
-            children = self.qwidget.findChildren(QWidget)
-            for widget in children:
-                if widget != self.qwidget:
-                    widget.deleteLater()
-
+        for i in self.children:
+            i.delete()
+        
+        # Теперь строим новое дерево
         self._runner.parser.build_tree_from_objects(tree, self)
 
-    def clear_layout_recursive(self, layout) -> None:
-        "Recursive layout clean"
-
+    def clear_layout_recursive(self, layout):
+        """Рекурсивная очистка layout"""
         while layout.count():
             item = layout.takeAt(0)
             if widget := item.widget():
-                widget.close()
+                if widget in self._runner.widgets:
+                    self._runner.widgets.pop(widget.name)
+                widget.deleteLater()
             elif sub_layout := item.layout():
                 self.clear_layout_recursive(sub_layout)
     
-    def add_child(self, name: str, props: dict) -> None:
+    def add_child(self, name: str, props: dict):
 
-        if name:
-            self._runner.parser.build_tree_from_objects({
-                name: props
-            }, self)
-        else:
-            self._runner.parser.build_tree_from_objects({
-                "pidor": props
-            }, self)
+        self._runner.parser.build_tree_from_objects({
+            name: props
+        }, self)
     
-    def delete(self) -> None:
+    def delete(self):
+        logging.debug(f"Deleting {self.type} {self.name}")
+        logging.debug(f"{self.name} has {self.children} at the moment of its death")
+        for i in self.children[:]:
+            logging.debug(f"{self.name} deletes {i.name}!")
+            i.delete()
+
         if self.parent:
             self.parent.children.remove(self)
             if hasattr(self.parent, "qlayout"):
                 if hasattr(self, "qwidget"):
                     self.parent.qlayout.removeWidget(self.qwidget)
+                if hasattr(self, "qlayout"):
+                    i = self.parent.qlayout.indexOf(self.qlayout)
+                    if i != -1:
+                        self.parent.qlayout.takeAt(i)
+
         if hasattr(self, "qwidget"):
             self.qwidget.setParent(None)
             self.qwidget.deleteLater()
-        
-        print("results", hasattr(self, "qwidget"))
-    
-    def tr(self, base_text: str) -> str:
+        if hasattr(self, "qlayout"):
+            self.qlayout.deleteLater()
+
+        self._runner.widgets.pop(self.name)
+            
+    def tr(self, base_text: str):
         "Translate text"
         loc = locale.getlocale()[0]
 
@@ -357,10 +354,17 @@ class ImageView(Widget):
         self.type = "label"
 
         self.callables = {
-            "set_image": self.set_image
+            "set_image": self.set_image,
+            "set_source": self.set_source
         }
 
         self._setup()
+
+        self.quality = "good"
+
+        if "quality" in props:
+            if props["quality"] == "fast":
+                self.quality = "fast"
 
         self.pixmap = QPixmap()
         self.qwidget.resizeEvent = self.resizeEvent
@@ -368,13 +372,31 @@ class ImageView(Widget):
     def set_image(self, image: str) -> None:
         self.pixmap = QPixmap()
         self.pixmap.loadFromData(base64.b64decode(image.encode()))
-        self.qwidget.setPixmap(self.pixmap)
+        self.resizeEvent(None)
+
+    def set_source(self, source: str) -> None:
+
+        if self.quality == "fast":
+            reader = QImageReader(source)
+            reader.setScaledSize(self.qwidget.size().scaled(
+                self.qwidget.size().width(),
+                self.qwidget.size().height(),
+                Qt.KeepAspectRatioByExpanding
+            ))
+            self.pixmap = QPixmap.fromImage(reader.read())
+        else:
+            self.pixmap = QPixmap(source)
+
         self.resizeEvent(None)
     
     def resizeEvent(self, ev):
-        self.qwidget.setPixmap(self.pixmap.scaled(self.qwidget.size(), 
-                               Qt.AspectRatioMode.KeepAspectRatioByExpanding, 
-                               Qt.TransformationMode.SmoothTransformation)
+        self.qwidget.setPixmap(
+            self.pixmap.scaled(
+                self.qwidget.size(), 
+                t.KeepAspectRatioByExpanding, 
+                Qt.FastTransformation if self.quality == "fast" else \
+                    Qt.SmoothTransformation
+            )
         )
 
 
@@ -631,12 +653,14 @@ class ListView(Widget):
         self.qwidget.setSelectionBehavior(QListView.SelectItems)
         self.qwidget.setEditTriggers(QListView.EditTrigger.NoEditTriggers)
 
-    def set_contents(self, contents: list):
+        self.qwidget.doubleClicked.connect(self.doubleclick_handler)
+
+    def set_contents(self, contents: dict):
         model = QStandardItemModel()
 
         print(contents)
 
-        for item in contents:
+        for name, item in contents.items():
             if type(item) != dict:
                 continue
 
@@ -644,7 +668,7 @@ class ListView(Widget):
                 title = str(item["title"])
             else:
                 title = ""
-            
+
             if "icon" in item:
                 icon = QIcon.fromTheme(str(item["icon"]))
             else:
@@ -652,11 +676,53 @@ class ListView(Widget):
 
             qitem = QStandardItem(title)
             qitem.setIcon(icon)
+            qitem.setData(name, Qt.ItemDataRole.UserRole + 1)
 
             model.appendRow(qitem)
 
         self.qwidget.setModel(model)
 
+    def doubleclick_handler(self, index):
+
+        item = self.qwidget.model().itemFromIndex(index)
+        id = item.data(Qt.ItemDataRole.UserRole + 1)
+        self._runner.event(
+            name=id, type="listview_doubleclick"
+        )
+
+
+class FileTree(Widget):
+    def __init__(self, runner, name, props, parent):
+        super().__init__(runner, name, props, parent)
+        self.type = "filetree"
+
+        self.callables = {
+            "set_path": self.set_path
+        }
+
+        self._setup()
+
+        self.model = QFileSystemModel()
+        self.model.setRootPath(QDir.homePath())
+        self.qwidget.setModel(self.model)
+
+        self.qwidget.doubleClicked.connect(self.on_doubleclick)
+
+        self.set_path("/home/romario/")
+
+    def set_path(self, path: str):
+        print("got path", path)
+        index = self.model.index(path)
+
+        if self.model.isDir(index):
+            self.qwidget.setRootIndex(index)
+
+    def on_doubleclick(self, index):
+        path = self.model.filePath(index)
+        self._runner.event(
+            name=self.name, type="filetree_doubleclick",
+            path=str(path)
+        )
 
 
 class Terminal(Widget):
@@ -701,6 +767,7 @@ widget_table = {
     "entry": Entry,
     "slider": Slider,
     "listview": ListView,
+    "filetree": FileTree,
     "webview": WebView,
     "terminal": Terminal
 }

@@ -51,6 +51,8 @@ class Client:
     def receive(self, data: dict):
         "Receive some info from backend"
 
+        #logging.debug(f"Got data from client {self.uuid}: {data}")
+
         if data["type"] == "init_layout":
             self.parser.build(data["payload"])
             self.widget.update()
@@ -61,6 +63,8 @@ class Client:
         elif data["type"] == "update_node":
             if data["name"] in self.widgets:
                 self.widgets[data["name"]].update_children(data["children"])
+                for w in self.widgets:
+                    logging.debug(f"Widget {w} has {self.widgets[w].children}")
                 self.callback('{"status": "ok"}')
             else:
                 self.callback('{"status": "unknown_node"}')
@@ -76,6 +80,8 @@ class Client:
                         )
                     else:
                         self.callback('{"status": "ok"}')
+            else:
+                self.callback('{"status": "unknown_widget"}')
         elif data["type"] == "append_title":
             if "title" in data:
                 self.comm.send("wm", "append_window_title",
