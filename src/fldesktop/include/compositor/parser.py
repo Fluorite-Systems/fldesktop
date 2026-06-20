@@ -1,32 +1,29 @@
 from PySide6.QtWidgets import QWidget, QMenu
 from PySide6.QtGui import QAction, QIcon, QKeySequence, QShortcut
 
-from fldesktop.include.compositor.widgets import (
-    widget_table, RootWidget, Widget
-)
+from fldesktop.include.compositor.widgets import widgets
+from fldesktop.include.compositor.widgets.base import Widget
 from fldesktop.include.widgets.sidebar import Sidebar, SidebarItem
 
-from typing import Dict, List, Any
-
 import logging
-
 import locale
 
 
 class Parser:
-    def __init__(self, runner):
+    def __init__(self, runner) -> None:
 
         self.runner = runner
         self.data = None
 
-    def build(self, data):
+    def build(self, data: dict) -> widgets["root"]:
+        "Build widget tree from layout"
 
         logging.debug(f"Building tree for client {self.runner.uuid}")
 
         self.data = data
         objects = data.get("layout", {})
 
-        root = RootWidget(self.runner)
+        root = widgets["root"](self.runner)
 
         root.children = self.build_tree_from_objects(objects, parent=root)
 
@@ -47,20 +44,22 @@ class Parser:
         return root
 
 
-    def build_tree_from_objects(self, objects: Dict[str, Any], parent = None):
+    def build_tree_from_objects(self, objects: dict, parent = None) -> List:
+        "Build widget tree from objects dict"
+
         Objects = []
         for name, cfg in objects.items():
             Objects.append(self.build_object(name, cfg, parent))
         return Objects
 
-    def build_object(self, name: str, cfg: Dict[str, Any], parent = None):
-        object_type = cfg.get("type", "unknown")
-        # всё, что не type и children, считаем свойствами
-        props = {k: v for k, v in cfg.items() if k not in ("type", "children")}
-        # obj = Object(self.runner, name, object_type, parent, props)
+    def build_object(self, name: str, cfg: dict, parent = None) -> Widget:
+        "Build widget object"
 
-        if object_type in widget_table:
-            obj = widget_table[object_type](self.runner, name, props, parent)
+        object_type = cfg.get("type", "unknown")
+        props = {k: v for k, v in cfg.items() if k not in ("type", "children")}
+
+        if object_type in widgets:
+            obj = widgets[object_type](self.runner, name, props, parent)
         else:
             obj = Widget(self.runner, name, props, parent)
 
@@ -74,18 +73,21 @@ class Parser:
         ]
         return obj
 
-    def print_tree(self, Objects: List, indent: int = 0):
+    def print_tree(self, Objects: list, indent: int = 0) -> None:
+        "Print object tree"
+
         pad = "  " * indent
         for Object in Objects:
             logging.debug(f"{pad}{Object.name} ({Object.type}) {Object.props}")
             if Object.children:
                 self.print_tree(Object.children, indent + 1)
     
-    def build_menu(self, data: dict):
+    def build_menu(self, data: dict) -> QMenu:
+        "Build a QMenu from json layout"
 
         def add_menu_item(parent_menu, key, item):
             if isinstance(item, dict) and "text" in item:
-                # Это обычный пункт меню (QAction)
+                # Menu item
                 trs = self.runner.translations
                 loc = locale.getlocale()[0]
                 if loc in trs:
@@ -100,8 +102,9 @@ class Parser:
                     lambda: self.runner.event(type="action_press", name=key)
                 )
                 parent_menu.addAction(action)
+
             elif isinstance(item, dict):
-                # Это подменю (QMenu)
+                # Submenu
                 sub_menu = QMenu(key.replace("_", " ").title())
                 parent_menu.addMenu(sub_menu)
                 for sub_key, sub_item in item.items():
@@ -113,13 +116,16 @@ class Parser:
         
         return menu
 
-    def setup_menu(self):
+    def setup_menu(self) -> None:
+        "Setup QMenu"
+
         if "menu" in self.data:
             menu = self.build_menu(self.data["menu"])
             self.runner.comm.send("wm", "set_window_menu",
                                   (self.runner.winid, menu))
     
-    def setup_sidebar(self):
+    def setup_sidebar(self) -> None:
+        "Setup sidebar thingie"
 
         if "sidebar" in self.data:
             s = Sidebar()
