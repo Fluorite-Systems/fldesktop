@@ -21,7 +21,7 @@ class OSManager:
 
         if not "XDG_RUNTIME_DIR" in os.environ:
             logging.fatal("XDG_RUNTIME_DIR is not specified!")
-            self.comm.send("osmgr", "crash")
+            self.crash()
     
     def get_path(self, postfix) -> str | None:
         "Get data path (useful for testing)"
