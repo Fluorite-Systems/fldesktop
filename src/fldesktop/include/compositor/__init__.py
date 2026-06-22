@@ -126,10 +126,6 @@ class AppServer:
     def __init__(self, comm):
         self.comm = comm
         self.comm.register("appserver", {"stop": self.stop})
-
-        if not "XDG_RUNTIME_DIR" in os.environ:
-            logging.fatal("XDG_RUNTIME_DIR is not specified!")
-            self.comm.send("osmgr", "crash")
             
         self.socket_path = os.path.join(
             os.environ["XDG_RUNTIME_DIR"], "flos.socket"
