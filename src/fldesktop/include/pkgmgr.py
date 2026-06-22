@@ -1,4 +1,5 @@
 from PySide6.QtCore import QProcess
+from pathlib import Path
 import subprocess
 import logging
 import uuid
@@ -18,7 +19,9 @@ class Package:
 
         self.procs = []
 
-        self.mount_path = f"/tmp/fla/{str(uuid.uuid4())}/"
+        self.mount_path = Path(
+            os.environ["XDG_RUNTIME_DIR"]
+        ) / "fla" / str(uuid.uuid4())
         
         self.mount()
         self.load_metadata()
@@ -26,7 +29,7 @@ class Package:
     def load_metadata(self):
         "Load package metadata"
 
-        path = self.mount_path + "app.json"
+        path = self.mount_path / "app.json"
 
         with open(path) as f:
             data = json.load(f)
