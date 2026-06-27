@@ -13,7 +13,7 @@ class SearchBtn(QPushButton):
         
         self.comm = comm
         
-        self.setText("Search...")
+        self.setText(self.comm.request("localemgr", "tr", "Search"))
         self.setIcon(QIcon.fromTheme("search-symbolic"))
 
         self.search_ui = SearchUI(self.comm)
@@ -46,7 +46,9 @@ class SearchUI(QWidget):
         self.scroller.setWidget(self.container)
 
         self.entry = QLineEdit()
-        self.entry.setPlaceholderText("Type here to search...")
+        self.entry.setPlaceholderText(
+            self.comm.request("localemgr", "tr", "Type here to search...")
+        )
 
         self.layout.addWidget(self.entry)
         self.layout.addWidget(self.scroller)

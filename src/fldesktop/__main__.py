@@ -2,9 +2,11 @@ from PySide6.QtWidgets import QApplication
 
 from fldesktop.include import (communicator, desktop, dialogs,
                      thememgr, pkgmgr, lockscreen, os_manager,
-                     configmgr, compositor, search, wm, loginmgr)
+                     configmgr, compositor, search, wm, loginmgr,
+                     localemgr)
 from fldesktop.include.compositor.clientmgr import ClientManager
 from fldesktop.include.widgets.surface import SurfaceManager
+from fldesktop.include.input import InputManager
 
 import logging
 
@@ -28,6 +30,8 @@ class Core:
         self.osmgr = os_manager.OSManager(self.comm)
 
         self.configmgr = configmgr.ConfigurationManager(self.comm)
+
+        self.localemgr = localemgr.LocaleManager(self.comm)
 
         self.pkgmgr = pkgmgr.PackageManager(self.comm)
 

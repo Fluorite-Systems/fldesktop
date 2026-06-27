@@ -15,37 +15,17 @@ class LoginManager:
             }
         )
 
-        self.file_path = self.comm.request("osmgr", "get_path", "login.json")
-
-    def read_file(self) -> dict | None:
-        "Read login.json"
-
-        try:
-            with open(self.file_path, "r") as f:
-                data = json.load(f)
-        except:
-            return None
-            
-        return data
-
-    def check_availability(self, data: dict = None) -> bool:
+    def check_availability(self) -> bool:
         "Can we log in?"
 
-        data = data if data else self.read_file()
-
-        if data and type(data) == dict:
-            if "pwhash" in data:
-                return True
-
-        return False
+        return bool(self.comm.request("cfgmgr", "get", "pwhash"))
 
     def check_password(self, password: str):
         "Check password by its hash from login.json"
 
-        data = self.read_file()
-        if self.check_availability(data):
-            
-            parts = data["pwhash"].split("$")
+        if self.check_availability():
+            hash = self.comm.request("cfgmgr", "get", "pwhash") 
+            parts = hash.split("$")
 
             if len(parts) != 4:
                 raise ValueError("Неверный формат хеша")
