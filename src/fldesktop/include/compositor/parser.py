@@ -44,7 +44,7 @@ class Parser:
         return root
 
 
-    def build_tree_from_objects(self, objects: dict, parent = None) -> List:
+    def build_tree_from_objects(self, objects: dict, parent = None) -> list:
         "Build widget tree from objects dict"
 
         Objects = []

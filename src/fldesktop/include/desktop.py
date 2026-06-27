@@ -58,7 +58,7 @@ class Desktop(QMainWindow):
         self.bgp = QPixmap(self.comm.request("cfgmgr", "get", "background"))
         self.refresh_bg()
     
-    def get_instance(self) -> Desktop:
+    def get_instance(self):
         "Get desktop instance from comm"
 
         return self
