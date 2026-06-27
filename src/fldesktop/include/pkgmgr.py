@@ -66,10 +66,12 @@ class Package:
     
     def exec(self, arguments: list = []):
 
+        logging.debug(f"Executing entrypoint {self.mount_path / "main"}")
+
         if self.executable:
 
             proc = QProcess()
-            proc.start(f"{self.mount_path}main", arguments)
+            proc.start(str(self.mount_path / "main"), arguments)
 
             self.procs.append(proc)
 
