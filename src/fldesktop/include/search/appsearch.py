@@ -1,7 +1,7 @@
 class AppSearch:
     def __init__(self, comm):
         self.comm = comm
-        self.name = "Applications"
+        self.name = self.comm.request("localemgr", "tr", "Applications")
     
     def query(self, query: str):
 

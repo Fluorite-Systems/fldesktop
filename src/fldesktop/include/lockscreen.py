@@ -90,9 +90,12 @@ class LockScreen(Surface):
         )
 
         actions = [
-            ("Sleep", "system-suspend-symbolic", lambda: ...),
-            ("shutdown", "system-shutdown-symbolic", lambda: ...),
-            ("reboot", "system-reboot-symbolic", lambda: ...)
+            (self.comm.request("localemgr", "tr", "Sleep"),
+                "system-suspend-symbolic", lambda: ...),
+            (self.comm.request("localemgr", "tr", "Shutdown"),
+                "system-shutdown-symbolic", lambda: ...),
+            (self.comm.request("localemgr", "tr", "Reboot"),
+                "system-reboot-symbolic", lambda: ...)
         ]
 
         for i in actions:

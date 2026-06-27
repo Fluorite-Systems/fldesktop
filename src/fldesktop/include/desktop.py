@@ -26,8 +26,12 @@ class Desktop(QMainWindow):
 
         # Context menu when right-clicked at the background
         self.menu = QMenu()
-        self.ch_bg_action = self.menu.addAction("Change background")
-        self.st_action = self.menu.addAction("Settings")
+        self.ch_bg_action = self.menu.addAction(
+            self.comm.request("localemgr", "tr", "Change background")
+        )
+        self.st_action = self.menu.addAction(
+            self.comm.request("localemgr", "tr", "Settings")
+        )
         self.ch_bg_action.triggered.connect(
             lambda: self.comm.send("pkgmgr", "run_app", "com.example.texted")
         )

@@ -1,6 +1,9 @@
 {
     "Search": "Поиск",
     "Type here to search...": "Пишите здесь для поиска...",
+    "Applications": "Приложения",
+    "Settings": "Настройки",
+    "Change background": "Изменить фон",
     "Shutdown": "Выключение",
     "Reboot": "Перезагрузка",
     "Sleep": "Спящий режим"

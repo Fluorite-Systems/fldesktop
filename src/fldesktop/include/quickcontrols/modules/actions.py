@@ -39,10 +39,12 @@ class Actions(QWidget):
 
         self.pwr_menu = QMenu()
         self.shutdown_act = self.pwr_menu.addAction(
-            QIcon.fromTheme("system-shutdown-symbolic"), "Shutdown"
+            QIcon.fromTheme("system-shutdown-symbolic"),
+            self.comm.request("localemgr", "tr", "Shutdown")
         )
         self.reboot_act = self.pwr_menu.addAction(
-            QIcon.fromTheme("system-reboot-symbolic"), "Reboot"
+            QIcon.fromTheme("system-reboot-symbolic"),
+            self.comm.request("localemgr", "tr", "Reboot")
         )
         self.logout_act = self.pwr_menu.addAction(
             QIcon.fromTheme("system-log-out-symbolic"), "Log out"
