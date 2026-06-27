@@ -6,6 +6,7 @@ class TextEdit(Widget):
     def __init__(self, runner, name, props, parent):
         super().__init__(runner, name, props, parent)
         self.type = "textedit"
+        self.qwidget = QTextEdit()
 
         self.callables = {
             "set_text": self.set_text,
