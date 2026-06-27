@@ -4,8 +4,8 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Signal, QObject
 from fldesktop.include.compositor.parser import Parser
-import json
 
+import json
 import logging
 
 
@@ -53,54 +53,60 @@ class Client:
 
         #logging.debug(f"Got data from client {self.uuid}: {data}")
 
-        if data["type"] == "init_layout":
-            self.parser.build(data["payload"])
-            self.widget.update()
-            self.callback('{"status": "ok"}')
-        elif data["type"] == "set_translations":
-            self.translations = data["translations"]
-            self.callback('{"status": "ok"}')
-        elif data["type"] == "update_node":
-            if data["name"] in self.widgets:
-                self.widgets[data["name"]].update_children(data["children"])
-                for w in self.widgets:
-                    logging.debug(f"Widget {w} has {self.widgets[w].children}")
+        match data["type"]:
+            case "init_layout":
+                self.parser.build(data["payload"])
+                self.widget.update()
                 self.callback('{"status": "ok"}')
-            else:
-                self.callback('{"status": "unknown_node"}')
-        elif data["type"] == "call_method":
-            if data["name"] in self.widgets:
-                w = self.widgets[data["name"]]
-                if data["method"] in w.callables:
-                    r = w.callables[data["method"]](data["args"])
 
-                    if r:
-                        self.callback(
-                            json.dumps({"status": "ok", "reply": r})
-                        )
-                    else:
-                        self.callback('{"status": "ok"}')
-            else:
-                self.callback('{"status": "unknown_widget"}')
-        elif data["type"] == "append_title":
-            if "title" in data:
-                self.comm.send("wm", "append_window_title",
-                               self.winid, data["title"])
+            case "set_translations":
+                self.translations = data["translations"]
                 self.callback('{"status": "ok"}')
-        elif data["type"] == "file_dialog":
-            dtype = "open_file"
-            if "dialog_type" in data:
-                if data["dialog_type"] == "save_file":
-                    dtype = "save_file"
-            self.comm.send(
-                "dialogmgr", dtype,
-                lambda r: self.callback(
-                    json.dumps({"type": "files_choosen", "files": r})
+
+            case "update_node":
+                if data["name"] in self.widgets:
+                    self.widgets[data["name"]].update_children(data["children"])
+                    for w in self.widgets:
+                        logging.debug(f"Widget {w} has {self.widgets[w].children}")
+                    self.callback('{"status": "ok"}')
+                else:
+                    self.callback('{"status": "unknown_node"}')
+
+            case "call_method":
+                if data["name"] in self.widgets:
+                    w = self.widgets[data["name"]]
+                    if data["method"] in w.callables:
+                        r = w.callables[data["method"]](data["args"])
+
+                        if r:
+                            self.callback(
+                                json.dumps({"status": "ok", "reply": r})
+                            )
+                        else:
+                            self.callback('{"status": "ok"}')
+                else:
+                    self.callback('{"status": "unknown_widget"}')
+
+            case "append_title":
+                if "title" in data:
+                    self.comm.send("wm", "append_window_title",
+                                self.winid, data["title"])
+                    self.callback('{"status": "ok"}')
+
+            case "file_dialog":
+                dtype = "open_file"
+                if "dialog_type" in data:
+                    if data["dialog_type"] == "save_file":
+                        dtype = "save_file"
+                self.comm.send(
+                    "dialogmgr", dtype,
+                    lambda r: self.callback(
+                        json.dumps({"type": "files_choosen", "files": r})
+                    )
                 )
-            )
-            self.callback('{"status": "ok"}')
-        else:
-            self.callback('{"status": "invalid_type"}')
+                self.callback('{"status": "ok"}')
+            case _:
+                self.callback('{"status": "invalid_type"}')
 
 
 class ClientManager(QObject):
