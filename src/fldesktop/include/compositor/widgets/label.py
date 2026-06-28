@@ -29,7 +29,8 @@ class Label(Widget):
         if "style" in self.props:
             styles = {
                 "caption": QFont("Noto Sans", 14, QFont.Bold),
-                "header": QFont("Noto Sans", 12, QFont.Bold)
+                "header": QFont("Noto Sans", 12, QFont.Bold),
+                "subheader": QFont("Noto Sans", 10, QFont.Bold)
             }
             if self.props["style"] in styles:
                 self.qwidget.setFont(styles[self.props["style"]])
