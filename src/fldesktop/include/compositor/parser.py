@@ -86,7 +86,21 @@ class Parser:
         "Build a QMenu from json layout"
 
         def add_menu_item(parent_menu, key, item):
-            if isinstance(item, dict) and "text" in item:
+            if isinstance(item, dict) and "children" in item \
+                and "text" in item:
+                # Submenu
+                trs = self.runner.translations
+                loc = locale.getlocale()[0]
+                if loc in trs:
+                    if item["text"] in trs[loc]:
+                        item["text"] = trs[loc][item["text"]]
+
+                sub_menu = QMenu(item["text"])
+                parent_menu.addMenu(sub_menu)
+                for sub_key, sub_item in item["children"].items():
+                    add_menu_item(sub_menu, sub_key, sub_item)
+
+            elif isinstance(item, dict) and "text" in item:
                 # Menu item
                 trs = self.runner.translations
                 loc = locale.getlocale()[0]
@@ -102,13 +116,6 @@ class Parser:
                     lambda: self.runner.event(type="action_press", name=key)
                 )
                 parent_menu.addAction(action)
-
-            elif isinstance(item, dict):
-                # Submenu
-                sub_menu = QMenu(key.replace("_", " ").title())
-                parent_menu.addMenu(sub_menu)
-                for sub_key, sub_item in item.items():
-                    add_menu_item(sub_menu, sub_key, sub_item)
 
         menu = QMenu()
         for key, item in data.items():
