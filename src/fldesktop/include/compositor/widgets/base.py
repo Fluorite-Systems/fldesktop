@@ -106,6 +106,7 @@ class Widget:
         if hasattr(self, "qlayout"):
             self.qlayout.deleteLater()
 
+        self._runner.deleted_widgets.append(self.name)
         self._runner.widgets.pop(self.name)
 
     def tr(self, base_text: str):
