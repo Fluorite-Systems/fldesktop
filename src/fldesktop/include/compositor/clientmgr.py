@@ -18,6 +18,7 @@ class Client:
         self.widget = QWidget()
         self.main_layout = QVBoxLayout(self.widget)
         self.widgets = {}
+        self.deleted_widgets = []
         self.translations = {}
         self.parser = Parser(self)
         self.uuid = uuid
@@ -65,10 +66,19 @@ class Client:
 
             case "update_node":
                 if data["name"] in self.widgets:
+                    self.deleted_widgets = []
                     self.widgets[data["name"]].update_children(data["children"])
                     for w in self.widgets:
                         logging.debug(f"Widget {w} has {self.widgets[w].children}")
-                    self.callback('{"status": "ok"}')
+                    self.callback(
+                        json.dumps(
+                            {
+                                "status": "ok",
+                                "deleted": self.deleted_widgets
+                            }
+                        )
+                    )
+                    self.deleted_widgets = []
                 else:
                     self.callback('{"status": "unknown_node"}')
 
