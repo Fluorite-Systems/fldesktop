@@ -21,6 +21,7 @@ widgets = {
     "listview": listview.ListView,
     "radiobutton": radiobutton.RadioButton,
     "slider": slider.Slider,
+    "entry": entry.Entry,
     "tabs": tabs.Tabs,
     "terminal": terminal.Terminal,
     "textedit": textedit.TextEdit,
