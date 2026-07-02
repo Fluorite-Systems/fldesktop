@@ -73,8 +73,6 @@ class Battery(QWidget):
         else:
             icon = f"battery-empty{c}-symbolic"
 
-        print(icon, c)
-
         return icon
 
     def sys_bat_percent(self, bats: list) -> tuple[int, bool]:
