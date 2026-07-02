@@ -1,11 +1,12 @@
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout,
-                               QLabel, QPushButton, QMenu,
-                               QGraphicsDropShadowEffect)
-from PySide6.QtCore import (Qt, QPoint, QSize, Signal)
-from PySide6.QtGui import QIcon, QAction
+                               QLabel, QPushButton) 
+from PySide6.QtCore import Qt, QPoint, QSize, Signal
+from PySide6.QtGui import QIcon
 
 from fldesktop.include.widgets.surface import Surface
 from fldesktop.include.widgets.animation import Animation
+
+import logging
 
 
 class Overlay(QLabel):
@@ -131,7 +132,7 @@ class Window(Surface):
         # Show window
         self.animate_open()
     
-    def close_window(self):
+    def close_window(self) -> None:
         "Closes the window"
 
         Animation(
@@ -142,19 +143,14 @@ class Window(Surface):
         self.on_close.emit()
         self.close() 
 
-    def replace_widget(self, new_widget: QWidget):
+    def replace_widget(self, new_widget: QWidget) -> None:
 
         self.layout.removeWidget(self.widget)
         self.layout.addWidget(new_widget)
         new_widget.setMouseTracking(True)
         self.widget = new_widget
    
-    def set_children_frozen(self, frozen: bool):
-        for i in self.findChildren(QWidget):
-            if i != self:
-                i.setUpdatesEnabled(not frozen)
-
-    def toggle_minimized(self):
+    def toggle_minimized(self) -> None:
         if not self.minimized:
             self.prev_pos_mi = self.pos()
             self.prev_size_mi = self.size()
@@ -169,7 +165,7 @@ class Window(Surface):
             self.minimized = False
             self.comm.send("wm", "change_focus", self.id)
     
-    def toggle_maximized(self):
+    def toggle_maximized(self) -> None:
         if not self.maximized:
             self.prev_pos_mx = self.pos()
             self.prev_size_mx = self.size()
@@ -184,7 +180,7 @@ class Window(Surface):
 
             self.maximized = False
         
-    def animate_minimize(self):
+    def animate_minimize(self) -> None:
 
         self.hide()
         Animation(
@@ -193,7 +189,7 @@ class Window(Surface):
             lambda: ...
         )
 
-    def animate_maximize(self):
+    def animate_maximize(self) -> None:
         
         pos = QPoint(0, 26)
         size = QSize(self.parent().size().width(),
@@ -206,9 +202,8 @@ class Window(Surface):
             {"pos": pos, "size": size},
             self.show
         )
-        print(self.parent())
 
-    def animate_unminimize(self):
+    def animate_unminimize(self) -> None:
 
         Animation(
             self.comm, self.parent(), self.grab(), "wunminimize",
@@ -217,7 +212,7 @@ class Window(Surface):
         )
 
     
-    def animate_unmaximize(self):
+    def animate_unmaximize(self) -> None:
         
         self.hide()
         self.resize(self.prev_size_mx)
@@ -228,7 +223,7 @@ class Window(Surface):
             self.show
         )
     
-    def animate_open(self):
+    def animate_open(self) -> None:
 
         def on_finished(self):
             self.show()
@@ -268,7 +263,7 @@ class Window(Surface):
         
         return resizing_dir
     
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event) -> None:
         self.raise_()
         # Change focus
         if self.comm.request("wm", "get_focus") != self.id:
@@ -291,7 +286,7 @@ class Window(Surface):
                 # Store the initial position of the mouse relative to the square
                 self.drag_start_pos = event.pos()
     
-    def mouseMoveEvent(self, event): # Move window
+    def mouseMoveEvent(self, event) -> None: # Move window
 
         if self.resizing_dir:
             rd = self.resizing_dir
@@ -340,7 +335,7 @@ class Window(Surface):
             else:
                 self.move(QPoint(new_pos.x(), 26))
         
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event) -> None:
         if self.resizing:
             self.resizing = False
             self.resizing_dir = ""
@@ -376,11 +371,12 @@ class WindowManager:
         self.focus = None
 
     
-    def create_window(self, params: dict):
+    def create_window(self, params: dict) -> tuple:
         "Creates an window"
-        print(params)
-
+        
         self.curid += 1
+
+        logging.info(f"Creating a window with id {id}")
 
         if params["icon"].isNull():
             params["icon"] = QIcon.fromTheme("applications-other")
@@ -406,16 +402,16 @@ class WindowManager:
 
         return win.id, win.on_close
 
-    def close_window(self, id: int):
+    def close_window(self, id: int) -> None:
         "Closes a window"
 
-        print("closin window", id)
+        logging.info(f"Closing window with id {id}")
 
         for win in self.windows:
             if win.id == id:
                 win.close_window()
             
-    def change_focus(self, id: int = None):
+    def change_focus(self, id: int = None) -> None:
         "Change window focus"
 
         for win in self.windows:
@@ -437,7 +433,7 @@ class WindowManager:
 
         return self.focus
     
-    def set_window_menu(self, data: tuple):
+    def set_window_menu(self, data: tuple) -> None:
 
         btn = QPushButton()
         btn.setObjectName("flatbtn")
@@ -450,7 +446,7 @@ class WindowManager:
             if win.id == data[0]:
                 win.tlayout.insertWidget(4, btn)
     
-    def set_window_sidebar(self, winid: int, sidebar):
+    def set_window_sidebar(self, winid: int, sidebar) -> None:
         
         for win in self.windows:
             if win.id == winid:
@@ -463,7 +459,7 @@ class WindowManager:
                 win.sidebar = sidebar
                 sidebar.refresh(win.size())
     
-    def append_window_title(self, id: int, title: str):
+    def append_window_title(self, id: int, title: str) -> None:
 
         for win in self.windows:
             if win.id == id:
