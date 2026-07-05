@@ -19,6 +19,7 @@ class LockScreen(Surface):
         self.comm.register("lockscreen", {
             "show": self.show_,
             "refresh_size": self.refresh_size,
+            "is_visible": self.is_visible
         })
 
         self.mlayout = QHBoxLayout(self)
@@ -141,6 +142,10 @@ class LockScreen(Surface):
 
         self.setFixedSize(self.parent.size())
         self.move(0, 0)
+
+    def is_visible(self) -> bool:
+
+        return self.isVisible()
 
     def resizeEvent(self, event) -> None:
         self.powerbtn.move(
