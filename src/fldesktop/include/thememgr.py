@@ -92,40 +92,42 @@ STYLESHEET = """
               }
 """
 
-BREEZE_DARK_CS = {
-    "Window": "#2a2e32",
-    "WindowText": "#fcfcfc",
-    "Base": "#1b1e20",
-    "AlternateBase": "#232629",
-    "ToolTipBase": "#31363b",
-    "ToolTipText": "#fcfcfc",
-    "PlaceholderText": "#a1a9b1",
-    "Text": "#fcfcfc",
-    "Button": "#31363b",
-    "ButtonText": "#fcfcfc",
+FLUORITE_DARK_CS = {
+    "Window": "#232629",
+    "WindowText": "#f2f4f7",
+    "Base": "#2a2e32",
+    "AlternateBase": "#30353a",
+    "ToolTipBase": "#2f3438",
+    "ToolTipText": "#f2f4f7",
+    "PlaceholderText": "#9aa3ab",
+    "Text": "#f2f4f7",
+    "Button": "#2a2e32",
+    "ButtonText": "#f2f4f7",
     "BrightText": "#ffffff",
-    "Highlight": "#3daee9",
-    "HighlightedText": "#fcfcfc",
-    "Light": "#474d54",
-    "Midlight": "#3a4045",
-    "Dark": "#141618",
-    "Mid": "#24282b",
-    "Shadow": "#0f1012"
+    "Highlight": "#4a86e8",
+    "HighlightedText": "#ffffff",
+    "Light": "#34393e",
+    "Midlight": "#2f3438",
+    "Dark": "#181b1f",
+    "Mid": "#555b61",
+    "Shadow": "#0d0f12",
+    "Link": "#2980b9",
+    "LinkVisited": "#9b59b6"
 }
 
-BREEZE_LIGHT_CS = {
-    "Window": "#eff0f1",
-    "WindowText": "#232629",
+FLUORITE_LIGHT_CS = {
+    "Window": "#f6f7f8",
+    "WindowText": "#1e232a",
     "Base": "#ffffff",
-    "AlternateBase": "#f7f7f7",
+    "AlternateBase": "#eef1f4",
     "ToolTipBase": "#f7f7f7",
-    "ToolTipText": "#232629",
+    "ToolTipText": "#1e232a",
     "PlaceholderText": "#707d8a",
-    "Text": "#232629",
+    "Text": "#1e232a",
     "Button": "#fcfcfc",
-    "ButtonText": "#232629",
+    "ButtonText": "#1e232a",
     "BrightText": "#ffffff",
-    "Highlight": "#3daee9",
+    "Highlight": "#4a86e8",
     "HighlightedText": "#ffffff",
     "Light": "#ffffff",
     "Midlight": "#f6f7f7",
@@ -136,10 +138,23 @@ BREEZE_LIGHT_CS = {
     "LinkVisited": "#9b59b6"
 }
 
+STD_COLORS = {
+    "red": "#D95C5C",
+    "orange": "#E89A4A",
+    "yellow": "#E0B84D",
+    "green": "#43B77A",
+    "teal": "#5AA7A2",
+    "blue": "#4A86E8",
+    "indigo": "#6673C6",
+    "purple": "#9575CD",
+    "pink": "#CB6A9E",
+    "cyan": "#56A8D8"
+}
+
 COLORSCHEMES = {
-    "dark": (BREEZE_DARK_CS, "breeze-dark"),
-    "light": (BREEZE_LIGHT_CS, "breeze-light"),
-    "neutral": (BREEZE_DARK_CS, "breeze-dark")
+    "dark": (FLUORITE_DARK_CS, "breeze-dark"),
+    "neutral": (FLUORITE_DARK_CS, "breeze-dark"),
+    "light": (FLUORITE_LIGHT_CS, "breeze-light")
 }
 
 SURFACE_PRESETS = {
@@ -162,6 +177,13 @@ class ThemingManager:
     def __init__(self, app, comm):
         self.app = app
         self.comm = comm
+
+        self.comm.register(
+            "thememgr",
+            {
+                "stdcolors": self.get_stdcolors
+            }
+        )
         
         self.comm.subscribe("reload_config", self.setup_theme)
 
@@ -189,3 +211,17 @@ class ThemingManager:
         QIcon.setThemeName(cs[1])
 
         self.app.setStyleSheet(STYLESHEET)
+
+    def get_stdcolors(self):
+
+        theme = self.comm.request("cfgmgr", "get", "theme")
+
+        cs = COLORSCHEMES[theme] if theme in COLORSCHEMES \
+          else COLORSCHEMES["neutral"]
+
+        colors = STD_COLORS
+        colors["fg"] = cs[0]["Text"]
+        colors["bg"] = cs[0]["Base"]
+        colors["accent"] = STD_COLORS["blue"]
+
+        return colors

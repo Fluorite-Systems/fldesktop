@@ -1,3 +1,4 @@
+from PySide6.QtGui import QIcon
 from PySide6.QtCore import QProcess
 from pathlib import Path
 import subprocess
@@ -13,6 +14,7 @@ class Package:
         self.name = ""
         self.generic_name = {}
         self.version = ""
+        self.icon = QIcon()
         self.search = False
         self.executable = False
         self.path = path
@@ -48,6 +50,9 @@ class Package:
             self.search = True
         if "main" in d:
             self.executable = True
+        if "icon.fvgi" in d:
+            with open(self.mount_path / "icon.fvgi") as f:
+                self.icon = f.read()
 
     def mount(self):
         "Mount app squashfs"
