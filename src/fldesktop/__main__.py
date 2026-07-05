@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QApplication
 from fldesktop.include import (communicator, desktop, dialogs,
                      thememgr, pkgmgr, lockscreen, os_manager,
                      configmgr, compositor, search, wm, loginmgr,
-                     localemgr)
+                     localemgr, notifications, iconmgr)
 from fldesktop.include.compositor.clientmgr import ClientManager
 from fldesktop.include.widgets.surface import SurfaceManager
 from fldesktop.include.input import InputManager
@@ -42,6 +42,8 @@ class Core:
         # Setup theming
         self.theming = thememgr.ThemingManager(self.app, self.comm)
 
+        self.iconmgr = iconmgr.IconManager(self.comm)
+
         self.surfacemgr = SurfaceManager(self.comm)
 
         # Init the desktop
@@ -53,6 +55,8 @@ class Core:
 
         self.dialogmgr = dialogs.DialogManager(self.desktop, self.comm)
 
+        self.notifymgr = notifications.NotificationManager(self.comm)
+
         # Init appserver
         self.clientmgr = ClientManager(self.comm)
         
@@ -62,6 +66,8 @@ class Core:
 
         self.lockscreen.show_()
         self.comm.send("fade_effect", "fadein")
+
+        #self.comm.send("notifymgr", "notify", "system", "hello")
 
         # Finally exec the app
         self.app.exec()
