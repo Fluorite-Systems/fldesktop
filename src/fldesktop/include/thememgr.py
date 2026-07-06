@@ -40,19 +40,20 @@ STYLESHEET = """
                 background-color: #00d2ff
               }
 
-              QPushButton#flatbtn
+              QToolButton#flatbtn
               {
                 border: 1;
-                border-radius: 13;
                 background-color: rgba(0, 0, 0, 0);
+                padding: 0px;
+                margin: 0px;
               }
 
-              QPushButton#flatbtn::hover
+              QToolButton#flatbtn::hover
               {
                 background-color: rgba(255, 255, 255, 50);
               }
 
-              QPushButton#flatbtn::pressed
+              QToolButton#flatbtn::pressed
               {
                 background-color: rgba(0, 0, 0, 100);
               }

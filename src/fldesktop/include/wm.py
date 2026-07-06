@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout,
-                               QLabel, QPushButton) 
+                               QLabel, QToolButton) 
 from PySide6.QtCore import Qt, QPoint, QSize, Signal
 from PySide6.QtGui import QIcon
 
@@ -74,9 +74,15 @@ class Window(Surface):
         # Title widgets
         self.icon = QLabel(pixmap = icon.pixmap(QSize(24, 244)))
         self.title = QLabel(self.name)
-        self.iconify_btn = QPushButton(icon=QIcon.fromTheme("window-minimize"))
-        self.maximize_btn = QPushButton(icon=QIcon.fromTheme("window-maximize"))
-        self.close_btn = QPushButton(icon=QIcon.fromTheme("window-close"))
+        self.iconify_btn = QToolButton(
+            icon=self.comm.request("iconmgr", "get", "window-minimize")
+        )
+        self.maximize_btn = QToolButton(
+            icon=self.comm.request("iconmgr", "get", "window-maximize")
+        )
+        self.close_btn = QToolButton(
+            icon=self.comm.request("iconmgr", "get", "window-close")
+        )
         self.iconify_btn.clicked.connect(self.toggle_minimized)
         self.maximize_btn.clicked.connect(self.toggle_maximized)
         self.close_btn.clicked.connect(self.close_window)
@@ -90,7 +96,6 @@ class Window(Surface):
         for i in [self.iconify_btn, self.maximize_btn, self.close_btn]:
             self.tlayout.addWidget(i)
             i.setObjectName("flatbtn")
-            i.setFlat(True)
             i.setFixedSize(24, 24)
 
         self.layout.addWidget(self.widget)
@@ -170,13 +175,18 @@ class Window(Surface):
             self.prev_pos_mx = self.pos()
             self.prev_size_mx = self.size()
             self.animate_maximize()
-            self.maximize_btn.setIcon(QIcon.fromTheme("window-restore"))
+            self.maximize_btn.setIcon(
+                self.comm.request("iconmgr", "get", "window-restore")
+            )
 
             self.maximized = True
         else:
             self.animate_unmaximize()
 
-            self.maximize_btn.setIcon(QIcon.fromTheme("window-maximize"))
+            self.maximize_btn.setIcon(
+                self.comm.request("iconmgr", "get", "window-maximize")
+            )
+
 
             self.maximized = False
         
@@ -435,7 +445,7 @@ class WindowManager:
     
     def set_window_menu(self, data: tuple) -> None:
 
-        btn = QPushButton()
+        btn = QToolButton()
         btn.setObjectName("flatbtn")
         btn.setFixedSize(24, 24)
         btn.setIcon(QIcon.fromTheme("application-menu-symbolic"))

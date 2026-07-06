@@ -14,7 +14,7 @@ class SearchBtn(QPushButton):
         self.comm = comm
         
         self.setText(self.comm.request("localemgr", "tr", "Search"))
-        self.setIcon(QIcon.fromTheme("search-symbolic"))
+        self.setIcon(self.comm.request("iconmgr", "get", "search"))
 
         self.search_ui = SearchUI(self.comm)
 

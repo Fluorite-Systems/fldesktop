@@ -100,7 +100,7 @@ class Parser:
 
         mul = round(size / 16)
 
-        pixmap = QPixmap(size + mul * 2, size)
+        pixmap = QPixmap(size, size)
         pixmap.fill(Qt.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
@@ -186,8 +186,15 @@ class IconManager:
 
         self.parser = Parser(self.comm)
 
+        self.load_std_icons()
+
     def get_icon(self, name: str):
-        ...
+        
+        if name in self.icons:
+            return self.icons[name]
+        else:
+            logging.warning(f"Requested icon that does not exists: {name}")
+            return QIcon()
 
     def load_icon(self, path: Path) -> QIcon:
 
@@ -211,3 +218,28 @@ class IconManager:
         )
 
         return icon
+
+    def load_std_icons(self):
+
+        self.icons = {}
+
+        path = Path(__file__).resolve().parent / "assets" / "icons"
+
+        for i in path.iterdir():
+            if i.suffix == ".fvgi":
+
+                try:
+                
+                    with open(i) as f:
+                        icon = self.parser.iconify(
+                            self.parser.rectify(
+                                self.parser.parse(
+                                    f.read()
+                                )
+                            )
+                        )
+                except Exception as e:
+                    logging.warning(f"Failed to load icon {i.stem}: {e}")
+                    icon = QIcon()
+
+                self.icons[i.stem] = icon
