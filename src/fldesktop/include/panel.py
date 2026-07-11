@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import (QLabel, QHBoxLayout, QPushButton)
 from PySide6.QtCore import Qt, QSize
 
-from fldesktop.include.quickcontrols import QuickControls, calendar
+from fldesktop.include.quickcontrols import (QuickControls, calendar,
+                                             kbindicator)
 from fldesktop.include.widgets.surface import Surface
 
 
@@ -30,6 +31,9 @@ class Panel(Surface):
         self.layout.addLayout(self.minimized_layout)
 
         self.layout.addStretch()
+
+        self.ki = kbindicator.KeyboardIndicator(self.comm)
+        self.layout.addWidget(self.ki.btn)
 
         self.cal = calendar.Calendar(self.comm)
         self.layout.addWidget(self.cal.btn)

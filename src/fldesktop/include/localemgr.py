@@ -42,4 +42,7 @@ class LocaleManager:
         return base
 
     def get_kb_locales(self) -> list:
-        ...
+        
+        l = self.comm.request("cfgmgr", "get", "kb_locales")
+
+        return l if l else ["en_US"]
