@@ -5,7 +5,8 @@ import json
 FALLBACK_CONFIG = {
     "background": "/usr/share/wallpapers/Earth.png",
     "theme": "dark",
-    "language": "en_US"
+    "language": "en_US",
+    "kb_locales": ["us"]
 }
 
 
