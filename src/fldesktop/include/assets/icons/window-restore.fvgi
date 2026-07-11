@@ -1,0 +1,4 @@
+line x1=2 y1=8 x2=6 y2=8  width=25
+line x1=6 y1=8 x2=6 y2=12 width=25
+line x1=8 y1=2 x2=8 y2=6 width=25
+line x1=8 y1=6 x2=12 y2=6 width=25
