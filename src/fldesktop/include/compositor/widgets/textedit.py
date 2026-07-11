@@ -15,11 +15,16 @@ class TextEdit(Widget):
             "disable": lambda _: self.qwidget.setEnabled(False)
         }
 
+        self.qwidget.textChanged.connect(
+            lambda: self._runner.event(
+                name=self.name, type="textedit_text_changed"
+            )
+        )
+
         self._setup()
 
-    def get_text(self, _) -> str:
+    def get_text(self) -> str:
         return self.qwidget.toPlainText()
 
-    def set_text(self, args) -> None:
-        text = args["text"] if "text" in args else ""
+    def set_text(self, text: str) -> None:
         self.qwidget.setPlainText(text)

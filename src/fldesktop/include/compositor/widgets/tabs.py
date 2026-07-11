@@ -1,6 +1,6 @@
-from PySide6.QtWidgets import QTabWidget
+from PySide6.QtWidgets import QTabWidget, QWidget
 from fldesktop.include.compositor.widgets.base import Widget
-
+from fldesktop.include.compositor.widgets.vlayout import VLayout
 
 class Tabs(Widget):
     def __init__(self, runner, name, props, parent):
@@ -10,16 +10,32 @@ class Tabs(Widget):
 
         self.tabs = []
 
+        self.callables = {
+            "add_tab": self.add_tab
+        }
+
         self._setup()
+
+        self.qwidget.setTabsClosable(True)
+        self.qwidget.tabCloseRequested.connect(self.tab_close_handler)
 
         if "tabs" in self.props:
             for i in self.props["tabs"]:
                 name = self.props["tabs"][i]["title"] if "title" in self.props["tabs"][i] else str(i)
-                p = Container(self._runner, str(i), self.props["tabs"][i], {}, self)
+                p = VLayout(self._runner, str(i), {}, None)
+                p._setup()
                 self._runner.parser.build_tree_from_objects(self.props["tabs"][i]["children"], p)
-                self.qwidget.addTab(p.qwidget, name)
+                w = QWidget()
+                w.setLayout(p.qlayout)
+                self.qwidget.addTab(w, name)
 
-    def add_tab(self, name: str, props: dict):
-        p = Container(self._runner, name, props, {}, self)
-        self._runner.parser.build_tree_from_objects(props["children"], p)
-        self.qwidget.addTab(p.qwidget, props["title"])
+    def add_tab(self, data: dict):
+        p = VLayout(self._runner, str(data["title"]), {}, None)
+        p._setup()
+        self._runner.parser.build_tree_from_objects(data["children"], p)
+        w = QWidget()
+        w.setLayout(p.qlayout)
+        self.qwidget.addTab(w, str(data["title"]))
+
+    def tab_close_handler(self, index):
+        widget = self.qwidget.widget(index)

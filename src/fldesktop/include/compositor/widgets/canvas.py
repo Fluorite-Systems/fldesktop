@@ -1,3 +1,7 @@
+from PySide6.QtWidgets import QWidget
+from PySide6.QtGui import QPixmap, QPainter, QColor, QPen, QFont
+from PySide6.QtCore import Qt, QPoint
+
 from fldesktop.include.compositor.widgets.base import Widget
 
 
@@ -5,80 +9,105 @@ class Canvas(Widget):
     def __init__(self, runner, name, props, parent):
         super().__init__(runner, name, props, parent)
         self.type = "canvas"
+        self.qwidget = QWidget()
 
-        # Создаём растровый буфер
-        self.pixmap = QPixmap(300, 300)
-        self.pixmap.fill(Qt.transparent)
+        self.callables = {
+            "resize": self.resize,
+            "fill": self.fill,
+            "clear": self.clear,
+            "draw_line": self.line,
+            "draw_rect": self.rect,
+            "draw_circle": self.circle,
+            #"draw_bezier": self.bezier,
+            "draw_text": self.text
+        }
         
-        # Настройки по умолчанию
-        self.pen = QPen(Qt.black, 2, Qt.SolidLine)
-        self.brush = QBrush(Qt.NoBrush)
-        self.bg_color = Qt.transparent
-
         self._setup()
-    
-    def setPen(self, pen):
-        """Установить перо для последующих операций."""
-        self.pen = pen
+
+        self.pixmap = QPixmap(self.qwidget.width(), self.qwidget.height())
+        self.pixmap.fill(Qt.transparent)
+
+        self.qwidget.paintEvent = self.paintEvent
+
+    def resize(self, width: int, height: int):
         
-    def setBrush(self, brush):
-        """Установить кисть для заполнения."""
-        self.brush = brush
-        
-    def setBackgroundColor(self, color):
-        """Изменить цвет фона (перезаполняет pixmap)."""
-        self.bg_color = color
-        self.pixmap.fill(color)
-        self.update()
+        np = QPixmap(width, height)
+        ...
+        self.pixmap = np
+
+    def fill(self, color: str):
+        self.pixmap.fill(QColor(color))
+        self.qwidget.update()
         
     def clear(self):
-        """Очистить холст (заполнить цветом фона)."""
-        self.pixmap.fill(self.bg_color)
-        self.update()
+        self.pixmap.fill(Qt.transparent)
+        self.qwidget.update()
         
-    def rect(self, x, y, width, height, pen=None, brush=None):
-        """Нарисовать прямоугольник."""
+    def rect(self, x: int, y: int, w: int, h: int,
+             outline: str = "#000000", fill: str = "#00000000", 
+             width: int = 15):
+
         painter = QPainter(self.pixmap)
-        painter.setPen(pen or self.pen)
-        painter.setBrush(brush or self.brush)
-        painter.drawRect(x, y, width, height)
+        painter.setPen(QPen(QColor(outline), width))
+        painter.setBrush(QColor(fill))
+        painter.drawRect(x, y, w, h)
         painter.end()
-        self.update()
+        self.qwidget.update()
         
-    def line(self, x1, y1, x2, y2, pen=None):
-        """Нарисовать линию."""
+    def line(self, x1: int, y1: int, x2: int, y2: int,
+             color: str = "#000000", width: int = 15):
+        
         painter = QPainter(self.pixmap)
-        painter.setPen(pen or self.pen)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(QPen(QColor(color), width))
         painter.drawLine(x1, y1, x2, y2)
         painter.end()
-        self.update()
+        self.qwidget.update()
         
-    def circle(self, x, y, radius, pen=None, brush=None):
-        """Нарисовать окружность (центр в x,y, радиус radius)."""
+    def circle(self, x: int, y: int, radius: int,
+               outline: str = "#000000", fill: str = "#00000000", 
+               width: int = 15):
+
         painter = QPainter(self.pixmap)
-        painter.setPen(pen or self.pen)
-        painter.setBrush(brush or self.brush)
-        # drawEllipse принимает верхний левый угол и размеры
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(QPen(QColor(outline), width))
+        painter.setBrush(QColor(fill))
         painter.drawEllipse(x - radius, y - radius, 2 * radius, 2 * radius)
         painter.end()
-        self.update()
+        self.qwidget.update()
         
     def bezier(self, p1, p2, p3, p4, pen=None):
-        """Нарисовать кубическую кривую Безье по 4 точкам."""
         if isinstance(p1, tuple): p1 = QPointF(*p1)
         if isinstance(p2, tuple): p2 = QPointF(*p2)
         if isinstance(p3, tuple): p3 = QPointF(*p3)
         if isinstance(p4, tuple): p4 = QPointF(*p4)
             
         painter = QPainter(self.pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setPen(pen or self.pen)
         path = QPainterPath()
         path.moveTo(p1)
         path.cubicTo(p2, p3, p4)
         painter.drawPath(path)
         painter.end()
-        self.update()
+        self.qwidget.update()
+
+    def text(self, text: str, x: int, y: int, size: int, 
+             color: str = "white", rotation: int = 0):
+
+        painter = QPainter(self.pixmap)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+        painter.setPen(QColor(color))
+        painter.setFont(QFont("Noto Sans", size))
+
+        if rotation:
+            painter.translate(x, y)
+            painter.rotate(rotation)
+
+        painter.drawText(x, y, text)
+        painter.end()
+        self.qwidget.update()
         
     def paintEvent(self, event):
-        painter = QPainter(self)
+        painter = QPainter(self.qwidget)
         painter.drawPixmap(0, 0, self.pixmap)
