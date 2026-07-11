@@ -86,9 +86,9 @@ class Client:
                 if data["name"] in self.widgets:
                     w = self.widgets[data["name"]]
                     if data["method"] in w.callables:
-                        r = w.callables[data["method"]](data["args"])
+                        r = w.callables[data["method"]](**data["args"])
 
-                        if r:
+                        if r or str(data["method"]).startswith("get"):
                             self.callback(
                                 json.dumps({"status": "ok", "reply": r})
                             )
