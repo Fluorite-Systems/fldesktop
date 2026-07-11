@@ -24,20 +24,22 @@ STYLESHEET = """
                 padding: 1;
               }
 
-              QWidget#traybtn
+              QPushButton#traybtn
               {
-                background-color: transparent;
+                border: 1;
+                background-color: rgba(0, 0, 0, 0);
+                padding: 5px;
+                margin: 0px;
               }
 
-              QWidget#traybtn::hover
+              QPushButton#traybtn::hover
               {
-                background-color: rgba(255, 255, 255, 150);
-                border-radius: 1;
+                background-color: rgba(255, 255, 255, 50);
               }
 
-              QWidget#traybtn::pressed
+              QPushButton#traybtn::pressed
               {
-                background-color: #00d2ff
+                background-color: rgba(255, 255, 255, 25);
               }
 
               QToolButton#flatbtn

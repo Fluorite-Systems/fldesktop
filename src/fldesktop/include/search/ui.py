@@ -15,6 +15,7 @@ class SearchBtn(QPushButton):
         
         self.setText(self.comm.request("localemgr", "tr", "Search"))
         self.setIcon(self.comm.request("iconmgr", "get", "search"))
+        self.setObjectName("traybtn")
 
         self.search_ui = SearchUI(self.comm)
 

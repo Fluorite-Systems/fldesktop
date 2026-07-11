@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import (QPushButton, QVBoxLayout,
-                               QWidget, QCalendarWidget)
+                               QWidget, QCalendarWidget,
+                               QSizePolicy)
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QTimer
 
@@ -27,8 +28,8 @@ class Calendar:
     def __init__(self, comm):
         
         self.btn = QPushButton()
-        self.btn.setFixedSize(50, 26)
-        self.btn.setFlat(True)
+        self.btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.btn.setObjectName("traybtn")
 
         self.w = CalendarWidget(comm, self.btn)
 

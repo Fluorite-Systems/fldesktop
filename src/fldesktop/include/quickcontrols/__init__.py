@@ -18,6 +18,7 @@ class Button(QPushButton):
         )
 
         self.setFlat(True)
+        self.setObjectName("traybtn")
 
         self.layout = QHBoxLayout(self)
         self.layout.setSpacing(2)
