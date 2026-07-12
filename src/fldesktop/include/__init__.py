@@ -14,6 +14,11 @@ class QApp:
 
 class PostInit:
     def __init__(self, comm):
-        comm.send("lockscreen", "show")
-        comm.send("fade_effect", "fadein") 
+        self.comm = comm
+
+        self.comm.send("lockscreen", "show")
+        self.comm.send("fade_effect", "fadein")
+
+    def srv_cleanup(self):
+        self.comm.send("fade_effect", "fadeout")
 

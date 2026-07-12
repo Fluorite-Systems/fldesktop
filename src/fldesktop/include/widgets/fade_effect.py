@@ -1,5 +1,6 @@
-from PySide6.QtWidgets import QWidget, QGraphicsOpacityEffect, QLabel
-from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
+from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QEventLoop, Property
+from PySide6.QtGui import QPalette, QColor
 
 
 class FadeEffect(QWidget):
@@ -13,43 +14,60 @@ class FadeEffect(QWidget):
             }
         )
 
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet("background-color: black")
+        self.setAutoFillBackground(True)
 
-        self.effect = QGraphicsOpacityEffect(self)
-        self.effect.setOpacity(1.0)
-        self.setGraphicsEffect(self.effect)
+        pal = self.palette()
+        pal.setColor(QPalette.ColorRole.Window, QColor(0, 0, 0, 0))
+        self.setPalette(pal)
 
-        self.fi_anim = QPropertyAnimation(self.effect, b"opacity")
-        self.fi_anim.setStartValue(1.0)
-        self.fi_anim.setEndValue(0.0)
+        self.fi_anim = QPropertyAnimation(self, b"currentColor")
         self.fi_anim.setDuration(500)
+        self.fi_anim.setStartValue(QColor(0, 0, 0, 255))
+        self.fi_anim.setEndValue(QColor(0, 0, 0, 0))
+
         self.fi_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
         self.fi_anim.finished.connect(self.hide)
 
-        self.fo_anim = QPropertyAnimation(self.effect, b"opacity")
-        self.fo_anim.setStartValue(0.0)
-        self.fo_anim.setEndValue(1.0)
-        self.fi_anim.setDuration(500)
-        self.fi_anim.setEasingCurve(QEasingCurve.Type.InCubic)
-    
-    def fadein(self):
+        self.fo_anim = QPropertyAnimation(self, b"currentColor")
+        self.fo_anim.setDuration(500)
+        self.fo_anim.setStartValue(QColor(0, 0, 0, 0))
+        self.fo_anim.setEndValue(QColor(0, 0, 0, 255))
+
+        self.fo_anim.setEasingCurve(QEasingCurve.Type.InCubic)
+
+        self.loop = QEventLoop()
+        self.fo_anim.finished.connect(self.loop.exit)
+
+    @Property(QColor)
+    def currentColor(self) -> QColor:
+        return self.palette().color(QPalette.ColorRole.Window)
+
+    @currentColor.setter
+    def currentColor(self, color: QColor):
+        pal = self.palette()
+        pal.setColor(QPalette.ColorRole.Window, color)
+        self.setPalette(pal)
+
+    def _prepare_geometry(self) -> None:
+        "Prepare overlay geometry based on the desktop size"
+
         d = self.comm.request("desktop", "get_instance")
         self.setFixedSize(d.size())
         self.move(0, 0)
-
         self.show()
         self.raise_()
+
+    def fadein(self) -> None:
+        "Fade in effect"
+
+        self._prepare_geometry()
+
         self.fi_anim.start()
 
-    def fadeout(self, callback = None):
+    def fadeout(self) -> None:
+        "Fade out effect"
 
-        if callback:
-            self.fo_anim.finished.connect(callback)
-        
-        d = self.comm.request("desktop", "get_instance")
-        self.setFixedSize(d.size())
+        self._prepare_geometry()
 
-        self.show()
-        self.raise_()
         self.fo_anim.start()
+        self.loop.exec(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
