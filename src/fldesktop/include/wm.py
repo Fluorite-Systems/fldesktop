@@ -361,10 +361,9 @@ class Window(Surface):
 
 
 class WindowManager:
-    def __init__(self, comm, desktop):
+    def __init__(self, comm):
 
         self.comm = comm
-        self.desktop = desktop
         self.comm.register("wm", {
             "create_window": self.create_window,
             "close_window": self.close_window,
@@ -395,7 +394,8 @@ class WindowManager:
 
         win = Window(
             params["widget"], params["name"], params["package"],
-            self.desktop, self.curid, self.comm, params["icon"]
+            self.comm.request("desktop", "get_instance"),
+            self.curid, self.comm, params["icon"]
         )
         self.windows.append(win)
 

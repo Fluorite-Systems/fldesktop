@@ -215,3 +215,8 @@ class AppServer:
             logging.critical(f"Failed to delete socket file: {e}")
 
         logging.info("Appserver stopped")
+
+    def srv_cleanup(self):
+        "Service cleanup method for Init"
+
+        self.stop()

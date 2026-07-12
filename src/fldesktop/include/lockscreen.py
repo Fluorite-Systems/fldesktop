@@ -4,13 +4,13 @@ from PySide6.QtGui import (QIcon, QPixmap, QFont,
                            QShortcut, QKeySequence)
 from PySide6.QtCore import (Qt, QTimer, QTime, QDate, QLocale, QPoint)
 from fldesktop.include.widgets.surface import Surface
-import os
-
-import pam
 
 
 class LockScreen(Surface):
-    def __init__(self, parent: QWidget, comm) -> None:
+    def __init__(self, comm) -> None:
+
+        parent = comm.request("desktop", "get_instance")
+        
         super().__init__(comm, parent, 5)
 
         self.parent = parent

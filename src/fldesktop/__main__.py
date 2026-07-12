@@ -8,12 +8,30 @@ from fldesktop.include.compositor.clientmgr import ClientManager
 from fldesktop.include.widgets.surface import SurfaceManager
 from fldesktop.include.input import InputManager
 
+from fldesktop.include.init import Init
+
 import logging
+
+
+VERSION = "raw"
 
 
 class Core:
     def __init__(self) -> None:
-        "There we will do desktop initialization"
+        "Basic initialization"
+
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s: %(filename)s: %(levelname)s: %(message)s"
+        )
+
+        logging.info(f"Welcome to fldesktop, version: {VERSION}")
+
+        self.init = Init()
+        self.init.run()
+
+    def __init__bk(self) -> None:
+        "There we will do desktop initialization. Backup."
 
         # Init the core first
         logging.basicConfig(
@@ -39,8 +57,10 @@ class Core:
 
         self.loginmgr = loginmgr.LoginManager(self.comm)
 
+        self.inputmgr = InputManager(self.comm)
+
         # Setup theming
-        self.theming = thememgr.ThemingManager(self.app, self.comm)
+        self.theming = thememgr.ThemingManager(self.comm)
 
         self.iconmgr = iconmgr.IconManager(self.comm)
 
@@ -49,11 +69,11 @@ class Core:
         # Init the desktop
         self.desktop = desktop.Desktop(self.comm)
 
-        self.wm = wm.WindowManager(self.comm, self.desktop)
+        self.wm = wm.WindowManager(self.comm)
 
-        self.lockscreen = lockscreen.LockScreen(self.desktop, self.comm)
+        self.lockscreen = lockscreen.LockScreen(self.comm)
 
-        self.dialogmgr = dialogs.DialogManager(self.desktop, self.comm)
+        self.dialogmgr = dialogs.DialogManager(self.comm)
 
         self.notifymgr = notifications.NotificationManager(self.comm)
 
@@ -67,7 +87,7 @@ class Core:
         self.lockscreen.show_()
         self.comm.send("fade_effect", "fadein")
 
-        #self.comm.send("notifymgr", "notify", "system", "hello")
+        self.comm.send("notifymgr", "notify", "system", "hello")
 
         # Finally exec the app
         self.app.exec()

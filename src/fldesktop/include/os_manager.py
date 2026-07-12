@@ -62,9 +62,11 @@ class OSManager:
     
     def logout(self) -> None:
         "Log out"
-        self.prepare_logout()
-        logging.info("Logging out, goodbye.")
-        QApplication.instance().quit()
+
+        self.comm.send("init", "cleanup")
+        #self.prepare_logout()
+        #logging.info("Logging out, goodbye.")
+        #QApplication.instance().quit()
     
     def prepare_logout(self) -> None:
         "Prepare for logout"

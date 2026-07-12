@@ -1,4 +1,5 @@
 from PySide6.QtGui import QPalette, QColor, QIcon, QFont
+from PySide6.QtWidgets import QApplication
 
 STYLESHEET = """
               QWidget#surface
@@ -177,8 +178,8 @@ SURFACE_PRESETS = {
 
 
 class ThemingManager:
-    def __init__(self, app, comm):
-        self.app = app
+    def __init__(self, comm):
+
         self.comm = comm
 
         self.comm.register(
@@ -190,9 +191,9 @@ class ThemingManager:
         
         self.comm.subscribe("reload_config", self.setup_theme)
 
-        app.setStyle("oxygen")
+        QApplication.instance().setStyle("oxygen")
 
-        app.setFont(QFont("Noto Sans", 10))
+        QApplication.instance().setFont(QFont("Noto Sans", 10))
 
         self.setup_theme()
 
@@ -209,11 +210,11 @@ class ThemingManager:
             palette.setColor(getattr(QPalette.ColorRole, i), 
                              QColor(cs[0][i]))
 
-        self.app.setPalette(palette)
+        QApplication.instance().setPalette(palette)
 
         QIcon.setThemeName(cs[1])
 
-        self.app.setStyleSheet(STYLESHEET)
+        QApplication.instance().setStyleSheet(STYLESHEET)
 
     def get_stdcolors(self):
 

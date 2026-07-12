@@ -107,9 +107,10 @@ class MessageBox(QWidget):
 
 
 class DialogManager:
-    def __init__(self, desktop, comm):
+    def __init__(self, comm):
+        
         self.comm = comm
-        self.desktop = desktop
+        self.desktop = self.comm.request("desktkop", "get_instance")
 
         self.comm.register("dialogmgr", {
             "notification": self.notify,

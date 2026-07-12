@@ -146,3 +146,9 @@ class PackageManager:
         for i in self.loaded_packages.values():
             for proc in i.procs:
                 proc.kill()
+
+    def srv_cleanup(self):
+        "Service cleanup method for Init"
+
+        self.killall()
+        self.unmount()
