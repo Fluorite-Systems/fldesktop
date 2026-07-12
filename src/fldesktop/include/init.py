@@ -121,6 +121,8 @@ class Service:
         self.name = name
         self.comm = comm
 
+        self.started = False
+
         for i in DEFAULTS:
             if i[0] in params:
                 setattr(self, i[0], params[i[0]])
@@ -142,13 +144,19 @@ class Service:
 
             if self.importance == "critical":
                 self.comm.send("init", "failure")
+        else:
+            self.started = True
 
     def cleanup(self) -> None:
         "Cleanup service (if supported by object)"
 
-        if hasattr(self.object, "srv_cleanup"):
+        if hasattr(self.object, "srv_cleanup") and self.started:
             logging.info(f"Performing cleanup for service {self.name}")
-            self.object.srv_cleanup()
+
+            try:
+                self.object.srv_cleanup()
+            except Exception as e:
+                logging.info(f"Cleanup for {self.name} failed: {e}")
 
 
 class Init:
