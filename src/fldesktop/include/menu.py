@@ -1,25 +1,37 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout
+from PySide6.QtCore import Qt, QObject, QEvent
 
 from fldesktop.include.widgets.surface import Surface
 from fldesktop.include.widgets.animation import Animation
 
 
-class Overlay(QWidget):
-    def __init__(self, desktop, menu: QWidget):
-        super().__init__(desktop)
-
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, 
-                        False)
-        
-        self.setFixedSize(desktop.size())
+class EventFilter(QObject):
+    def __init__(self, menu):
+        super().__init__()
 
         self.menu = menu
 
-    def mousePressEvent(self, event):
-        self.menu.close_menu()
-        return super().mousePressEvent(event)
+        QApplication.instance().installEventFilter(self)
 
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.MouseButtonPress:
+            if self.menu.isVisible():
+
+                click_point = event.globalPosition().toPoint()
+
+                global_top_left = self.menu.mapToGlobal(self.menu.rect().topLeft())
+
+
+                menu_global_rect = self.menu.rect()
+                menu_global_rect.moveTopLeft(global_top_left)
+
+                if menu_global_rect.contains(click_point):
+                    return super().eventFilter(obj, event)
+                else:
+                    self.menu.close_menu()
+                    return False 
+                
+        return super().eventFilter(obj, event)
 
 
 class Menu(Surface): 
@@ -34,6 +46,8 @@ class Menu(Surface):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.addWidget(widget)
         self.setObjectName("menu")
+
+        self.filter = EventFilter(self)
 
         self.hide()
         self.lower()
@@ -51,7 +65,7 @@ class Menu(Surface):
         def show(self):
             self.show()
             self.desktop.panel.raise_()
-            self.setup_overlay()
+            #self.setup_overlay()
             self.raise_()
 
         x = int(self.anchor.x() - \
@@ -70,7 +84,7 @@ class Menu(Surface):
     def close_menu(self):
         "Close the menu with some anim"
 
-        self.overlay.close()
+        #self.overlay.close()
         self.hide()
         #self.move(self.x(), -self.height())
         
