@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QEventLoop, Property
+from PySide6.QtCore import (QPropertyAnimation, QEasingCurve,
+                            QEventLoop, Property)
 from PySide6.QtGui import QPalette, QColor
 
 

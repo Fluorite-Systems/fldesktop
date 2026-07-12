@@ -1,6 +1,4 @@
-from PySide6.QtWidgets import QApplication
 import os
-import sys
 import logging
 import subprocess
 
@@ -14,14 +12,13 @@ class OSManager:
                 "poweroff": self.os_poweroff,
                 "reboot": self.os_reboot,
                 "suspend": self.os_suspend,
-                "logout": self.logout,
-                "crash": self.crash
+                "logout": self.logout
             }
         )
 
         if not "XDG_RUNTIME_DIR" in os.environ:
             logging.fatal("XDG_RUNTIME_DIR is not specified!")
-            self.crash()
+            self.comm.send("init", "failure")
     
     def get_path(self, postfix) -> str | None:
         "Get data path (useful for testing)"
@@ -73,9 +70,4 @@ class OSManager:
         self.comm.send("fade_effect", "fadeout")
         self.comm.send("pkgmgr", "killall")
         self.comm.send("appserver", "stop")
-        self.comm.send("pkgmgr", "unmount")
-    
-    def crash(self) -> None:
-        "Something in fldesktop went really wrong"
-        logging.info("Crashing...")
-        os._exit(1)
+        self.comm.send("pkgmgr", "unmount") 

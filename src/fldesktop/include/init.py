@@ -224,6 +224,10 @@ class Init:
     def on_failure(self) -> None:
         "When a critical service crashes"
 
+        logging.critical(
+            "Something very bad had occured, cleaning and exiting..."
+        )
+
         self.cleanup()
         os._exit(1)
         
