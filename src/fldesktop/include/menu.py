@@ -19,14 +19,22 @@ class EventFilter(QObject):
 
                 click_point = event.globalPosition().toPoint()
 
-                global_top_left = self.menu.mapToGlobal(self.menu.rect().topLeft())
-
-
                 menu_global_rect = self.menu.rect()
-                menu_global_rect.moveTopLeft(global_top_left)
+                menu_global_rect.moveTopLeft(
+                    self.menu.mapToGlobal(self.menu.rect().topLeft())
+                )
+
+                anchor_global_rect = self.menu.anchor.rect()
+                anchor_global_rect.moveTopLeft(
+                    self.menu.anchor.mapToGlobal(
+                        self.menu.anchor.rect().topLeft()
+                    )
+                )
 
                 if menu_global_rect.contains(click_point):
                     return super().eventFilter(obj, event)
+                elif anchor_global_rect.contains(click_point):
+                    return False
                 else:
                     self.menu.close_menu()
                     return False 
@@ -39,6 +47,7 @@ class Menu(Surface):
         super().__init__(comm, desktop)
         self.desktop = desktop
         self.anchor = anchor
+        self.active = False
 
         self.setFixedSize(widget.size())
 
@@ -52,21 +61,23 @@ class Menu(Surface):
         self.hide()
         self.lower()
 
-    def setup_overlay(self):
-        "Creates overlay"
-
-        self.overlay = Overlay(self.desktop, self)
-        self.overlay.show()
-        self.overlay.raise_()
-
     def open(self):
         "Opens menu with some anim"
 
-        def show(self):
-            self.show()
-            self.desktop.panel.raise_()
-            #self.setup_overlay()
-            self.raise_()
+        def show(self): 
+            if self.comm.request("lockscreen", "is_visible"):
+                self.comm.send("lockscreen", "raise")
+                self.show()
+                self.raise_()
+                self.comm.send("lockscreen", "raise_qc_btn")
+            else:
+                self.show()
+                self.desktop.panel.raise_()
+                self.raise_()
+
+        if self.isVisible():
+            self.close_menu()
+            return
 
         x = int(self.anchor.x() - \
                     (self.size().width() - self.anchor.size().width()) / 2)
@@ -84,9 +95,7 @@ class Menu(Surface):
     def close_menu(self):
         "Close the menu with some anim"
 
-        #self.overlay.close()
-        self.hide()
-        #self.move(self.x(), -self.height())
+        self.hide()        
         
         Animation(self.comm, self.parent(), self.grab(), "mclose",
                   {"pos": self.pos(), "size": self.size()},

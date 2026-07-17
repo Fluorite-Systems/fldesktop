@@ -19,8 +19,12 @@ class LockScreen(Surface):
         self.comm.register("lockscreen", {
             "show": self.show_,
             "refresh_size": self.refresh_size,
-            "is_visible": self.is_visible
+            "is_visible": self.is_visible,
+            "raise": self.raise_,
+            "raise_qc_btn": self.raise_qc_btn
         })
+
+        self.comm.subscribe("qc_btn_size_changed", self.refresh_size)
 
         self.mlayout = QHBoxLayout(self)
         self.layout = QVBoxLayout()
@@ -103,6 +107,8 @@ class LockScreen(Surface):
             a = self.powermenu.addAction(QIcon.fromTheme(i[1]), i[0])
             a.triggered.connect(i[2])
 
+        self.qc_btn = None
+
         self.hide()
 
         self.clock_tick()
@@ -122,9 +128,13 @@ class LockScreen(Surface):
         "Show"
 
         if self.comm.request("loginmgr", "is_available"):
+            self.qc_btn = self.comm.request("panel", "get_qc_btn")
+            self.qc_btn.setParent(self.parent)
+            self.qc_btn.show()          
             self.raise_()
             self.show()
             self.refresh_size()
+            self.qc_btn.raise_()
         else:
             ...
     
@@ -133,6 +143,8 @@ class LockScreen(Surface):
 
         if self.comm.request("loginmgr", "check_password", self.pwedit.text()): #pam.authenticate(os.getlogin(), self.pwedit.text()):
             self.hide()
+            self.comm.send("panel", "return_qc_btn")
+            self.qc_btn = None
             self.pwedit.setText(None)
         else:
             self.message.setText("Failed to unlock")
@@ -143,9 +155,17 @@ class LockScreen(Surface):
         self.setFixedSize(self.parent.size())
         self.move(0, 0)
 
+        if self.qc_btn:
+            self.qc_btn.move(self.width() - self.qc_btn.width(), 0)
+
     def is_visible(self) -> bool:
 
         return self.isVisible()
+
+    def raise_qc_btn(self) -> None:
+
+        if self.qc_btn:
+            self.qc_btn.raise_()
 
     def resizeEvent(self, event) -> None:
         self.powerbtn.move(

@@ -35,7 +35,9 @@ class Actions(QWidget):
 
         self.pwr_btn = QPushButton()
         self.pwr_btn.setFlat(True)
-        self.pwr_btn.setIcon(QIcon.fromTheme("system-shutdown-symbolic"))
+        self.pwr_btn.setIcon(
+            self.comm.request("iconmgr", "get", "shutdown")
+        )
 
         self.pwr_menu = QMenu()
         self.shutdown_act = self.pwr_menu.addAction(

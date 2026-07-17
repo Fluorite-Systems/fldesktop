@@ -25,7 +25,9 @@ class Button(QPushButton):
         self.layout.setDirection(QHBoxLayout.Direction.RightToLeft)
         self.icons = {}
 
-        self.add_icon(QIcon.fromTheme("system-shutdown-symbolic"), "shutdown")
+        self.add_icon(
+            self.comm.request("iconmgr", "get", "shutdown"), "shutdown"
+        )
     
     def add_icon(self, icon: QIcon, id: str):
         
@@ -39,6 +41,8 @@ class Button(QPushButton):
             self.icons[id].setPixmap(pm)
 
         self.refresh_size()
+
+        self.comm.emit("qc_btn_size_changed")
     
     def remove_icon(self):
         ...

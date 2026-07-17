@@ -17,7 +17,9 @@ class Panel(Surface):
 
         self.comm.register("panel", {
             "raise": self.raise_,
-            "add_minimized": self.add_minimized
+            "add_minimized": self.add_minimized,
+            "get_qc_btn": self.get_qc_btn,
+            "return_qc_btn": self.return_qc_btn
         })
 
         self.layout = QHBoxLayout(self)
@@ -63,3 +65,13 @@ class Panel(Surface):
         )
 
         self.minimized_layout.addWidget(btn)
+
+    def get_qc_btn(self) -> QPushButton:
+
+        self.layout.removeWidget(self.qc.btn)
+        return self.qc.btn
+
+    def return_qc_btn(self) -> None:
+
+        self.qc.btn.setParent(None)
+        self.layout.addWidget(self.qc.btn)
