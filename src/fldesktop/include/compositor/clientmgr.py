@@ -121,7 +121,7 @@ class Client:
 
 class ClientManager(QObject):
     new_client_s = Signal(str, str, str, Any)
-    notify_client_s = Signal(str, dict)
+    notify_client_s = Signal(str, str)
     kill_client_s = Signal(str)
 
     def __init__(self, comm):
@@ -134,9 +134,11 @@ class ClientManager(QObject):
         self.comm = comm
         self.comm.register("clientmgr", {
             "new_client": lambda n, u, p, c:
-                                        self.new_client_s.emit(n, u, p, c),
-            "notify_client": lambda u, d: self.notify_client_s.emit(u, d),
-            "kill_client": lambda u: self.kill_client_s.emit(u)
+                self.new_client_s.emit(n, u, p, c),
+            "notify_client": lambda u, d:
+                self.notify_client_s.emit(u, json.dumps(d)),
+            "kill_client": lambda u: 
+                self.kill_client_s.emit(u)
         })
 
         self.clients = {}
@@ -148,8 +150,10 @@ class ClientManager(QObject):
         cl = Client(self.comm, name, package, uuid, callback)
         self.clients[cl.uuid] = cl
     
-    def notify_client(self, uuid: str, data: dict):
+    def notify_client(self, uuid: str, data: str):
         "Notify client"
+
+        data = json.loads(data)
 
         if uuid in self.clients:
             self.clients[uuid].receive(data)
