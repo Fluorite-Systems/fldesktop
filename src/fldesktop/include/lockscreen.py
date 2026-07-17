@@ -1,8 +1,7 @@
-from PySide6.QtWidgets import (QWidget, QLabel, QLineEdit, QPushButton,
-                               QVBoxLayout, QHBoxLayout, QMenu)
-from PySide6.QtGui import (QIcon, QPixmap, QFont,
-                           QShortcut, QKeySequence)
-from PySide6.QtCore import (Qt, QTimer, QTime, QDate, QLocale, QPoint)
+from PySide6.QtWidgets import (QLabel, QLineEdit, QPushButton,
+                               QVBoxLayout, QHBoxLayout)
+from PySide6.QtGui import QIcon, QFont, QShortcut, QKeySequence
+from PySide6.QtCore import Qt, QTimer, QTime, QDate, QLocale
 from fldesktop.include.widgets.surface import Surface
 
 
@@ -76,37 +75,6 @@ class LockScreen(Surface):
         
         self.pwedit.textChanged.connect(lambda: self.message.setText(""))
 
-        self.powerbtn = QPushButton(
-            self,
-            icon=QIcon.fromTheme("system-shutdown-symbolic"),
-            flat=True
-        )
-        self.powerbtn.setFixedSize(32, 32)
-        self.powerbtn.show()
-
-        self.powermenu = QMenu()
-
-        self.powerbtn.clicked.connect(
-            lambda: self.powermenu.exec(
-                self.powerbtn.mapToGlobal(
-                   self.powerbtn.pos()
-                )
-            )
-        )
-
-        actions = [
-            (self.comm.request("localemgr", "tr", "Sleep"),
-                "system-suspend-symbolic", lambda: ...),
-            (self.comm.request("localemgr", "tr", "Shutdown"),
-                "system-shutdown-symbolic", lambda: ...),
-            (self.comm.request("localemgr", "tr", "Reboot"),
-                "system-reboot-symbolic", lambda: ...)
-        ]
-
-        for i in actions:
-            a = self.powermenu.addAction(QIcon.fromTheme(i[1]), i[0])
-            a.triggered.connect(i[2])
-
         self.qc_btn = None
 
         self.hide()
@@ -116,10 +84,15 @@ class LockScreen(Surface):
     def clock_tick(self) -> None:
         "Refresh clock"
 
+        locale = QLocale(
+            self.comm.request("cfgmgr", "get", "language")
+        )
+        df = locale.dateFormat(QLocale.FormatType.LongFormat)
+
         time = QTime.currentTime()
         date = QDate.currentDate()
         hrtime = time.toString("hh:mm")
-        hrdate = "думаете я знаю как дату вывести????"
+        hrdate = locale.toString(date, df)
 
         self.clock.setText(hrtime)
         self.date.setText(hrdate)
@@ -166,10 +139,3 @@ class LockScreen(Surface):
 
         if self.qc_btn:
             self.qc_btn.raise_()
-
-    def resizeEvent(self, event) -> None:
-        self.powerbtn.move(
-            self.width() - self.powerbtn.width(),
-            self.height() - self.powerbtn.height()
-        )
-        super().resizeEvent(event)
