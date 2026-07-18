@@ -56,9 +56,25 @@ class Client:
 
         match data["type"]:
             case "init_layout":
+                self.deleted_widgets = []
+
+                for k in list(self.widgets.keys()):
+                    if k in self.widgets:
+                        w = self.widgets[k]
+                        w.delete()
+
                 self.parser.build(data["payload"])
                 self.widget.update()
-                self.callback('{"status": "ok"}')
+
+                self.callback(
+                    json.dumps(
+                        {
+                            "status": "ok",
+                            "deleted": self.deleted_widgets
+                        }
+                    )
+                )
+                self.deleted_widgets = []
 
             case "set_translations":
                 self.translations = data["translations"]
