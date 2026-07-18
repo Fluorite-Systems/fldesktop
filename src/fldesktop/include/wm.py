@@ -454,6 +454,9 @@ class WindowManager:
         
         for win in self.windows:
             if win.id == data[0]:
+                if win.tlayout.itemAt(4).widget() != win.iconify_btn:
+                    w = win.tlayout.takeAt(4).widget()
+                    w.close()
                 win.tlayout.insertWidget(4, btn)
     
     def set_window_sidebar(self, winid: int, sidebar) -> None:
