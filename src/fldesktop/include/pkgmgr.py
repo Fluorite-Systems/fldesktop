@@ -3,6 +3,7 @@ from PySide6.QtCore import QProcess
 from pathlib import Path
 import subprocess
 import logging
+import shutil
 import uuid
 import json
 import os
@@ -24,6 +25,10 @@ class Package:
         self.mount_path = Path(
             os.environ["XDG_RUNTIME_DIR"]
         ) / "fla" / str(uuid.uuid4())
+
+        self.env_path = Path(
+            os.environ["XDG_RUNTIME_DIR"]
+        ) / "fla_env" / str(uuid.uuid4())
         
         self.mount()
         self.load_metadata()
@@ -31,26 +36,32 @@ class Package:
     def load_metadata(self):
         "Load package metadata"
 
-        path = self.mount_path / "app.json"
+        path = self.mount_path / "manifest.json"
 
-        with open(path) as f:
-            data = json.load(f)
-        
-        if "package" in data:
-            self.package = data["package"]
+        if path.exists():
+            with open(path) as f:
+                data = json.load(f)
+            
+            if "package" in data:
+                self.package = data["package"]
 
-        if "name" in data:
-            self.name = data["name"]
-        
-        if "generic_name" in data:
-            self.generic_name = data["generic_name"]
+            if "name" in data:
+                self.name = data["name"]
+            
+            if "generic_name" in data:
+                self.generic_name = data["generic_name"]
 
-        d = os.listdir(self.mount_path)
-        if "search" in d:
+        else:
+            self.package = "Unknown"
+            self.name = "Unknown"
+            self.generic_name = {"en_US": "Unknown"}
+
+        if (self.mount_path / "bin" / "search").exists():
             self.search = True
-        if "main" in d:
+        if (self.mount_path / "bin" / "main").exists():
             self.executable = True
-        if "icon.fvgi" in d:
+
+        if (self.mount_path / "icon.fvgi").exists():
             with open(self.mount_path / "icon.fvgi") as f:
                 self.icon = f.read()
 
@@ -71,16 +82,38 @@ class Package:
     
     def exec(self, arguments: list = []):
 
-        logging.debug(f"Executing entrypoint {self.mount_path / "main"}")
+        logging.debug(
+            f"Executing entrypoint {self.mount_path / "bin" / "main"}"
+        )
 
         if self.executable:
 
+            args = [
+                "--ro-bind", f"{self.mount_path / "bin"}", "/application/bin",
+                "--bind", str(Path.home()), "/home",
+                "--proc", "/proc",
+                "--dev", " /dev",
+                "--ro-bind", str(self.env_path), "/"
+            ]
+
+            if (self.mount_path / "runtime").exists() and \
+                (self.mount_path / "runtime").is_dir():
+                    args.extend(
+                        ["--ro-bind", str(self.mount_path / "runtime"), "/"]
+                    )
+
+            args.append("/application/bin/main")
+            args.extend(arguments)
+            #args.extend(["ls", "/"])
+
+            logging.debug(f"Running bwrap with these arguments: {args}")
+
             proc = QProcess()
-            proc.start(str(self.mount_path / "main"), arguments)
+            proc.start("/usr/bin/bwrap", args)
+
+            #proc.start(str(self.mount_path / "bin" / "main"), arguments)
 
             self.procs.append(proc)
-
-            # temporary solution, make it use bwrap instead
 
 
 class PackageManager:
