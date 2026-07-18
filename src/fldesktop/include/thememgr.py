@@ -227,5 +227,6 @@ class ThemingManager:
         colors["fg"] = cs[0]["Text"]
         colors["bg"] = cs[0]["Base"]
         colors["accent"] = STD_COLORS["blue"]
+        colors["transparent"] = "#00000000"
 
         return colors
