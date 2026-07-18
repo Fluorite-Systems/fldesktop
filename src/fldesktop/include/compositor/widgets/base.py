@@ -1,3 +1,5 @@
+from PySide6.QtCore import Qt
+
 import logging
 import locale
 
@@ -16,7 +18,18 @@ class Widget:
     def _setup(self):
         self._setup_layouting()
         self._runner.widgets[self.name] = self
-        self.update_props()
+        
+        if hasattr(self, "qwidget"):
+            self.callables.update(
+                {
+                    "show": self.qwidget.show,
+                    "hide": self.qwidget.hide,
+                    "set_width": lambda width: \
+                        self.qwidget.setFixedWidth(int(width)),
+                    "set_height": lambda height: \
+                        self.qwidget.setFixedHeight(int(height))
+                }
+            )
 
     def _setup_layouting(self):
         "Setups widget"
@@ -55,9 +68,6 @@ class Widget:
                     lambda p: menu.exec(self.qwidget.mapToGlobal(p))
                 )
 
-    def update_props(self):
-        pass
-
     def update_children(self, tree: dict):
 
         for i in self.children:
@@ -65,17 +75,6 @@ class Widget:
 
         # Теперь строим новое дерево
         self._runner.parser.build_tree_from_objects(tree, self)
-
-    def clear_layout_recursive(self, layout):
-        """Рекурсивная очистка layout"""
-        while layout.count():
-            item = layout.takeAt(0)
-            if widget := item.widget():
-                if widget in self._runner.widgets:
-                    self._runner.widgets.pop(widget.name)
-                widget.deleteLater()
-            elif sub_layout := item.layout():
-                self.clear_layout_recursive(sub_layout)
 
     def add_child(self, name: str, props: dict):
 
