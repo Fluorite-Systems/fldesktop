@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QPixmap, QPainter, QColor, QPen, QFont
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import QRect, Qt, QPoint
 
 from fldesktop.include.compositor.widgets.base import Widget
 
@@ -45,12 +45,13 @@ class Canvas(Widget):
         
     def rect(self, x: int, y: int, w: int, h: int,
              outline: str = "#000000", fill: str = "#00000000", 
-             width: int = 15):
+             width: int = 15, rounding: int = 0):
 
         painter = QPainter(self.pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setPen(QPen(QColor(outline), width))
         painter.setBrush(QColor(fill))
-        painter.drawRect(x, y, w, h)
+        painter.drawRoundedRect(x, y, w, h, rounding)
         painter.end()
         self.qwidget.update()
         

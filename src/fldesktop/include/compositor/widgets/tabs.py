@@ -29,13 +29,13 @@ class Tabs(Widget):
                 w.setLayout(p.qlayout)
                 self.qwidget.addTab(w, name)
 
-    def add_tab(self, data: dict):
-        p = VLayout(self._runner, str(data["title"]), {}, None)
+    def add_tab(self, title: str, children: dict):
+        p = VLayout(self._runner, title, {}, None)
         p._setup()
-        self._runner.parser.build_tree_from_objects(data["children"], p)
+        self._runner.parser.build_tree_from_objects(children, p)
         w = QWidget()
         w.setLayout(p.qlayout)
-        self.qwidget.addTab(w, str(data["title"]))
+        self.qwidget.addTab(w, title)
 
     def tab_close_handler(self, index):
         widget = self.qwidget.widget(index)
