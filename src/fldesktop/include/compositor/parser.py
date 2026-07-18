@@ -15,7 +15,7 @@ class Parser:
         self.runner = runner
         self.data = None
 
-    def build(self, data: dict) -> widgets["root"]:
+    def build(self, data: dict):
         "Build widget tree from layout"
 
         logging.debug(f"Building tree for client {self.runner.uuid}")
