@@ -79,7 +79,7 @@ class ClientHandler:
             data = json.loads(message)
 
             if "type" in data:
-                if data["type"] == "create_window":
+                if data["type"] == "init_client":
                     # Create a window
                     uuid4 = str(uuid.uuid4())
                     self.uuids.append(uuid4)
