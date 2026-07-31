@@ -33,10 +33,10 @@ class Desktop(QMainWindow):
             self.comm.request("localemgr", "tr", "Settings")
         )
         self.ch_bg_action.triggered.connect(
-            lambda: self.comm.send("pkgmgr", "run_app", "com.example.texted")
+            lambda: self.comm.request("pkgmgr", "run_app", "com.example.texted")
         )
         self.st_action.triggered.connect(
-            lambda: self.comm.send("pkgmgr", "run_app", "com.example.texted")
+            lambda: self.comm.request("pkgmgr", "run_app", "com.example.texted")
         )
 
         self.bg.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -58,7 +58,7 @@ class Desktop(QMainWindow):
     def reload(self) -> None:
         "Reloads desktop (primarily bg)"
 
-        self.comm.send("cfgmgr", "reload")
+        self.comm.request("cfgmgr", "reload")
         self.bgp = QPixmap(self.comm.request("cfgmgr", "get", "background"))
         self.refresh_bg()
     
@@ -78,12 +78,12 @@ class Desktop(QMainWindow):
         )
         self.bg.lower()
 
-        self.comm.send("surfacemgr", "refresh")
+        self.comm.request("surfacemgr", "refresh")
     
     def resizeEvent(self, event) -> None:
 
         super().resizeEvent(event)
 
         self.panel.refresh_geometry()
-        self.comm.send("lockscreen", "refresh_size")
+        self.comm.request("lockscreen", "refresh_size")
         self.refresh_bg()

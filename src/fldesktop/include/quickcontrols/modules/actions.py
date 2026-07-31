@@ -20,7 +20,7 @@ class Actions(QWidget):
         self.lock_btn.setIcon(QIcon.fromTheme("lock-symbolic"))
         self.lock_btn.clicked.connect(
             lambda: self.action_handler(
-                lambda: self.comm.send("lockscreen", "show")
+                lambda: self.comm.request("lockscreen", "show")
             )
         )
 
@@ -29,7 +29,7 @@ class Actions(QWidget):
         self.sleep_btn.setIcon(QIcon.fromTheme("system-suspend-symbolic"))
         self.sleep_btn.clicked.connect(
             lambda: self.action_handler(
-                lambda: self.comm.send("osmgr", "suspend")
+                lambda: self.comm.request("osmgr", "suspend")
             )
         )
 
@@ -54,17 +54,17 @@ class Actions(QWidget):
 
         self.shutdown_act.triggered.connect(
             lambda: self.action_handler(
-                lambda: self.comm.send("osmgr", "poweroff")
+                lambda: self.comm.request("osmgr", "poweroff")
             )
         )
         self.reboot_act.triggered.connect(
             lambda: self.action_handler(
-                lambda: self.comm.send("osmgr", "reboot")
+                lambda: self.comm.request("osmgr", "reboot")
             )
         )
         self.logout_act.triggered.connect(
             lambda: self.action_handler(
-                lambda: self.comm.send("osmgr", "logout")
+                lambda: self.comm.request("osmgr", "logout")
             )
         )
 

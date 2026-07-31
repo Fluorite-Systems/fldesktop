@@ -135,10 +135,10 @@ class DialogManager:
             }
         )[0]
 
-        diag.fileSelected.connect(lambda x, i=id: self.comm.send(
+        diag.fileSelected.connect(lambda x, i=id: self.comm.request(
             "wm", "close_window", i
         ))
-        diag.cancelled.connect(lambda i=id: self.comm.send(
+        diag.cancelled.connect(lambda i=id: self.comm.request(
             "wm", "close_window", i
         ))
     
@@ -155,10 +155,10 @@ class DialogManager:
             }
         )[0]
 
-        diag.fileSelected.connect(lambda x, i=id: self.comm.send(
+        diag.fileSelected.connect(lambda x, i=id: self.comm.request(
             "wm", "close_window", i
         ))
-        diag.cancelled.connect(lambda i=id: self.comm.send(
+        diag.cancelled.connect(lambda i=id: self.comm.request(
             "wm", "close_window", i
         ))
     

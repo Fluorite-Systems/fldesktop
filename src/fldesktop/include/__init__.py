@@ -16,9 +16,9 @@ class PostInit:
     def __init__(self, comm):
         self.comm = comm
 
-        self.comm.send("lockscreen", "show")
-        self.comm.send("fade_effect", "fadein")
+        self.comm.request("lockscreen", "show")
+        self.comm.request("fade_effect", "fadein")
 
     def srv_cleanup(self):
-        self.comm.send("fade_effect", "fadeout")
+        self.comm.request("fade_effect", "fadeout")
 

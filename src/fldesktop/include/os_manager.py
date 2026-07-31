@@ -18,7 +18,7 @@ class OSManager:
 
         if not "XDG_RUNTIME_DIR" in os.environ:
             logging.fatal("XDG_RUNTIME_DIR is not specified!")
-            self.comm.send("init", "failure")
+            self.comm.request("init", "failure")
     
     def get_path(self, postfix) -> str | None:
         "Get data path (useful for testing)"
@@ -54,20 +54,20 @@ class OSManager:
     
     def os_suspend(self) -> None:
         "Show lockscreen and suspend the system"
-        self.comm.send("lockscreen", "show")
+        self.comm.request("lockscreen", "show")
         subprocess.run(["systemctl", "suspend"])
     
     def logout(self) -> None:
         "Log out"
 
-        self.comm.send("init", "cleanup")
+        self.comm.request("init", "cleanup")
         #self.prepare_logout()
         #logging.info("Logging out, goodbye.")
         #QApplication.instance().quit()
     
     def prepare_logout(self) -> None:
         "Prepare for logout"
-        self.comm.send("fade_effect", "fadeout")
-        self.comm.send("pkgmgr", "killall")
-        self.comm.send("appserver", "stop")
-        self.comm.send("pkgmgr", "unmount") 
+        self.comm.request("fade_effect", "fadeout")
+        self.comm.request("pkgmgr", "killall")
+        self.comm.request("appserver", "stop")
+        self.comm.request("pkgmgr", "unmount") 

@@ -51,7 +51,7 @@ class Volume(QWidget):
             ico = "player-volume-muted-symbolic"
         
         self.mute_btn.setIcon(QIcon.fromTheme(ico))
-        self.comm.send("qc_indicator", "add_icon", 
+        self.comm.request("qc_indicator", "add_icon", 
                        QIcon.fromTheme(ico), "volume")
         self.percentage.setText(str(vol))
 

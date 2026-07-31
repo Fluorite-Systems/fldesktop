@@ -66,10 +66,10 @@ class Menu(Surface):
 
         def show(self): 
             if self.comm.request("lockscreen", "is_visible"):
-                self.comm.send("lockscreen", "raise")
+                self.comm.request("lockscreen", "raise")
                 self.show()
                 self.raise_()
-                self.comm.send("lockscreen", "raise_qc_btn")
+                self.comm.request("lockscreen", "raise_qc_btn")
             else:
                 self.show()
                 self.desktop.panel.raise_()

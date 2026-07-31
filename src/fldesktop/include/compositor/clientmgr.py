@@ -131,7 +131,7 @@ class Client:
 
             case "append_title":
                 if "title" in data:
-                    self.comm.send("wm", "append_window_title",
+                    self.comm.request("wm", "append_window_title",
                                 self.winid, data["title"])
                     self.callback('{"status": "ok"}')
 
@@ -140,7 +140,7 @@ class Client:
                 if "dialog_type" in data:
                     if data["dialog_type"] == "save_file":
                         dtype = "save_file"
-                self.comm.send(
+                self.comm.request(
                     "dialogmgr", dtype,
                     lambda r: self.callback(
                         json.dumps({"type": "files_choosen", "files": r})
@@ -197,4 +197,4 @@ class ClientManager(QObject):
 
         logging.debug(f"Trying to kill client {uuid}")
         if uuid in self.clients:
-            self.comm.send("wm", "close_window", self.clients[uuid].winid)
+            self.comm.request("wm", "close_window", self.clients[uuid].winid)

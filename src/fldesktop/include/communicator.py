@@ -7,15 +7,7 @@ class Communicator:
         "Register in communicator"
 
         self.services.append((name, actions))
-    
-    def send(self, name: str, action: str, *args):
-        "Sends arg to service"
 
-        for s in self.services:
-            if s[0] == name:
-                if action in s[1]:
-                    s[1][action](*args)
-    
     def request(self, name: str, action: str, *args):
         "Requests something from service"
 

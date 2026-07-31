@@ -116,7 +116,7 @@ class LockScreen(Surface):
 
         if self.comm.request("loginmgr", "check_password", self.pwedit.text()): #pam.authenticate(os.getlogin(), self.pwedit.text()):
             self.hide()
-            self.comm.send("panel", "return_qc_btn")
+            self.comm.request("panel", "return_qc_btn")
             self.qc_btn = None
             self.pwedit.setText(None)
         else:

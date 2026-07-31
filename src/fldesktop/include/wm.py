@@ -161,14 +161,14 @@ class Window(Surface):
             self.prev_size_mi = self.size()
             self.animate_minimize()
             self.minimized = True
-            self.comm.send(
+            self.comm.request(
                 "panel", "add_minimized", self.qicon, self.toggle_minimized
             )
-            self.comm.send("wm", "change_focus")
+            self.comm.request("wm", "change_focus")
         else:
             self.animate_unminimize()
             self.minimized = False
-            self.comm.send("wm", "change_focus", self.id)
+            self.comm.request("wm", "change_focus", self.id)
     
     def toggle_maximized(self) -> None:
         if not self.maximized:
@@ -280,8 +280,8 @@ class Window(Surface):
         self.raise_()
         # Change focus
         if self.comm.request("wm", "get_focus") != self.id:
-            self.comm.send("wm", "change_focus", self.id)
-            self.comm.send("panel", "raise")
+            self.comm.request("wm", "change_focus", self.id)
+            self.comm.request("panel", "raise")
             return
         # Check if the mouse is close to the bottom-right corner for resizing
         if not self.maximized:

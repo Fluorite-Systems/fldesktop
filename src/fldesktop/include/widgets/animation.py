@@ -23,7 +23,7 @@ class Animation(QWidget):
         self.raise_()
 
         if not comm.request("lockscreen", "is_visible"):
-            comm.send("panel", "raise")
+            comm.request("panel", "raise")
 
         self.animate(type, params, on_finished)
 

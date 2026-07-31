@@ -132,7 +132,7 @@ class Parser:
 
         if "menu" in self.data:
             menu = self.build_menu(self.data["menu"])
-            self.runner.comm.send("wm", "set_window_menu",
+            self.runner.comm.request("wm", "set_window_menu",
                                   (self.runner.winid, menu))
     
     def setup_sidebar(self) -> None:
@@ -162,5 +162,5 @@ class Parser:
                 
                 s.add_item(i)
             
-            self.runner.comm.send("wm", "set_window_sidebar",
+            self.runner.comm.request("wm", "set_window_sidebar",
                                   self.runner.winid, s)

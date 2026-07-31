@@ -42,7 +42,7 @@ class Battery(QWidget):
 
         panel_icon = self.get_icon_by_percent(total_percent, charging)
 
-        self.comm.send("qc_indicator", "add_icon", 
+        self.comm.request("qc_indicator", "add_icon", 
                        QIcon.fromTheme(panel_icon), "battery")
 
         """text = ""

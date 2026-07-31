@@ -143,7 +143,7 @@ class Service:
                 self.start()
 
             if self.importance == "critical":
-                self.comm.send("init", "failure")
+                self.comm.request("init", "failure")
         else:
             self.started = True
 

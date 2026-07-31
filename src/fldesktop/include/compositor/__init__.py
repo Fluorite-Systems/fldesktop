@@ -91,7 +91,7 @@ class ClientHandler:
                     return '{"uuid": "' + uuid4 + '"}'
                 else:
                     if "uuid" in data:
-                        self.comm.send(
+                        self.comm.request(
                             "clientmgr", "notify_client", data["uuid"], data
                         )
 
@@ -108,7 +108,7 @@ class ClientHandler:
         self.is_active = False
         
         for uuid_client in self.uuids:
-            self.comm.send("clientmgr", "kill_client", uuid_client)
+            self.comm.request("clientmgr", "kill_client", uuid_client)
         
         try:
             self.connection.shutdown(socket.SHUT_RDWR)
