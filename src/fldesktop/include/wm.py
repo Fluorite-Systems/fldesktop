@@ -236,14 +236,17 @@ class Window(Surface):
     def animate_open(self) -> None:
 
         def on_finished(self):
-            self.show()
-            self.raise_()
+            try:
+                self.show()
+                self.raise_()
+            except RuntimeError:
+                self.close()
 
-        Animation(
-            self.comm, self.parent(), self.grab(), "wopen",
-            {"pos": self.pos(), "size": self.size()},
-            lambda: on_finished(self)
-        )
+            Animation(
+                self.comm, self.parent(), self.grab(), "wopen",
+                {"pos": self.pos(), "size": self.size()},
+                lambda: on_finished(self)
+            ) 
 
     def get_resizing_dir(self, x, y) -> str:
         w = self.width()
