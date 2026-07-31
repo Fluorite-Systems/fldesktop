@@ -80,12 +80,28 @@ class Client:
                 self.translations = data["translations"]
                 self.callback('{"status": "ok"}')
 
-            case "update_node":
+            case "update_children":
                 if data["name"] in self.widgets:
                     self.deleted_widgets = []
                     self.widgets[data["name"]].update_children(data["children"])
                     for w in self.widgets:
                         logging.debug(f"Widget {w} has {self.widgets[w].children}")
+                    self.callback(
+                        json.dumps(
+                            {
+                                "status": "ok",
+                                "deleted": self.deleted_widgets
+                            }
+                        )
+                    )
+                    self.deleted_widgets = []
+                else:
+                    self.callback('{"status": "unknown_node"}')
+
+            case "clear_children":
+                if data["name"] in self.widgets:
+                    self.deleted_widgets = []
+                    self.widgets[data["name"]].clear_children()
                     self.callback(
                         json.dumps(
                             {

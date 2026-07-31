@@ -55,16 +55,20 @@ class Parser:
     def build_object(self, name: str, cfg: dict, parent = None) -> Widget:
         "Build widget object"
 
-        object_type = cfg.get("type", "unknown")
-        props = {k: v for k, v in cfg.items() if k not in ("type", "children")}
+        if not name in self.runner.widgets:
+            object_type = cfg.get("type", "unknown")
+            props = {k: v for k, v in cfg.items() if k not in ("type", "children")}
 
-        if object_type in widgets:
-            obj = widgets[object_type](self.runner, name, props, parent)
+            if object_type in widgets:
+                obj = widgets[object_type](self.runner, name, props, parent)
+            else:
+                obj = Widget(self.runner, name, props, parent)
+
+            if parent:
+                parent.children.append(obj)
+
         else:
-            obj = Widget(self.runner, name, props, parent)
-
-        if parent:
-            parent.children.append(obj)
+            obj = self.runner.widgets[name]
 
         children_cfg = cfg.get("children", {})
         obj.children = [

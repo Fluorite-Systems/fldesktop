@@ -76,6 +76,11 @@ class Widget:
         # Теперь строим новое дерево
         self._runner.parser.build_tree_from_objects(tree, self)
 
+    def clear_children(self):
+
+        for i in self.children:
+            i.delete()
+
     def add_child(self, name: str, props: dict):
 
         self._runner.parser.build_tree_from_objects({
