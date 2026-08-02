@@ -1,8 +1,7 @@
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout,
-                               QLabel, QToolButton,
-                               QGraphicsDropShadowEffect) 
+                               QLabel, QToolButton) 
 from PySide6.QtCore import Qt, QPoint, QSize, Signal
-from PySide6.QtGui import QIcon, QColor
+from PySide6.QtGui import QIcon
 
 from fldesktop.include.widgets.surface import Surface
 from fldesktop.include.widgets.animation import Animation
