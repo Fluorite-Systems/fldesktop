@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QApplication, QMainWindow, QMenu,
                                QLabel)
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QPixmap, QPainter
+from PySide6.QtGui import QColor, QPixmap
 
 from fldesktop.include import panel
 from fldesktop.include.widgets.fade_effect import FadeEffect
@@ -17,7 +17,8 @@ class Background(QLabel):
 
         self.reload()
 
-    def reload(self):
+    def reload(self) -> None:
+        "Reload background"
 
         btype = self.comm.request("cfgmgr", "get", "background-type")
         color = self.comm.request("cfgmgr", "get", "background-color")
@@ -30,7 +31,7 @@ class Background(QLabel):
             self.pic.fill(QColor(color))
 
     def refresh(self) -> None:
-        "Resizes background"
+        "Resize background"
 
         parent = self.parent()
 
@@ -43,7 +44,6 @@ class Background(QLabel):
         self.lower()
 
         self.comm.request("surfacemgr", "refresh")
-
 
 
 class Desktop(QMainWindow):
