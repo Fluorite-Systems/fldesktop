@@ -3,7 +3,9 @@ import json
 
 
 FALLBACK_CONFIG = {
-    "background": "/usr/share/wallpapers/Earth.png",
+    "background-type": "wallpaper",
+    "background-color": "#257565",
+    "wallpaper": "/usr/share/wallpapers/Pine Path.jpg",
     "theme": "dark",
     "language": "en_US",
     "kb_locales": ["us"]
