@@ -240,13 +240,13 @@ class Window(Surface):
                 self.show()
                 self.raise_()
             except RuntimeError:
-                self.close()
+                logging.warning("RuntimeError in on_finished() of a window")
 
-            Animation(
-                self.comm, self.parent(), self.grab(), "wopen",
-                {"pos": self.pos(), "size": self.size()},
-                lambda: on_finished(self)
-            ) 
+        Animation(
+            self.comm, self.parent(), self.grab(), "wopen",
+            {"pos": self.pos(), "size": self.size()},
+            lambda: on_finished(self)
+        ) 
 
     def get_resizing_dir(self, x, y) -> str:
         w = self.width()
@@ -383,33 +383,32 @@ class WindowManager:
         self.focus = None
 
     
-    def create_window(self, params: dict) -> tuple:
+    def create_window(self, name: str, widget: QWidget, 
+                      icon: QIcon = QIcon(), package: str = "internal",
+                      type: str = "normal") -> tuple:
         "Creates an window"
         
         self.curid += 1
 
-        logging.info(f"Creating a window with id {id}")
+        logging.info(f"Creating a window with id {self.curid}")
 
-        if params["icon"].isNull():
-            params["icon"] = QIcon.fromTheme("applications-other")
+        if icon.isNull():
+            icon = QIcon.fromTheme("applications-other")
         
-        if not "package" in params: params["package"] = "internal"
-
         win = Window(
-            params["widget"], params["name"], params["package"],
+            widget, name, package,
             self.comm.request("desktop", "get_instance"),
-            self.curid, self.comm, params["icon"]
+            self.curid, self.comm, icon
         )
         self.windows.append(win)
 
         win.on_close.connect(lambda: self.windows.remove(win))
 
-        if "type" in params:
-            if params["type"] == "messagebox":
-                win.maximize_btn.hide()
-                win.iconify_btn.hide()
-                win.resize(300, 200)
-                win.resizing_allowed = False
+        if type == "messagebox":
+            win.maximize_btn.hide()
+            win.iconify_btn.hide()
+            win.resize(300, 200)
+            win.resizing_allowed = False
 
         self.change_focus(win.id)
 
