@@ -1,10 +1,12 @@
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout,
-                               QLabel, QToolButton) 
+                               QLabel, QToolButton,
+                               QGraphicsDropShadowEffect) 
 from PySide6.QtCore import Qt, QPoint, QSize, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QColor
 
 from fldesktop.include.widgets.surface import Surface
 from fldesktop.include.widgets.animation import Animation
+from fldesktop.include.thememgr import STD_COLORS
 
 import logging
 
@@ -97,6 +99,10 @@ class Window(Surface):
             self.tlayout.addWidget(i)
             i.setObjectName("flatbtn")
             i.setFixedSize(24, 24)
+
+        self.close_btn.setStyleSheet(
+            f"QToolButton::hover {{background-color: {STD_COLORS["red"]};}}"
+        )
 
         self.layout.addWidget(self.widget)
         
