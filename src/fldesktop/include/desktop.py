@@ -1,10 +1,49 @@
 from PySide6.QtWidgets import (QApplication, QMainWindow, QMenu,
                                QLabel)
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QColor, QPixmap, QPainter
 
 from fldesktop.include import panel
 from fldesktop.include.widgets.fade_effect import FadeEffect
+
+
+class Background(QLabel):
+    def __init__(self, desktop: Desktop, comm) -> None:
+        super().__init__(desktop)
+
+        self.comm = comm
+
+        self.comm.subscribe("reload_config", self.reload)
+
+        self.reload()
+
+    def reload(self):
+
+        btype = self.comm.request("cfgmgr", "get", "background-type")
+        color = self.comm.request("cfgmgr", "get", "background-color")
+        wp = self.comm.request("cfgmgr", "get", "wallpaper")
+
+        if wp and btype == "wallpaper":
+            self.pic = QPixmap(wp)
+        else:
+            self.pic = QPixmap(10, 10)
+            self.pic.fill(QColor(color))
+
+    def refresh(self) -> None:
+        "Resizes background"
+
+        parent = self.parent()
+
+        self.setGeometry(0, 0, parent.size().width(), parent.size().height())
+
+        self.setPixmap(self.pic.scaled(parent.size(), 
+                            Qt.AspectRatioMode.KeepAspectRatioByExpanding, 
+                            Qt.TransformationMode.SmoothTransformation)
+        )
+        self.lower()
+
+        self.comm.request("surfacemgr", "refresh")
+
 
 
 class Desktop(QMainWindow):
@@ -13,16 +52,13 @@ class Desktop(QMainWindow):
 
         self.comm = comm
         self.comm.register("desktop", {
-                "reload": self.reload,
                 "get_instance": self.get_instance
             }
         )
-        self.comm.subscribe("reload_config", self.reload)
 
         self.panel = panel.Panel(self, self.comm)
         
-        self.bg = QLabel(self)
-        self.bgp = QPixmap(self.comm.request("cfgmgr", "get", "background"))
+        self.bg = Background(self, self.comm)
 
         # Context menu when right-clicked at the background
         self.menu = QMenu()
@@ -55,30 +91,10 @@ class Desktop(QMainWindow):
 
         self.show()
     
-    def reload(self) -> None:
-        "Reloads desktop (primarily bg)"
-
-        self.comm.request("cfgmgr", "reload")
-        self.bgp = QPixmap(self.comm.request("cfgmgr", "get", "background"))
-        self.refresh_bg()
-    
     def get_instance(self):
         "Get desktop instance from comm"
 
         return self
-    
-    def refresh_bg(self) -> None:
-        "Resizes background"
-
-        self.bg.setGeometry(0, 0, self.size().width(), self.size().height())
-
-        self.bg.setPixmap(self.bgp.scaled(self.size(), 
-                            Qt.AspectRatioMode.KeepAspectRatioByExpanding, 
-                            Qt.TransformationMode.SmoothTransformation)
-        )
-        self.bg.lower()
-
-        self.comm.request("surfacemgr", "refresh")
     
     def resizeEvent(self, event) -> None:
 
@@ -86,4 +102,4 @@ class Desktop(QMainWindow):
 
         self.panel.refresh_geometry()
         self.comm.request("lockscreen", "refresh_size")
-        self.refresh_bg()
+        self.bg.refresh()
