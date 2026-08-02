@@ -9,6 +9,7 @@ from fldesktop.include.input import InputManager
 
 import logging
 import os
+import traceback
 
 
 SERVICES = {
@@ -137,7 +138,13 @@ class Service:
         try:
             self.object = self.object(self.comm)
         except Exception as e:
-            logging.critical(f"Service {self.name} failed: {e}")
+            tb = traceback.extract_tb(e.__traceback__)[-1]
+
+            file = tb.filename.split("/")[-1]
+
+            logging.critical(
+                f"Service {self.name} failed: {file}, line {tb.lineno}: {e}"
+            )
 
             if self.restart:
                 self.start()
