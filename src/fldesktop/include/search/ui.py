@@ -50,6 +50,11 @@ class SearchUI(QWidget):
         self.entry.setPlaceholderText(
             self.comm.request("localemgr", "tr", "Type here to search...")
         )
+        self.entry.setClearButtonEnabled(True)
+        self.entry.addAction( 
+            self.comm.request("iconmgr", "get", "search"),
+            QLineEdit.ActionPosition.LeadingPosition
+        ).setEnabled(False)
 
         self.layout.addWidget(self.entry)
         self.layout.addWidget(self.scroller)
