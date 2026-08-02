@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import (QPushButton, QVBoxLayout, QWidget,
                                QScrollArea, QLineEdit, QHBoxLayout,
                                QLabel, QTextEdit)
-from PySide6.QtGui import QIcon
-from PySide6.QtCore import Signal, QSize
+from PySide6.QtGui import QIcon, QFont
+from PySide6.QtCore import Qt, Signal, QSize
 
 from fldesktop.include.menu import Menu
 
@@ -75,24 +75,35 @@ class SearchUI(QWidget):
 
         r = self.comm.request("search", "search", text)
 
-        for provider in r:
+        if r:
+            for provider in r:
 
-            self.container.layout.addWidget(QLabel(provider))
+                self.container.layout.addWidget(QLabel(provider))
 
-            for v in r[provider]:
+                for v in r[provider]:
 
-                if v["type"] == "review":
-                    vw = ReviewView(v["text"], v["images"])
-                elif v["type"] == "actions":
-                    vw = ActionsView(v["actions"])
-                elif v["type"] == "items":
-                    for i in v["items"]:
-                        i["callback"] = lambda _, c=i["callback"]:\
-                            self.callback_handler(c)
-                    vw = ItemView(v["items"])
-                
-                self.container.layout.addWidget(vw)
-        
+                    if v["type"] == "review":
+                        vw = ReviewView(v["text"], v["images"])
+                    elif v["type"] == "actions":
+                        vw = ActionsView(v["actions"])
+                    elif v["type"] == "items":
+                        for i in v["items"]:
+                            i["callback"] = lambda _, c=i["callback"]:\
+                                self.callback_handler(c)
+                        vw = ItemView(v["items"])
+                    
+                    self.container.layout.addWidget(vw)
+
+        else:
+            self.container.layout.addStretch()
+            self.container.layout.addWidget(
+                QLabel(
+                    self.comm.request("localemgr", "tr", "Nothing found"),
+                    alignment=Qt.AlignmentFlag.AlignCenter,
+                    font=QFont("Sans Serif", 14, QFont.Bold)
+                )
+            )
+            
         self.container.layout.addStretch()
     
     def callback_handler(self, callback):
