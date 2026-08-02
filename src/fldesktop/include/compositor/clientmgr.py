@@ -1,9 +1,10 @@
-from typing import Any
-
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton
+from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Signal, QObject
+
 from fldesktop.include.compositor.parser import Parser
+
+from typing import Any
 
 import json
 import logging
@@ -25,13 +26,8 @@ class Client:
     
         # Create a window
         self.winid, self.on_close = self.comm.request(
-            "wm", "create_window",
-            {
-                "name": self.name,
-                "package": self.package,
-                "icon": QIcon(),
-                "widget": self.widget
-            }
+            "wm", "create_window", self.name, self.widget,
+            QIcon(), self.package
         )
 
         self.on_close.connect(lambda: self.callback("close"))

@@ -84,8 +84,8 @@ class ClientHandler:
                     uuid4 = str(uuid.uuid4())
                     self.uuids.append(uuid4)
                     self.comm.request("clientmgr", "new_client",
-                                    data["payload"]["title"], 
-                                    data["payload"]["package"],
+                                    data["title"], 
+                                    data["package"],
                                     uuid4, self.callback)
 
                     return '{"uuid": "' + uuid4 + '"}'
