@@ -203,7 +203,7 @@ class SurfaceManager(QObject):
         x = -height
         
         while x < width_total + height:
-            width = rng.bounded(30, 80)
+            width = rng.bounded(10, 50)
             alpha = rng.bounded(0, 70)
             
             if alpha >= 20:
