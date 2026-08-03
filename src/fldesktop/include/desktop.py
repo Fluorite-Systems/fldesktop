@@ -6,6 +6,8 @@ from PySide6.QtGui import QColor, QPixmap
 from fldesktop.include import panel
 from fldesktop.include.widgets.fade_effect import FadeEffect
 
+import os
+
 
 class Background(QLabel):
     def __init__(self, desktop: Desktop, comm) -> None:
@@ -24,7 +26,7 @@ class Background(QLabel):
         color = self.comm.request("cfgmgr", "get", "background-color")
         wp = self.comm.request("cfgmgr", "get", "wallpaper")
 
-        if wp and btype == "wallpaper":
+        if os.path.exists(wp) and btype == "wallpaper":
             self.pic = QPixmap(wp)
         else:
             self.pic = QPixmap(10, 10)
