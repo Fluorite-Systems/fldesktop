@@ -32,6 +32,8 @@ class Background(QLabel):
             self.pic = QPixmap(10, 10)
             self.pic.fill(QColor(color))
 
+        self.refresh()
+
     def refresh(self) -> None:
         "Resize background"
 
