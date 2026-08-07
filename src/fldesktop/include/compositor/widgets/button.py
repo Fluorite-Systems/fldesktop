@@ -25,5 +25,5 @@ class Button(Widget):
             self.qwidget.setFlat(self.props["flat"] == "true")
 
         self.qwidget.clicked.connect(
-            lambda: self._runner.event(name=self.name, type="button_press")
+            lambda: self._runner.event(name=self.name, type="button_pressed")
         )

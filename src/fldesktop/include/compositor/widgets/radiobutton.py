@@ -21,7 +21,7 @@ class RadioButton(Widget):
 
         self.qwidget.toggled.connect(
             lambda c: self._runner.event(
-                name=self.name, type="radiobutton_select"
+                name=self.name, type="radiobutton_selected"
             ) if c else lambda: ...
         )
 
