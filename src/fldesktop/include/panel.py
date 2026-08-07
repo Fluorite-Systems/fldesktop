@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import (QLabel, QHBoxLayout, QPushButton)
+from PySide6.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy
 from PySide6.QtCore import Qt, QSize
 
 from fldesktop.include.quickcontrols import (QuickControls, calendar,
@@ -58,8 +58,12 @@ class Panel(Surface):
             restore()
 
         btn = QPushButton(icon=icon)
+        
         #btn.setFixedSize(24, 24)
         btn.setIconSize(QSize(24, 24))
+        btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        btn.setObjectName("traybtn")
+
         btn.clicked.connect(
             lambda _, r=restore, b=btn: restore_handler(r, b)
         )
