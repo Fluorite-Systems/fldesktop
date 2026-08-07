@@ -17,10 +17,10 @@ class Background(QLabel):
 
         self.comm.subscribe("reload_config", self.reload)
 
-        self.reload()
+        self.load_bg()
 
-    def reload(self) -> None:
-        "Reload background"
+    def load_bg(self) -> None:
+        "Load background"
 
         btype = self.comm.request("cfgmgr", "get", "background-type")
         color = self.comm.request("cfgmgr", "get", "background-color")
@@ -32,6 +32,11 @@ class Background(QLabel):
             self.pic = QPixmap(10, 10)
             self.pic.fill(QColor(color))
 
+
+    def reload(self) -> None:
+        "Reload background"
+
+        self.load_bg()
         self.refresh()
 
     def refresh(self) -> None:
