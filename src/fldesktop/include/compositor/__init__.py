@@ -14,7 +14,7 @@ class ClientHandler:
         self.comm = comm
         self.callback = self.handle_callback
         self.is_active = True
-        self.uuids = []
+        self.uuid = None
         self.thread = None
     
     def handle_callback(self, s: str):
@@ -82,11 +82,25 @@ class ClientHandler:
                 if data["type"] == "init_client":
                     # Create a window
                     uuid4 = str(uuid.uuid4())
-                    self.uuids.append(uuid4)
-                    self.comm.request("clientmgr", "new_client",
-                                    data["title"], 
-                                    data["package"],
-                                    uuid4, self.callback)
+                    self.uuid = uuid4
+
+                    title = data["title"] if "title" in data else \
+                        self.comm.request(
+                            "localemgr", "tr", "Unnamed application"
+                        )
+                    package = data["title"] if "title" in data else "none"
+                    wsize = (
+                        int(data["width"]) if "width" in data else 500,
+                        int(data["height"]) if "height" in data else 400
+                    )
+                    wtype = data["windowtype"] if "windowtype" in data else \
+                                                                    "normal"
+
+                    self.comm.request(
+                        "clientmgr", "new_client",
+                        uuid4, title, package,
+                        wsize, wtype, self.callback
+                    )
 
                     return '{"uuid": "' + uuid4 + '"}'
                 else:
@@ -107,8 +121,7 @@ class ClientHandler:
             
         self.is_active = False
         
-        for uuid_client in self.uuids:
-            self.comm.request("clientmgr", "kill_client", uuid_client)
+        self.comm.request("clientmgr", "kill_client", self.uuid)
         
         try:
             self.connection.shutdown(socket.SHUT_RDWR)
@@ -119,7 +132,7 @@ class ClientHandler:
         except:
             pass
             
-        logging.info(f"Client with {self.uuids[0]} windows disconnected")
+        logging.info(f"Client {self.uuid} disconnected")
 
 
 class AppServer:

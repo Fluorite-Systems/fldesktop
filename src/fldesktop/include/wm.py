@@ -33,7 +33,8 @@ class Window(Surface):
 
     def __init__(self, widget: QWidget, name: str, pkgname: str,
                     parent: QWidget, identificator: int,
-                    comm, icon: QIcon, size: tuple = (400, 400)
+                    comm, icon: QIcon, size: tuple = (400, 400),
+                    type: str = "normal"
                 ) -> None:
         super().__init__(comm, parent)
 
@@ -47,6 +48,7 @@ class Window(Surface):
         self.id = identificator
         self.comm = comm
         self.qicon = icon
+        self.type = type
 
         self.sidebar = None
 
@@ -93,8 +95,20 @@ class Window(Surface):
         self.tlayout.addWidget(self.title)
 
         self.tlayout.addStretch()
+
+        match self.type:
+            case "normal":
+                btns = [self.iconify_btn, self.maximize_btn, self.close_btn]
+            case "toolwindow":
+                btns = [self.iconify_btn, self.close_btn]
+            case "messagebox":
+                btns = [self.close_btn]
+            case "importantdialog":
+                btns = []
+            case _:
+                btns = [self.close_btn]
         
-        for i in [self.iconify_btn, self.maximize_btn, self.close_btn]:
+        for i in btns:
             self.tlayout.addWidget(i)
             i.setObjectName("flatbtn")
             i.setFixedSize(24, 24)
@@ -129,7 +143,7 @@ class Window(Surface):
         self.prev_size_mi = None
 
         # Geometry management flags
-        self.resizing_allowed = True
+        self.resizing_allowed = (self.type == "normal")
         self.resizing = False
         self.dragging = False
         self.resizing_dir = ""
@@ -288,7 +302,7 @@ class Window(Surface):
             self.comm.request("wm", "change_focus", self.id)
             self.comm.request("panel", "raise")
             return
-        # Check if the mouse is close to the bottom-right corner for resizing
+
         if not self.maximized:
             x = event.pos().x()
             y = event.pos().y()
@@ -301,19 +315,19 @@ class Window(Surface):
 
             else:#if event.pos().y() < self.tlayout.sizeHint().height() + 5:
                 self.dragging = True
-                # Store the initial position of the mouse relative to the square
                 self.drag_start_pos = event.pos()
     
-    def mouseMoveEvent(self, event) -> None: # Move window
+    def mouseMoveEvent(self, event) -> None:
 
-        if self.resizing_dir:
-            rd = self.resizing_dir
-        else:
-            rd = self.get_resizing_dir(event.pos().x(), event.pos().y())
-        
-        if rd != self.prev_cur_rd:
-            self.setCursor(self.cur_mapping[rd])
-            self.prev_cur_rd = rd
+        if self.resizing_allowed:
+            if self.resizing_dir:
+                rd = self.resizing_dir
+            else:
+                rd = self.get_resizing_dir(event.pos().x(), event.pos().y())
+            
+            if rd != self.prev_cur_rd:
+                self.setCursor(self.cur_mapping[rd])
+                self.prev_cur_rd = rd
         
         if self.resizing:
             # Calculate new width and height based on mouse movement
@@ -390,6 +404,7 @@ class WindowManager:
     
     def create_window(self, name: str, widget: QWidget, 
                       icon: QIcon = QIcon(), package: str = "internal",
+                      size: tuple[int, int] = (400, 400),
                       type: str = "normal") -> tuple:
         "Creates an window"
         
@@ -403,17 +418,11 @@ class WindowManager:
         win = Window(
             widget, name, package,
             self.comm.request("desktop", "get_instance"),
-            self.curid, self.comm, icon
+            self.curid, self.comm, icon, size, type
         )
         self.windows.append(win)
 
         win.on_close.connect(lambda: self.windows.remove(win))
-
-        if type == "messagebox":
-            win.maximize_btn.hide()
-            win.iconify_btn.hide()
-            win.resize(300, 200)
-            win.resizing_allowed = False
 
         self.change_focus(win.id)
 

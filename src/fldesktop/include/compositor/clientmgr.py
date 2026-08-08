@@ -11,7 +11,9 @@ import logging
 
 
 class Client:
-    def __init__(self, comm, name: str, uuid: str, pkg: str, callback: Signal):
+    def __init__(self, comm, name: str, pkg: str, 
+                 wsize: tuple, wtype: str,
+                 uuid: str, callback: Signal):
         self.comm = comm
         self.name = name
         self.package = pkg
@@ -27,7 +29,7 @@ class Client:
         # Create a window
         self.winid, self.on_close = self.comm.request(
             "wm", "create_window", self.name, self.widget,
-            QIcon(), self.package
+            QIcon(), self.package, wsize, wtype
         )
 
         self.on_close.connect(lambda: self.callback("close"))
@@ -148,7 +150,7 @@ class Client:
 
 
 class ClientManager(QObject):
-    new_client_s = Signal(str, str, str, Any)
+    new_client_s = Signal(str, str, str, tuple, str, Any)
     notify_client_s = Signal(str, str)
     kill_client_s = Signal(str)
 
@@ -161,8 +163,8 @@ class ClientManager(QObject):
 
         self.comm = comm
         self.comm.register("clientmgr", {
-            "new_client": lambda n, u, p, c:
-                self.new_client_s.emit(n, u, p, c),
+            "new_client": lambda u, n, p, s, t, c:
+                self.new_client_s.emit(u, n, p, s, t, c),
             "notify_client": lambda u, d:
                 self.notify_client_s.emit(u, json.dumps(d)),
             "kill_client": lambda u: 
@@ -171,11 +173,13 @@ class ClientManager(QObject):
 
         self.clients = {}
 
-    def new_client(self, name: str, uuid: str, package: str,
-                   callback: Any):
+    def new_client(self, uuid: str, name: str, package: str,
+                   wsize: tuple, wtype: str, callback: Any):
         "Create a new client"
 
-        cl = Client(self.comm, name, package, uuid, callback)
+        cl = Client(
+            self.comm, name, package, wsize, wtype, uuid, callback
+        )
         self.clients[cl.uuid] = cl
     
     def notify_client(self, uuid: str, data: str):
