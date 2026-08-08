@@ -5,6 +5,7 @@ from PySide6.QtGui import QIcon
 
 from fldesktop.include.widgets.surface import Surface
 from fldesktop.include.widgets.animation import Animation
+from fldesktop.include.widgets.window_effects import WindowEffects
 from fldesktop.include.thememgr import STD_COLORS
 
 import logging
@@ -57,6 +58,9 @@ class Window(Surface):
         self.overlay.setObjectName("ov")
         self.overlay.show()
         self.overlay.lower()
+
+        # Effects manager
+        self.effects = WindowEffects(self)
 
         # Setup gui
         self.resize(size[0], size[1])
@@ -393,7 +397,8 @@ class WindowManager:
             "get_focus": self.get_focus,
             "set_window_menu": self.set_window_menu,
             "set_window_sidebar": self.set_window_sidebar,
-            "append_window_title": self.append_window_title
+            "append_window_title": self.append_window_title,
+            "spawn_effect": self.spawn_effect
         })
 
         self.windows = []
@@ -496,3 +501,11 @@ class WindowManager:
                     win.title.setText(f"{win.name} - {title}")
                 else:
                     win.title.setText(win.name)
+
+    def spawn_effect(self, id: int, effect: str) -> None:
+
+        logging.debug(f"Spawning effect {effect} for window {id}")
+
+        for win in self.windows:
+            if win.id == id:
+                win.effects.effect(effect)

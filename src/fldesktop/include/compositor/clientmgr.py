@@ -133,6 +133,13 @@ class Client:
                                 self.winid, data["title"])
                     self.callback('{"status": "ok"}')
 
+            case "spawn_effect":
+                if "effect" in data:
+                    self.comm.request(
+                        "wm", "spawn_effect", self.winid, data["effect"]
+                    )
+                    self.callback('{"status": "ok"}')
+
             case "file_dialog":
                 dtype = "open_file"
                 if "dialog_type" in data:
