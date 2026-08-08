@@ -10,17 +10,20 @@ class Entry(Widget):
 
         self.callables = {
             "get_text": self.get_text,
-            "set_text": self.set_text,
             "enable": lambda _: self.qwidget.setEnabled(True),
             "disable": lambda _: self.qwidget.setEnabled(False)
         }
 
+        self.base_props = {
+            "text": ""
+        }
+
         self._setup()
+
+    def apply_props(self):
+        super().apply_props()
+
+        self.qwidget.setText(self.props["text"])
 
     def get_text(self, _) -> str:
         return self.qwidget.text()
-
-    def set_text(self, args):
-        text = args["text"] if "text" in args else ""
-        self.qwidget.setText(text)
-

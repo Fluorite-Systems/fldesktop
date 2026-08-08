@@ -14,16 +14,18 @@ class RadioButton(Widget):
             "disable": lambda _: self.qwidget.setEnabled(False)
         }
 
-        self._setup()
-
-        if "text" in self.props:
-            self.qwidget.setText(self.tr(str(self.props["text"])))
+        self._setup()            
 
         self.qwidget.toggled.connect(
             lambda c: self._runner.event(
                 name=self.name, type="radiobutton_selected"
             ) if c else lambda: ...
         )
+
+    def apply_props(self):
+        super().apply_props()
+
+        self.qwidget.setText(self.tr(str(self.props["text"])))
 
     def select(self, _):
         self.qwidget.blockSignals(True)

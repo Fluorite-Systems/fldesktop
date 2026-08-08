@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QPushButton
+from PySide6.QtWidgets import QPushButton, QSizePolicy
 from PySide6.QtGui import QIcon
 from fldesktop.include.compositor.widgets.base import Widget
 
@@ -11,19 +11,30 @@ class Button(Widget):
 
         self.callables = {
             "enable": lambda _: self.qwidget.setEnabled(True),
-            "disable": lambda _: self.qwidget.setEnabled(False),
-            "set_text": lambda t: self.qwidget.setText(str(t))
+            "disable": lambda _: self.qwidget.setEnabled(False) 
+        }
+
+        self.base_props = {
+            "text": "",
+            "icon": "",
+            "flat": "false",
+            "compact": "false"
         }
 
         self._setup()
 
-        if "text" in self.props:
-            self.qwidget.setText(self.tr(str(self.props["text"])))
-        if "icon" in self.props:
-            self.qwidget.setIcon(QIcon.fromTheme(self.props["icon"]))
-        if "flat" in self.props:
-            self.qwidget.setFlat(self.props["flat"] == "true")
-
         self.qwidget.clicked.connect(
             lambda: self._runner.event(name=self.name, type="button_pressed")
         )
+
+    def apply_props(self):
+        super().apply_props()
+
+        if self.props["text"]:
+            self.qwidget.setText(self.tr(str(self.props["text"])))
+        if self.props["icon"]:
+            self.qwidget.setIcon(QIcon.fromTheme(self.props["icon"]))
+        if self.props["flat"]:
+            self.qwidget.setFlat(self.props["flat"] == "true")
+        if self.props["compact"] == "true":
+            self.qwidget.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)

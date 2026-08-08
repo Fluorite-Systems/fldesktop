@@ -9,10 +9,13 @@ class TextEdit(Widget):
         self.qwidget = QTextEdit()
 
         self.callables = {
-            "set_text": self.set_text,
             "get_text": self.get_text,
             "enable": lambda _: self.qwidget.setEnabled(True),
             "disable": lambda _: self.qwidget.setEnabled(False)
+        }
+
+        self.base_props = {
+            "text": ""
         }
 
         self.qwidget.textChanged.connect(
@@ -23,8 +26,10 @@ class TextEdit(Widget):
 
         self._setup()
 
+    def apply_props(self):
+        super().apply_props()
+
+        self.qwidget.setText(self.props["text"])
+
     def get_text(self) -> str:
         return self.qwidget.toPlainText()
-
-    def set_text(self, text: str) -> None:
-        self.qwidget.setPlainText(text)

@@ -13,7 +13,12 @@ class CheckBox(Widget):
             "disable": lambda _: self.qwidget.setEnabled(False)
         }
 
+        self.base_props = {"text": ""}
+
         self._setup()
 
-        if "text" in self.props:
+    def apply_props(self):
+        super().apply_props()
+
+        if self.props["text"]:
             self.qwidget.setText(self.tr(str(self.props["text"])))

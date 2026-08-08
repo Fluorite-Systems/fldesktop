@@ -9,28 +9,19 @@ class Icon(Widget):
         self.type = "icon"
         self.qwidget = QLabel()
 
-        self.callables = {
-            "set_icon": self.set_icon
+        self.base_props = {
+            "icon": "none"
         }
 
         self._setup()
 
         self.pixmap = QPixmap()
 
-        if "icon" in self.props:
-            self.set_icon({
-                "icon": self.props["icon"],
-                "width": self.props["width"]\
-                    if "width" in self.props else 64,
-                "height": self.props["height"]\
-                    if "height" in self.props else 64,
-            })
+    def apply_props(self) -> None:
+        super().apply_props()
 
-    def set_icon(self, args: dict) -> None:
-        icon = QIcon.fromTheme(
-            args["icon"] if "icon" in args else "none"
-        )
+        icon = QIcon.fromTheme(self.props["icon"])
         self.qwidget.setPixmap(icon.pixmap(
-            args["width"] if "width" in args else 64,
-            args["height"] if "height" in args else 64
+            self.props["width"] if self.props["width"] else 64,
+            self.props["height"] if self.props["height"] else 64
         ))

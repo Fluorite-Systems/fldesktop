@@ -14,6 +14,7 @@ class Widget:
         self.children = []
 
         self.callables = {}
+        self.base_props = {}
 
     def _setup(self):
         self._setup_layouting()
@@ -30,6 +31,17 @@ class Widget:
                         self.qwidget.setFixedHeight(int(height))
                 }
             )
+            self.base_props.update(
+                {
+                    "width": None,
+                    "height": None
+                }
+            )
+
+        self.props = {**self.base_props, **self.props}
+
+        self._setup_setters()
+        self.apply_props()
 
     def _setup_layouting(self):
         "Setups widget"
@@ -67,6 +79,29 @@ class Widget:
                 self.qwidget.customContextMenuRequested.connect(
                     lambda p: menu.exec(self.qwidget.mapToGlobal(p))
                 )
+
+    def _setup_setters(self):
+        for prop in self.base_props:
+
+            def make_setter(f_name):
+                def setter(**kwargs):
+                    if f_name in kwargs:
+                        self.props[f_name] = kwargs[f_name]
+                        self.apply_props()
+
+                return setter
+
+            setter = make_setter(prop)
+            setattr(self, f"set_{prop}", setter)
+            self.callables[f"set_{prop}"] = setter
+
+    def apply_props(self):
+
+        if hasattr(self, "qwidget"):
+            if self.props["width"]:
+                self.qwidget.setFixedWidth(int(self.props["width"]))
+            if self.props["height"]:
+                self.qwidget.setFixedWidth(int(self.props["height"]))
 
     def update_children(self, tree: dict):
 
