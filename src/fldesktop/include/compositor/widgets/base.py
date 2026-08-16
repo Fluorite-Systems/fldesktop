@@ -16,6 +16,9 @@ class Widget:
         self.callables = {}
         self.base_props = {}
 
+    def _cleanup(self):
+        ...
+
     def _setup(self):
         self._setup_layouting()
         self._runner.widgets[self.name] = self
@@ -83,10 +86,13 @@ class Widget:
     def _setup_setters(self):
         for prop in self.base_props:
 
-            def make_setter(f_name):
+            def make_setter(name):
                 def setter(**kwargs):
-                    if f_name in kwargs:
-                        self.props[f_name] = kwargs[f_name]
+                    if name in kwargs:
+                        self.props[name] = kwargs[name]
+                        logging.debug(
+                            f"Setting {name}={kwargs[name]} to {self.name}"
+                        )
                         self.apply_props()
 
                 return setter
@@ -138,6 +144,8 @@ class Widget:
                     i = self.parent.qlayout.indexOf(self.qlayout)
                     if i != -1:
                         self.parent.qlayout.takeAt(i)
+
+        self._cleanup()
 
         if hasattr(self, "qwidget"):
             self.qwidget.setParent(None)

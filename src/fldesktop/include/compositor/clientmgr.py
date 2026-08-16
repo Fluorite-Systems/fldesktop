@@ -155,6 +155,13 @@ class Client:
             case _:
                 self.callback('{"status": "invalid_type"}')
 
+    def cleanup(self):
+        "Clean up on close"
+
+        while self.widgets:
+            key = next(iter(self.widgets))
+            self.widgets[key].delete()
+
 
 class ClientManager(QObject):
     new_client_s = Signal(str, str, str, tuple, str, Any)
@@ -204,4 +211,5 @@ class ClientManager(QObject):
 
         logging.debug(f"Trying to kill client {uuid}")
         if uuid in self.clients:
+            self.clients[uuid].cleanup()
             self.comm.request("wm", "close_window", self.clients[uuid].winid)
