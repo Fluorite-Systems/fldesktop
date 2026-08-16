@@ -88,7 +88,7 @@ class ClientHandler:
                         self.comm.request(
                             "localemgr", "tr", "Unnamed application"
                         )
-                    package = data["title"] if "title" in data else "none"
+                    package = data["package"] if "package" in data else "none"
                     wsize = (
                         int(data["width"]) if "width" in data else 500,
                         int(data["height"]) if "height" in data else 400
