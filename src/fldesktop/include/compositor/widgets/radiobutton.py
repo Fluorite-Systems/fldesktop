@@ -16,11 +16,14 @@ class RadioButton(Widget):
 
         self._setup()            
 
-        self.qwidget.toggled.connect(
-            lambda c: self._runner.event(
+        self.qwidget.toggled.connect(self._handle_toggle)
+
+    def _handle_toggle(self, checked: bool):
+        
+        if checked:
+            self._runner.event(
                 name=self.name, type="radiobutton_selected"
-            ) if c else lambda: ...
-        )
+            )
 
     def apply_props(self):
         super().apply_props()
