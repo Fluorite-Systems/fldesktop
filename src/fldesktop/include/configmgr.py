@@ -8,7 +8,9 @@ FALLBACK_CONFIG = {
     "wallpaper": "/usr/share/wallpapers/Pine Path.jpg",
     "theme": "dark",
     "language": "en_US",
-    "kb_locales": ["us"]
+    "kb_locales": ["us"],
+    "auth-type": "passwordless",
+    "auth-pwhash": ""
 }
 
 

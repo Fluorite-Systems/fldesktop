@@ -10,7 +10,6 @@ class LoginManager:
         self.comm = comm
         self.comm.register(
             "loginmgr", {
-                "is_available": self.check_availability,
                 "check_password": self.check_password
             }
         )
@@ -20,16 +19,16 @@ class LoginManager:
 
         return bool(self.comm.request("cfgmgr", "get", "pwhash"))
 
-    def check_password(self, password: str):
+    def check_password(self, password: str) -> bool:
         "Check password by its hash from login.json"
 
         if self.check_availability():
-            hash = self.comm.request("cfgmgr", "get", "pwhash") 
+            hash = self.comm.request("cfgmgr", "get", "auth-pwhash") 
             parts = hash.split("$")
 
             if len(parts) != 4:
-                raise ValueError("Неверный формат хеша")
-            
+                return False
+
             _, iterations_str, salt_b64, stored_hash_b64 = parts
             
             iterations = int(iterations_str)

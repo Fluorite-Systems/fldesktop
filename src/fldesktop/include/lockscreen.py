@@ -1,8 +1,98 @@
-from PySide6.QtWidgets import (QLabel, QLineEdit, QPushButton,
-                               QVBoxLayout, QHBoxLayout)
+from PySide6.QtWidgets import (QToolButton, QWidget, QLabel, QLineEdit, 
+                               QPushButton, QVBoxLayout, QHBoxLayout,
+                               QSizePolicy)
 from PySide6.QtGui import QIcon, QFont, QShortcut, QKeySequence
 from PySide6.QtCore import Qt, QTimer, QTime, QDate, QLocale
 from fldesktop.include.widgets.surface import Surface
+
+
+class PasswordUnlockBackend(QWidget):
+    def __init__(self, manager):
+        super().__init__()
+
+        self.comm = manager.comm
+        self.manager = manager
+
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        
+        self.layout = QVBoxLayout(self)
+
+        self.inp_layout = QHBoxLayout()
+        self.layout.addLayout(self.inp_layout)
+
+        self.pwedit = QLineEdit()
+        self.pwedit.setEchoMode(self.pwedit.echoMode().Password)
+        self.pwedit.setFixedWidth(200)
+
+        self.ulbtn = QToolButton()
+        self.ulbtn.setIcon(QIcon.fromTheme("unlock-symbolic"))
+        self.ulbtn.clicked.connect(self.unlock)
+
+        self.inp_layout.addStretch()
+        self.inp_layout.addWidget(self.pwedit)
+        self.inp_layout.addWidget(self.ulbtn)
+        self.inp_layout.addStretch()
+
+    def unlock(self):
+        
+        if self.comm.request(
+            "loginmgr", "check_password", self.pwedit.text()
+        ):
+            self.manager.unlock()
+
+
+class PasswordlessUnlockBackend(QWidget):
+    def __init__(self, manager):
+        super().__init__()
+
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+
+        self.layout = QVBoxLayout(self)
+
+        self.ulbtn = QPushButton(
+            manager.comm.request("localemgr", "tr", "Unlock"),
+            flat=True
+        )
+        self.ulbtn.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self.ulbtn.setIcon(QIcon.fromTheme("unlock-symbolic"))
+        self.ulbtn.clicked.connect(manager.unlock)
+
+        self.layout.addWidget(
+            self.ulbtn, alignment=Qt.AlignmentFlag.AlignCenter
+        )
+
+
+class UnlockBackendManager:
+    def __init__(self, lockscreen: LockScreen):
+
+        self.comm = lockscreen.comm
+        self.lockscreen = lockscreen
+
+        self.backends = {
+            "passwordless": PasswordlessUnlockBackend,
+            "password": PasswordUnlockBackend
+        }
+
+        self.backend = None
+
+        self.widget = QWidget()
+        self._layout = QVBoxLayout(self.widget)
+
+    def setup(self):
+        backend_type = self.comm.request("cfgmgr", "get", "auth-type")
+
+        if self.backend is not None:
+            self.backend.close()
+
+        if backend_type in self.backends:
+            self.backend = self.backends[backend_type](self)
+        else:
+            self.backend = PasswordlessUnlockBackend(self)
+
+        self._layout.addWidget(self.backend)
+
+    def unlock(self):
+        self.lockscreen.hide_()
 
 
 class LockScreen(Surface):
@@ -25,29 +115,14 @@ class LockScreen(Surface):
 
         self.comm.subscribe("qc_btn_size_changed", self.refresh_size)
 
+        self.bkmgr = UnlockBackendManager(self)
+
         self.mlayout = QHBoxLayout(self)
         self.layout = QVBoxLayout()
 
         self.mlayout.addStretch()
         self.mlayout.addLayout(self.layout)
         self.mlayout.addStretch() 
-
-        self.pwlayout = QHBoxLayout()
-
-        self.pwedit = QLineEdit()
-        self.pwedit.setEchoMode(self.pwedit.echoMode().Password)
-        self.pwedit.setFixedWidth(200)
-        self.ulbtn = QPushButton()
-        self.ulbtn.setIcon(QIcon.fromTheme("unlock-symbolic"))
-        self.ulbtn.clicked.connect(self.unlock)
-
-        self.ulsc = QShortcut(QKeySequence("Return"), self.pwedit)
-        self.ulsc.activated.connect(self.unlock)
-
-        self.pwlayout.addStretch()
-        self.pwlayout.addWidget(self.pwedit)
-        self.pwlayout.addWidget(self.ulbtn)
-        self.pwlayout.addStretch()
 
         self.clock = QLabel()
         self.clock.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -57,10 +132,6 @@ class LockScreen(Surface):
         self.date.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.date.setFont(QFont("Noto Sans", 16))
 
-        self.message = QLabel()
-        self.message.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.message.setFont(QFont("Noto Sans", 14, italic=True))
-
         self.clock_timer = QTimer()
         self.clock_timer.timeout.connect(self.clock_tick)
         self.clock_timer.start(1000)
@@ -69,13 +140,11 @@ class LockScreen(Surface):
         self.layout.addWidget(self.clock)
         self.layout.addWidget(self.date)
         self.layout.addStretch()
-        self.layout.addLayout(self.pwlayout)
-        self.layout.addWidget(self.message)
+        self.layout.addWidget(self.bkmgr.widget)
         self.layout.addStretch()
-        
-        self.pwedit.textChanged.connect(lambda: self.message.setText(""))
 
         self.qc_btn = None
+        self.first_show = True
 
         self.hide()
 
@@ -100,27 +169,26 @@ class LockScreen(Surface):
     def show_(self) -> None:
         "Show"
 
-        if self.comm.request("loginmgr", "is_available"):
-            self.qc_btn = self.comm.request("panel", "get_qc_btn")
-            self.qc_btn.setParent(self.parent)
-            self.qc_btn.show()          
-            self.raise_()
-            self.show()
-            self.refresh_size()
-            self.qc_btn.raise_()
-        else:
-            ...
-    
-    def unlock(self) -> None:
-        "Attempt an unlock"
+        atype = self.comm.request("cfgmgr", "get", "auth-type")
+        if atype == "passwordless" and self.first_show:
+            self.first_show = False
+            return
 
-        if self.comm.request("loginmgr", "check_password", self.pwedit.text()): #pam.authenticate(os.getlogin(), self.pwedit.text()):
-            self.hide()
-            self.comm.request("panel", "return_qc_btn")
-            self.qc_btn = None
-            self.pwedit.setText(None)
-        else:
-            self.message.setText("Failed to unlock")
+        self.bkmgr.setup()
+        self.qc_btn = self.comm.request("panel", "get_qc_btn")
+        self.qc_btn.setParent(self.parent)
+        self.qc_btn.show()          
+        self.raise_()
+        self.show()
+        self.refresh_size()
+        self.qc_btn.raise_()
+
+    def hide_(self) -> None:
+        "Hide lockscreen after unlock"
+ 
+        self.hide()
+        self.comm.request("panel", "return_qc_btn")
+        self.qc_btn = None
     
     def refresh_size(self) -> None:
         "Refreshes size"
