@@ -26,7 +26,6 @@ widgets = {
     "tabs": tabs.Tabs,
     "terminal": terminal.Terminal,
     "textedit": textedit.TextEdit,
-    "webview": webview.WebView,
     "canvas": canvas.Canvas,
     "accelgraphicsview": accelgraphicsview.AccelGraphicsView
 }
