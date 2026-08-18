@@ -112,7 +112,8 @@ class Widget:
     def update_children(self, tree: dict):
 
         for i in self.children:
-            i.delete()
+            if i.name not in tree:
+                i.delete()
 
         # Теперь строим новое дерево
         self._runner.parser.build_tree_from_objects(tree, self)
