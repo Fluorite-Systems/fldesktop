@@ -143,16 +143,53 @@ FLUORITE_LIGHT_CS = {
 }
 
 STD_COLORS = {
+    "white": "#f2f4f7",
+    "lightwhite": "#FFFFFF",
+    "darkwhite": "#D5D8DD",
+
+    "black": "#2a2e32",
+    "lightblack": "#4A5056",
+    "darkblack": "#121416",
+
     "red": "#D95C5C",
+    "lightred": "#F28B82",
+    "darkred": "#A93B3B",
+
     "orange": "#E89A4A",
+    "lightorange": "#F5C27B",
+    "darkorange": "#C17A2E",
+
     "yellow": "#E0B84D",
+    "lightyellow": "#F5DC7A",
+    "darkyellow": "#B89330",
+
     "green": "#43B77A",
+    "lightgreen": "#78DBA3",
+    "darkgreen": "#2A8F5C",
+
     "teal": "#5AA7A2",
+    "lightteal": "#8ACAC5",
+    "darkteal": "#3E807B",
+
     "blue": "#4A86E8",
+    "lightblue": "#7BA9F0",
+    "darkblue": "#2E62B8",
+
     "indigo": "#6673C6",
+    "lightindigo": "#939DDA",
+    "darkindigo": "#4A56A0",
+
     "purple": "#9575CD",
+    "lightpurple": "#B99FD9",
+    "darkpurple": "#7657A8",
+
     "pink": "#CB6A9E",
-    "cyan": "#56A8D8"
+    "lightpink": "#E095BE",
+    "darkpink": "#A84A7A",
+
+    "cyan": "#56A8D8",
+    "lightcyan": "#84C3E5",
+    "darkcyan": "#3A85B0"
 }
 
 COLORSCHEMES = {
