@@ -21,7 +21,7 @@ class Button(QPushButton):
         self.setObjectName("traybtn")
 
         self.layout = QHBoxLayout(self)
-        self.layout.setSpacing(2)
+        self.layout.setSpacing(5)
         self.layout.setDirection(QHBoxLayout.Direction.RightToLeft)
         self.icons = {}
 
