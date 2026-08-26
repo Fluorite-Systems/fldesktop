@@ -162,7 +162,6 @@ class Parser:
                             c += 1
                         else:
                             f = False
-                    print(points)
 
                     painter.setPen(QPen(QColor(v["outline"]), v["width"]))
                     painter.setBrush(QColor(v["fill"]) if v["fill"] else Qt.NoBrush)
