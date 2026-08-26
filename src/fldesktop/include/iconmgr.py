@@ -1,4 +1,6 @@
-from PySide6.QtGui import QIcon, QPainter, QPixmap, QPen, QColor, QPolygon
+from PySide6.QtGui import (QIcon, QPainter, QPixmap,
+                           QPen, QColor, QPolygon,
+                           QPainterPath)
 from PySide6.QtCore import Qt, QRect, QPoint
 
 from pathlib import Path
@@ -16,8 +18,12 @@ DEFAULTS = {
     "y": 0,
     "x1": 0,
     "x2": 0,
+    "x3": 0,
+    "x4": 0,
     "y1": 0,
     "y2": 0,
+    "y3": 0,
+    "y4": 0,
     "w": 0,
     "h": 0
 }
@@ -140,7 +146,7 @@ class Parser:
                     if v["cap"] == "rounded":
                         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
                     elif v["cap"] == "none":
-                        pen.setCapStyle(Qt.PenCapStyle.FlatCa)
+                        pen.setCapStyle(Qt.PenCapStyle.FlatCap)
 
                     painter.setPen(pen)
                     painter.setBrush(QColor(v["fill"]) if v["fill"] else Qt.NoBrush)
@@ -166,6 +172,20 @@ class Parser:
                     polygon = QPolygon(points)
                     painter.drawPolygon(polygon)
 
+                case "bezier":
+                    pen = QPen(QColor(v["outline"]), v["width"])
+                    pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+                    painter.setPen(pen)
+                    painter.setBrush(QColor(v["fill"]) if v["fill"] else Qt.NoBrush)
+
+                    path = QPainterPath()
+                    path.moveTo(QPoint(v["x1"] * mul, v["y1"] * mul))
+                    path.cubicTo(
+                        QPoint(v["x2"] * mul, v["y2"] * mul),
+                        QPoint(v["x3"] * mul, v["y3"] * mul),
+                        QPoint(v["x4"] * mul, v["y4"] * mul)
+                    )
+                    painter.drawPath(path)
         painter.end()
 
         return QIcon(pixmap)
@@ -198,6 +218,8 @@ class IconManager:
 
     def load_icon(self, path: Path) -> QIcon:
 
+        logging.debug(f"Loading icon {path.name}...")
+
         with open(path) as f:
             code = f.read()
 
@@ -227,17 +249,8 @@ class IconManager:
 
         for i in path.iterdir():
             if i.suffix == ".fvgi":
-
                 try:
-                
-                    with open(i) as f:
-                        icon = self.parser.iconify(
-                            self.parser.rectify(
-                                self.parser.parse(
-                                    f.read()
-                                )
-                            )
-                        )
+                    icon = self.load_icon(i) 
                 except Exception as e:
                     logging.warning(f"Failed to load icon {i.stem}: {e}")
                     icon = QIcon()
