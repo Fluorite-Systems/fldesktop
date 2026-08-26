@@ -9,5 +9,12 @@
     "Reboot": "Перезагрузка",
     "Sleep": "Спящий режим",
     "Unlock": "Разблокировать",
-    "Unnamed application": "Безымянное приложение"
+    "Unnamed application": "Безымянное приложение",
+    "Local network only": "Только локальная сеть",
+    "Connected to internal network": "Подключено к внутренней сети",
+    "Connected to the Internet": "Подключено к Интернету",
+    "Connections available": "Доступны подключения",
+    "Connections unavailable": "Подлючения недоступны",
+    "Disconnected from network": "Отключено от сети",
+    "Wired network": "Проводное подключение"
 }
