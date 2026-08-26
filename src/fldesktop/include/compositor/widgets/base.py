@@ -107,13 +107,16 @@ class Widget:
             if self.props["width"]:
                 self.qwidget.setFixedWidth(int(self.props["width"]))
             if self.props["height"]:
-                self.qwidget.setFixedWidth(int(self.props["height"]))
+                self.qwidget.setFixedHeight(int(self.props["height"]))
 
     def update_children(self, tree: dict):
-
-        for i in self.children:
-            if i.name not in tree:
-                i.delete()
+        i = 0
+        while i < len(self.children):
+            child = self.children[i]
+            if child.name not in tree:
+                child.delete()
+            else:
+                i += 1
 
         # Теперь строим новое дерево
         self._runner.parser.build_tree_from_objects(tree, self)
@@ -132,9 +135,9 @@ class Widget:
     def delete(self):
         logging.debug(f"Deleting {self.type} {self.name}")
         logging.debug(f"{self.name} has {self.children} at the moment of its death")
-        for i in self.children[:]:
-            logging.debug(f"{self.name} deletes {i.name}!")
-            i.delete()
+        while self.children:
+            logging.debug(f"{self.name} deletes {self.children[0].name}!")
+            self.children[0].delete()
 
         if self.parent:
             self.parent.children.remove(self)
