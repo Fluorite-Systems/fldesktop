@@ -1,0 +1,4 @@
+polygon x1=7 y1=1 x2=4 y2=4 x3=2 y3=4 x4=2 y4=10 x5=4 y5=10 x6=7 y6=13 width=18
+
+bezier x1=9 y1=4 x2=10 y2=6 x3=10 y3=8 x4=9 y4=10 width=15
+bezier x1=10 y1=3 x2=12 y2=5 x3=12 y3=9 x4=10 y4=11 width=15

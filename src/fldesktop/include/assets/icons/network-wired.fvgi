@@ -1,0 +1,8 @@
+rectangle x=2 y=2 w=12 h=8 fill=transparent outline=fg width=20
+rectangle x=7 y=9 w=2 h=4 fill=fg outline=fg rounding=1 width=20
+line x1=5 y1=12 x2=10 y2=12 width=20 cap=rounded
+
+rectangle x=0 y=0 w=5 h=6 fill=bg outline=fg rounding=1 width=15
+line x1=2 y1=5 x2=2 y2=13 outline=fg width=18 cap=none
+line x1=0 y1=2 x2=4 y2=2 outline=fg width=18 cap=none
+line x1=2 y1=2 x2=2 y2=3 outline=fg width=18
