@@ -1,6 +1,7 @@
+from PySide6.QtWidgets import QLabel, QGraphicsDropShadowEffect
 from PySide6.QtGui import (QIcon, QPainter, QPixmap,
                            QPen, QColor, QPolygon,
-                           QPainterPath)
+                           QPainterPath, QLinearGradient)
 from PySide6.QtCore import Qt, QRect, QPoint
 
 from pathlib import Path
@@ -18,12 +19,8 @@ DEFAULTS = {
     "y": 0,
     "x1": 0,
     "x2": 0,
-    "x3": 0,
-    "x4": 0,
     "y1": 0,
     "y2": 0,
-    "y3": 0,
-    "y4": 0,
     "w": 0,
     "h": 0
 }
@@ -173,6 +170,10 @@ class Parser:
                     painter.drawPolygon(polygon)
 
                 case "bezier":
+                    for i in ["x3", "y3", "x4", "y4"]:
+                        if i not in v:
+                            v[i] = 0
+
                     pen = QPen(QColor(v["outline"]), v["width"])
                     pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
                     painter.setPen(pen)
@@ -188,7 +189,40 @@ class Parser:
                     painter.drawPath(path)
         painter.end()
 
-        return QIcon(pixmap)
+        return QIcon(self.apply_effects(pixmap))
+
+    def apply_effects(self, pix: QPixmap) -> QPixmap:
+
+        result = pix.copy()
+        painter = QPainter(result)
+        rect = result.rect()
+
+        g = QLinearGradient(rect.topLeft(), rect.bottomLeft())
+        g.setColorAt(0, QColor(255,255,255,80))
+        g.setColorAt(0.4, QColor(255,255,255,0))
+        g.setColorAt(0.6, QColor(0,0,0,0))
+        g.setColorAt(1, QColor(0,0,0,100))
+
+        painter.setCompositionMode(QPainter.CompositionMode_SourceAtop)
+        painter.fillRect(rect, g)
+        painter.end()
+
+        effect = QGraphicsDropShadowEffect(
+            blurRadius=30,
+            offset=QPoint(1, 1),
+            color=QColor(50, 50, 50, 200)
+        )
+
+        label = QLabel()
+        label.setPixmap(result)
+        label.setFixedSize(result.size())
+        label.setGraphicsEffect(effect)
+
+        label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        label.setStyleSheet("background: transparent;")
+        label.setAutoFillBackground(False)
+
+        return label.grab()
 
 
 class IconManager:
