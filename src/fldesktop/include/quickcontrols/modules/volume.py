@@ -41,18 +41,19 @@ class Volume(QWidget):
         
         vol = self.slider.value()
 
-        if vol >= 66:
-            ico = "audio-volume-high-symbolic"
-        elif vol < 66 and vol >= 33:
-            ico = "audio-volume-medium-symbolic"
-        elif vol < 33 and vol >= 1:
-            ico = "audio-volume-low-symbolic"
+        if vol > 66:
+            ico = "audio-volume-3"
+        elif vol > 33:
+            ico = "audio-volume-2"
+        elif vol > 1:
+            ico = "audio-volume-1"
         else:
-            ico = "player-volume-muted-symbolic"
+            ico = "audio-volume-muted"
+
+        icon = self.comm.request("iconmgr", "get", ico)
         
-        self.mute_btn.setIcon(QIcon.fromTheme(ico))
-        self.comm.request("qc_indicator", "add_icon", 
-                       QIcon.fromTheme(ico), "volume")
+        self.mute_btn.setIcon(icon)
+        self.comm.request("qc_indicator", "add_icon", icon, "volume")
         self.percentage.setText(str(vol))
 
         self.timer.start()

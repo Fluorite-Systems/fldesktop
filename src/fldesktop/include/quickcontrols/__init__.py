@@ -26,7 +26,7 @@ class Button(QPushButton):
         self.icons = {}
 
         self.add_icon(
-            self.comm.request("iconmgr", "get", "shutdown"), "shutdown"
+            self.comm.request("iconmgr", "get", "system-shutdown"), "shutdown"
         )
     
     def add_icon(self, icon: QIcon, id: str):

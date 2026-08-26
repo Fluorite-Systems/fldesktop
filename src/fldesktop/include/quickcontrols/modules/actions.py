@@ -26,7 +26,9 @@ class Actions(QWidget):
 
         self.sleep_btn = QPushButton()
         self.sleep_btn.setFlat(True)
-        self.sleep_btn.setIcon(QIcon.fromTheme("system-suspend-symbolic"))
+        self.sleep_btn.setIcon(
+            self.comm.request("iconmgr", "get", "system-suspend")
+        )
         self.sleep_btn.clicked.connect(
             lambda: self.action_handler(
                 lambda: self.comm.request("osmgr", "suspend")
@@ -36,7 +38,7 @@ class Actions(QWidget):
         self.pwr_btn = QPushButton()
         self.pwr_btn.setFlat(True)
         self.pwr_btn.setIcon(
-            self.comm.request("iconmgr", "get", "shutdown")
+            self.comm.request("iconmgr", "get", "system-shutdown")
         )
 
         self.pwr_menu = QMenu()
