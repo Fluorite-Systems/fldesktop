@@ -17,8 +17,8 @@ class Button(Widget):
         self.base_props = {
             "text": "",
             "icon": "",
-            "flat": "false",
-            "compact": "false"
+            "flat": False,
+            "compact": False
         }
 
         self._setup()
@@ -35,6 +35,6 @@ class Button(Widget):
         if self.props["icon"]:
             self.qwidget.setIcon(QIcon.fromTheme(self.props["icon"]))
         if self.props["flat"]:
-            self.qwidget.setFlat(self.props["flat"] == "true")
-        if self.props["compact"] == "true":
+            self.qwidget.setFlat(self.props["flat"])
+        if self.props["compact"]:
             self.qwidget.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
