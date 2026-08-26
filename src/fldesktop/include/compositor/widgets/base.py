@@ -126,11 +126,22 @@ class Widget:
         for i in self.children:
             i.delete()
 
-    def add_child(self, name: str, props: dict):
+    def add_children(self, children: dict):
 
-        self._runner.parser.build_tree_from_objects({
-            name: props
-        }, self)
+        logging.debug(f"Adding children: {children}")
+
+        self._runner.parser.build_tree_from_objects(children, self)
+
+    def delete_children(self, children: list):
+
+        i = 0
+        while i < len(self.children):
+            child = self.children[i]
+            if child.name in children:
+                child.delete()
+            else:
+                i += 1
+
 
     def delete(self):
         logging.debug(f"Deleting {self.type} {self.name}")

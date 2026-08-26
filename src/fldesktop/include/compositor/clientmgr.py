@@ -94,7 +94,31 @@ class Client:
                     )
                     self.deleted_widgets = []
                 else:
-                    self.callback('{"status": "unknown_node"}')
+                    self.callback('{"status": "unknown_widget"}')
+
+            case "add_children":
+                if data["name"] in self.widgets:
+                    self.widgets[data["name"]].add_children(data["children"])
+                    self.callback('{"status": "ok"}')
+                else:
+                    self.callback('{"status": "unknown_widget"}')
+
+            case "delete_children":
+                if data["name"] in self.widgets: 
+                    self.deleted_widgets = []
+                    self.widgets[data["name"]].delete_children(data["children"]) 
+                    self.callback(
+                        json.dumps(
+                            {
+                                "status": "ok",
+                                "deleted": self.deleted_widgets
+                            }
+                        )
+                    )
+                    self.deleted_widgets = []
+                else:
+                    self.callback('{"status": "unknown_widget"}')
+
 
             case "clear_children":
                 if data["name"] in self.widgets:
@@ -110,7 +134,7 @@ class Client:
                     )
                     self.deleted_widgets = []
                 else:
-                    self.callback('{"status": "unknown_node"}')
+                    self.callback('{"status": "unknown_widget"}')
 
             case "call_method":
                 if data["name"] in self.widgets:
