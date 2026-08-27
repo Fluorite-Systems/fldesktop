@@ -63,7 +63,7 @@ class PasswordlessUnlockBackend(QWidget):
 
 
 class UnlockBackendManager:
-    def __init__(self, lockscreen: LockScreen):
+    def __init__(self, lockscreen):
 
         self.comm = lockscreen.comm
         self.lockscreen = lockscreen

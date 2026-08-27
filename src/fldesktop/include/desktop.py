@@ -10,7 +10,7 @@ import os
 
 
 class Background(QLabel):
-    def __init__(self, desktop: Desktop, comm) -> None:
+    def __init__(self, desktop, comm) -> None:
         super().__init__(desktop)
 
         self.comm = comm
