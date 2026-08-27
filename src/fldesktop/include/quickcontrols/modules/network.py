@@ -279,8 +279,6 @@ class Network(QWidget):
 
         status = self.nm.get_status()
 
-        print(status)
-
         if status["connected"]:
             self.details.show()
             if status["wifi_enabled"]:
