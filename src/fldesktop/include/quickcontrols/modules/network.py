@@ -101,11 +101,16 @@ class NetworkManagement:
 
         for dev_path in all_devices:
             dev_type = self._get_property(
-                dev_path, "org.freedesktop.NetworkManager.Device", 
+                dev_path, "org.freedesktop.NetworkManager.Device",
                 "DeviceType"
             )
             if dev_type == 2:
-                wifi_devices.append(dev_path)
+                dev_state = self._get_property(
+                    dev_path, "org.freedesktop.NetworkManager.Device",
+                    "State"
+                )
+                if dev_state is not None and int(dev_state) not in (0, 10):
+                    wifi_devices.append(dev_path)
         return wifi_devices
 
     def _count_available_access_points(self, wifi_devices: list) -> int:
@@ -149,10 +154,13 @@ class NetworkManagement:
         wifi_hw_on = self._get_property(
             NM_PATH, NM_IFACE, "WirelessHardwareEnabled"
         )
-        result["wifi_enabled"] = bool(wifi_switched_on) and bool(wifi_hw_on)
 
         wifi_devices = self._get_all_wifi_devices()
-        if result["wifi_enabled"] and wifi_devices:
+
+        has_wifi_hardware = len(wifi_devices) > 0
+        result["wifi_enabled"] = bool(wifi_switched_on) and bool(wifi_hw_on) and has_wifi_hardware
+
+        if result["wifi_enabled"]:
             result["available_ap_count"] = \
                 self._count_available_access_points(wifi_devices)
 
@@ -271,6 +279,8 @@ class Network(QWidget):
 
         status = self.nm.get_status()
 
+        print(status)
+
         if status["connected"]:
             self.details.show()
             if status["wifi_enabled"]:
@@ -304,20 +314,23 @@ class Network(QWidget):
 
         if status["connected"]:
             if status["wifi_enabled"]:
-                strength = status["strength"]
+                if isinstance(status["strength"], int):
+                    strength = status["strength"]
 
-                if strength >= 85:
-                    icon = "network-wireless-signal-5"
-                elif strength >= 70:
-                    icon = "network-wireless-signal-4"
-                elif strength >= 50:
-                    icon = "network-wireless-signal-3"
-                elif strength >= 35:
-                    icon = "network-wireless-signal-2"
-                elif strength >= 20:
-                    icon = "network-wireless-signal-1"
+                    if strength >= 85:
+                        icon = "network-wireless-signal-5"
+                    elif strength >= 70:
+                        icon = "network-wireless-signal-4"
+                    elif strength >= 50:
+                        icon = "network-wireless-signal-3"
+                    elif strength >= 35:
+                        icon = "network-wireless-signal-2"
+                    elif strength >= 20:
+                        icon = "network-wireless-signal-1"
+                    else:
+                        icon = "network-wireless-signal-0"
                 else:
-                    icon = "network-wireless-signal-0"
+                    icon = "network-wireless-signal-5"
             else:
                 icon = "network-wired"
         else:
