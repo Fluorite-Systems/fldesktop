@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import subprocess
 
@@ -44,13 +45,15 @@ class OSManager:
         "Power off the system"
         self.prepare_logout()
         logging.info("Shutting down via systemctl, goodbye.")
-        subprocess.run(["systemctl", "poweroff"])
+        subprocess.Popen(["systemctl", "poweroff", "--no-block", "--no-wall"])
+        sys.exit(0)
     
     def os_reboot(self) -> None:
         "Reboot the system"
         self.prepare_logout()
         logging.info("Rebooting via systemctl, goodbye.")
-        subprocess.run(["systemctl", "reboot"])
+        subprocess.Popen(["systemctl", "reboot", "--no-block", "--no-wall"])
+        sys.exit(0)
     
     def os_suspend(self) -> None:
         "Show lockscreen and suspend the system"
