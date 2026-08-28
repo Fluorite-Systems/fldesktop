@@ -45,7 +45,13 @@ class OSManager:
         "Power off the system"
         self.prepare_logout()
         logging.info("Shutting down via systemctl, goodbye.")
-        subprocess.Popen(["systemctl", "poweroff", "--no-wall"])
+        subprocess.Popen([
+            "dbus-send", "--system", "--print-reply",
+            "--dest=org.freedesktop.login1",
+            "/org/freedesktop/login1",
+            "org.freedesktop.login1.Manager.PowerOff",
+            "boolean:true"
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         while True:
             time.sleep(1000)
     
@@ -53,7 +59,13 @@ class OSManager:
         "Reboot the system"
         self.prepare_logout()
         logging.info("Rebooting via systemctl, goodbye.")
-        subprocess.Popen(["systemctl", "reboot", "--no-wall"])
+        subprocess.Popen([
+            "dbus-send", "--system", "--print-reply",
+            "--dest=org.freedesktop.login1",
+            "/org/freedesktop/login1",
+            "org.freedesktop.login1.Manager.Reboot",
+            "boolean:true"
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         while True:
             time.sleep(1000)
     
