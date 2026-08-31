@@ -3,7 +3,6 @@ from PySide6.QtCore import QProcess
 from pathlib import Path
 import subprocess
 import logging
-import shutil
 import uuid
 import json
 import os
@@ -16,6 +15,7 @@ class Package:
         self.generic_name = {}
         self.version = ""
         self.icon = ""
+        self.custom_env = {}
         self.search = False
         self.executable = False
         self.path = path
@@ -26,10 +26,6 @@ class Package:
             os.environ["XDG_RUNTIME_DIR"]
         ) / "fla" / str(uuid.uuid4())
 
-        self.env_path = Path(
-            os.environ["XDG_RUNTIME_DIR"]
-        ) / "fla_env" / str(uuid.uuid4())
-        
         self.mount()
         self.load_metadata()
 
@@ -50,6 +46,9 @@ class Package:
             
             if "generic_name" in data:
                 self.generic_name = data["generic_name"]
+
+            if "env" in data:
+                self.custom_env = data["env"]
 
         else:
             self.package = "Unknown"
@@ -82,36 +81,27 @@ class Package:
     
     def exec(self, arguments: list = []):
 
-        logging.debug(
-            f"Executing entrypoint {self.mount_path / "bin" / "main"}"
-        )
-
         if self.executable:
 
             args = [
-                "--ro-bind", f"{self.mount_path / "bin"}", "/application/bin",
+                "--bind", str(self.mount_path / "runtime"), "/",
+                "--bind", f"{self.mount_path / "bin"}", "/application/bin",
+                "--bind", os.environ["XDG_RUNTIME_DIR"], "/run/user/1000",
                 "--bind", str(Path.home()), "/home",
-                "--proc", "/proc",
-                "--dev", " /dev",
-                "--ro-bind", str(self.env_path), "/"
+                "--proc", "/proc"
             ]
 
-            if (self.mount_path / "runtime").exists() and \
-                (self.mount_path / "runtime").is_dir():
-                    args.extend(
-                        ["--ro-bind", str(self.mount_path / "runtime"), "/"]
-                    )
+            for k, v in self.custom_env.items():
+                args.append("--setenv")
+                args.append(str(k))
+                args.append(str(v))
 
             args.append("/application/bin/main")
-            args.extend(arguments)
-            #args.extend(["ls", "/"])
 
             logging.debug(f"Running bwrap with these arguments: {args}")
 
             proc = QProcess()
             proc.start("/usr/bin/bwrap", args)
-
-            #proc.start(str(self.mount_path / "bin" / "main"), arguments)
 
             self.procs.append(proc)
 
