@@ -15,7 +15,7 @@ class Package:
         self.name = ""
         self.generic_name = {}
         self.version = ""
-        self.icon = QIcon()
+        self.icon = ""
         self.search = False
         self.executable = False
         self.path = path
