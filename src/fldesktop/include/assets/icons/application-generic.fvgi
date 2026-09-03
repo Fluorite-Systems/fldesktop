@@ -1,0 +1,4 @@
+rectangle x=1 y=1 w=6 h=6 r=5 outline=lightcyan fill=cyan
+rectangle x=1 y=8 w=6 h=6 r=5 outline=lightteal fill=teal
+rectangle x=8 y=8 w=6 h=6 r=5 outline=lightred fill=red
+circle x=11 y=3 r=3 outline=lightyellow fill=yellow
