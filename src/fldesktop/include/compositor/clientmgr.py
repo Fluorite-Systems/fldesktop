@@ -224,7 +224,7 @@ class ClientManager(QObject):
     def notify_client(self, uuid: str, data: bytes):
         "Notify client"
 
-        data = msgpack.unpackb(data)
+        data = msgpack.unpackb(data, strict_map_key=False)
 
         if uuid in self.clients:
             self.clients[uuid].receive(data)

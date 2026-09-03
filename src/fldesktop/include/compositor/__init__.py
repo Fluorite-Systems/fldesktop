@@ -79,7 +79,7 @@ class ClientHandler:
             if message.strip()[0] == 0x7b:
                 data = json.loads(message.decode('utf-8').strip())
             else:
-                data = msgpack.unpackb(message)
+                data = msgpack.unpackb(message, strict_map_key=False)
 
             if "type" in data:
                 if data["type"] == "init_client":
