@@ -4,6 +4,7 @@ import os
 import uuid
 import threading
 import logging
+import msgpack
 from typing import Optional
 
 
@@ -53,10 +54,9 @@ class ClientHandler:
                     break
                 
                 data = b"".join(chunks)
-                message = data.decode('utf-8').strip()
 
                 # Process message and respond to it
-                response = self.process_message(message)
+                response = self.process_message(data)
 
                 if type(response) == str and response:
                     try:
@@ -69,14 +69,17 @@ class ClientHandler:
         finally:
             self.close()
     
-    def process_message(self, raw_message: str) -> str:
+    def process_message(self, raw_message: bytes) -> str:
         "Process incoming message"
 
-        for message in raw_message.split("\x00"):
+        for message in raw_message.split(b"\x00"):
             if not message:
                 continue
-                
-            data = json.loads(message)
+
+            if message.strip()[0] == 0x7b:
+                data = json.loads(message.decode('utf-8').strip())
+            else:
+                data = msgpack.unpackb(message)
 
             if "type" in data:
                 if data["type"] == "init_client":
