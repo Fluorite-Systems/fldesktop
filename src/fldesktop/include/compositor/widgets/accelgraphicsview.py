@@ -36,7 +36,7 @@ class ImageViewer(QWidget):
     def paintEvent(self, event):
         def draw_blank(self):
             p = QPainter(self)
-            p.fillRect(self.rect(), Qt.grey)
+            p.fillRect(self.rect(), Qt.darkGray)
             p.end()
 
         if self._image_data is None:
