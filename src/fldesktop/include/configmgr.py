@@ -1,4 +1,4 @@
-from PySide6.QtCore import QFileSystemWatcher
+from PySide6.QtCore import QFileSystemWatcher, QTimer
 import json
 
 
@@ -30,8 +30,11 @@ class ConfigurationManager:
 
         self.load_config()
 
+        self.debounce = QTimer(interval=500, singleShot=True)
+        self.debounce.timeout.connect(self.on_config_changed)
+
         self.watcher = QFileSystemWatcher([self.path])
-        self.watcher.fileChanged.connect(self.on_config_changed)
+        self.watcher.fileChanged.connect(self.debounce.start)
     
     def load_config(self):
         "Load configuration"
@@ -56,7 +59,7 @@ class ConfigurationManager:
             else:
                 return None
     
-    def on_config_changed(self, _):
+    def on_config_changed(self):
         "Handle config file changes"
 
         self.load_config()
