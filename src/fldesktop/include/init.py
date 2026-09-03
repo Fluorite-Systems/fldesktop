@@ -29,7 +29,7 @@ SERVICES = {
     },
     "PackageManager": {
         "object": pkgmgr.PackageManager,
-        "depends": ["QApplication"]
+        "depends": ["QApplication", "IconManager"]
     },
     "Search": {
         "object": search.Search,

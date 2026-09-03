@@ -16,9 +16,7 @@ class AppSearch:
                     i = {
                         "title": app.name,
                         "description": app.package,
-                        "icon": self.comm.request(
-                            "iconmgr", "parse", app.icon
-                        ),
+                        "icon": app.icon,
                         "callback": app.exec
                     }
                     results.append(i)
