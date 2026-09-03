@@ -7,6 +7,7 @@ from fldesktop.include.compositor.parser import Parser
 from typing import Any
 
 import json
+import msgpack
 import logging
 
 
@@ -189,7 +190,7 @@ class Client:
 
 class ClientManager(QObject):
     new_client_s = Signal(str, str, str, tuple, str, Any)
-    notify_client_s = Signal(str, str)
+    notify_client_s = Signal(str, bytes)
     kill_client_s = Signal(str)
 
     def __init__(self, comm):
@@ -204,7 +205,7 @@ class ClientManager(QObject):
             "new_client": lambda u, n, p, s, t, c:
                 self.new_client_s.emit(u, n, p, s, t, c),
             "notify_client": lambda u, d:
-                self.notify_client_s.emit(u, json.dumps(d)),
+                self.notify_client_s.emit(u, msgpack.packb(d)),
             "kill_client": lambda u: 
                 self.kill_client_s.emit(u)
         })
@@ -220,10 +221,10 @@ class ClientManager(QObject):
         )
         self.clients[cl.uuid] = cl
     
-    def notify_client(self, uuid: str, data: str):
+    def notify_client(self, uuid: str, data: bytes):
         "Notify client"
 
-        data = json.loads(data)
+        data = msgpack.unpackb(data)
 
         if uuid in self.clients:
             self.clients[uuid].receive(data)
