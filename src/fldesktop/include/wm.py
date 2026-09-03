@@ -408,7 +408,7 @@ class WindowManager:
 
     
     def create_window(self, name: str, widget: QWidget, 
-                      icon: QIcon = QIcon(), package: str = "internal",
+                      icon: QIcon = None, package: str = "internal",
                       size: tuple[int, int] = (400, 400),
                       type: str = "normal") -> tuple:
         "Creates an window"
@@ -417,8 +417,13 @@ class WindowManager:
 
         logging.info(f"Creating a window with id {self.curid}")
 
-        if icon.isNull():
-            icon = QIcon.fromTheme("applications-other")
+        if icon is None:
+            icon = self.comm.request("iconmgr", "get", "application-generic")
+        else:
+            if icon.isNull():
+                icon = self.comm.request(
+                    "iconmgr", "get", "application-generic"
+                )
         
         win = Window(
             widget, name, package,
