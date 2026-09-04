@@ -101,6 +101,15 @@ class Package:
             logging.debug(f"Running bwrap with these arguments: {args}")
 
             proc = QProcess()
+            proc.errorOccurred.connect(
+                lambda err, proc=proc: self.comm.request(
+                    "dialogmgr", "sys_error",
+                    (
+                        f"An error occured in package {self.package}: "
+                        f"{proc.errorString()}"
+                    )
+                )
+            )
             proc.start("/usr/bin/bwrap", args)
 
             self.procs.append(proc)
