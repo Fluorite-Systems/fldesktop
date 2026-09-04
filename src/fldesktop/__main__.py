@@ -18,14 +18,11 @@
 from fldesktop.include.init import Init
 from fldesktop.include.args import ArgumentParser
 
-from pathlib import Path
-
 import logging
 import sys
 
 
 VERSION = "raw"
-LOGGING_DIR = Path("/system/logs")
 
 
 class Core:
@@ -38,18 +35,10 @@ class Core:
             print(VERSION)
             sys.exit()
 
-        if LOGGING_DIR.exists():
-            logging.basicConfig(
-                level=logging.DEBUG if self.ap.args.debug else logging.INFO,
-                format="%(asctime)s: %(filename)s: %(levelname)s: %(message)s",
-                filename=LOGGING_DIR / "fldesktop.log",
-                filemode="w"
-            )
-        else:
-            logging.basicConfig(
-                level=logging.DEBUG if self.ap.args.debug else logging.INFO,
-                format="%(asctime)s: %(filename)s: %(levelname)s: %(message)s"
-            )
+        logging.basicConfig(
+            level=logging.DEBUG if self.ap.args.debug else logging.INFO,
+            format="%(asctime)s: %(filename)s: %(levelname)s: %(message)s"
+        )
 
         logging.info(f"Welcome to fldesktop, version: {VERSION}")
 
