@@ -130,6 +130,14 @@ class Surface(QWidget):
     def update(self):
         self._invalidate_cache()
         super().update()
+
+    def raise_(self):
+        self.shadow.raise_()
+        super().raise_()
+
+    def lower(self):
+        self.shadow.lower()
+        super().lower()
     
     def resizeEvent(self, event):
         super().resizeEvent(event)
