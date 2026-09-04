@@ -8,7 +8,7 @@ class Communicator:
 
         self.services.append((name, actions))
 
-    def request(self, name: str, action: str, *args):
+    def request(self, name: str, action: str, *args, **kwargs):
         "Requests something from service"
 
         r = None
@@ -16,7 +16,7 @@ class Communicator:
         for s in self.services:
             if s[0] == name:
                 if action in s[1]:
-                    r = s[1][action](*args)
+                    r = s[1][action](*args, **kwargs)
         
         return r
 
