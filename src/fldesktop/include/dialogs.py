@@ -95,6 +95,7 @@ class MessageBox(QWidget):
     def setup_icon(self):
         icons = {
             "error": "dialog-error",
+            "syserror": "dialog-error",
             "information": "dialog-information",
             "success": "dialog-positive"
         }
@@ -115,6 +116,7 @@ class DialogManager:
         self.comm.register("dialogmgr", {
             "notification": self.notify,
             "error": self.error,
+            "sys_error": self.sys_error,
             "open_file": self.file_chooser,
             "save_file": self.save_file_chooser
         })
@@ -173,4 +175,15 @@ class DialogManager:
                 "icon": diag.qicon,
                 "type": "messagebox"
             }
+        )
+
+    def sys_error(self, contents: str):
+
+        diag = MessageBox("syserror", contents)
+
+        self.comm.request(
+            "wm", "create_window",
+            "System error", diag,
+            size=(300, 200),
+            type="messagebox"
         )
