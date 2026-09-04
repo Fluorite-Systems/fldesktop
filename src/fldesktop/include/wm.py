@@ -17,9 +17,6 @@ class Overlay(QLabel):
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, 
                         False)
         self.setObjectName("overlay")
-        self.setStyleSheet(
-            "background-color: rgba(0, 0, 0, 50)"
-        )
     
     def mousePressEvent(self, event):
         self.parent().mousePressEvent(event)
