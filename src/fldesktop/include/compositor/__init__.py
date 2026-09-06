@@ -5,6 +5,7 @@ import uuid
 import threading
 import logging
 import msgpack
+import struct
 from typing import Optional
 
 
@@ -17,18 +18,33 @@ class ClientHandler:
         self.is_active = True
         self.uuid = None
         self.thread = None
+        self.data_fmt = "json"
     
-    def handle_callback(self, s: str):
+    def handle_callback(self, s: str | dict):
 
         logging.debug(f"Handling callback: {s}")
 
-        if s == "close":
-            self.close()
+        if isinstance(s, dict):
+            if self.data_fmt == "msgpack":
+                s = msgpack.dumps(s)
+            else:
+                s = json.dumps(s).encode("utf-8")
         else:
-            try:
-                self.connection.sendall((s + "\x00").encode("utf-8"))
-            except (BrokenPipeError, OSError):
-                self.close()
+            s = s.encode("utf-8")
+
+        if s == b"close":
+            self.close()
+            return
+
+        try:
+            message_length = len(s)
+            length_prefix = struct.pack(">I", message_length)
+            self.connection.sendall(length_prefix + s)
+        except (BrokenPipeError, OSError) as e:
+            logging.error(
+                f"Failed to send data to {self.client_address}: {e}"
+            )
+            self.close()
     
     def handle_client(self):
         "Client handling logics"
@@ -37,85 +53,68 @@ class ClientHandler:
         
         try:
             while self.is_active:
-                # Receive some chunks from client and join them
-                chunks = []
 
-                while True:
-                    data = self.connection.recv(1024)
-                    chunks.append(data)
-                    if b"\x00" in data:
-                        break
-
-                    if not data:
-                        chunks = None
-                        break
-
-                if chunks == None:
-                    break
+                size_data = self.connection.recv(4, socket.MSG_WAITALL)
                 
-                data = b"".join(chunks)
+                if not size_data or len(size_data) < 4:
+                    break
 
-                # Process message and respond to it
-                response = self.process_message(data)
+                size = struct.unpack(">I", size_data)[0]
 
-                if type(response) == str and response:
-                    try:
-                        self.connection.sendall((response + "\x00").encode('utf-8'))
-                    except (BrokenPipeError, OSError):
-                        break
+                data = self.connection.recv(size, socket.MSG_WAITALL)
+                
+                if len(data) < size:
+                    break
+
+                self.process_message(data)
 
         except (BrokenPipeError, ConnectionResetError, OSError) as e:
-            logging.error(f"Error processing client {self.client_address}: {e}")
+            logging.error(
+                f"Error processing client {self.client_address}: {e}"
+            )
         finally:
             self.close()
     
-    def process_message(self, raw_message: bytes) -> str:
+    def process_message(self, message: bytes):
         "Process incoming message"
 
-        for message in raw_message.split(b"\x00"):
-            if not message:
-                continue
+        if message.strip()[0] == 0x7b:
+            data = json.loads(message.decode('utf-8').strip())
+            self.data_fmt = "json"
+        else:
+            data = msgpack.unpackb(message, strict_map_key=False)
+            self.data_fmt = "msgpack"
 
-            if message.strip()[0] == 0x7b:
-                data = json.loads(message.decode('utf-8').strip())
-            else:
-                data = msgpack.unpackb(message, strict_map_key=False)
+        if "type" in data:
+            if data["type"] == "init_client":
+                # Create a window
+                uuid4 = str(uuid.uuid4())
+                self.uuid = uuid4
 
-            if "type" in data:
-                if data["type"] == "init_client":
-                    # Create a window
-                    uuid4 = str(uuid.uuid4())
-                    self.uuid = uuid4
-
-                    title = data["title"] if "title" in data else \
-                        self.comm.request(
-                            "localemgr", "tr", "Unnamed application"
-                        )
-                    package = data["package"] if "package" in data else "none"
-                    wsize = (
-                        int(data["width"]) if "width" in data else 500,
-                        int(data["height"]) if "height" in data else 400
-                    )
-                    wtype = data["windowtype"] if "windowtype" in data else \
-                                                                    "normal"
-
+                title = data["title"] if "title" in data else \
                     self.comm.request(
-                        "clientmgr", "new_client",
-                        uuid4, title, package,
-                        wsize, wtype, self.callback
+                        "localemgr", "tr", "Unnamed application"
                     )
+                package = data["package"] if "package" in data else "none"
+                wsize = (
+                    int(data["width"]) if "width" in data else 500,
+                    int(data["height"]) if "height" in data else 400
+                )
+                wtype = data["windowtype"] if "windowtype" in data else \
+                                                                "normal"
 
-                    return '{"uuid": "' + uuid4 + '"}'
-                else:
-                    if "uuid" in data:
-                        self.comm.request(
-                            "clientmgr", "notify_client", data["uuid"], data
-                        )
+                self.comm.request(
+                    "clientmgr", "new_client",
+                    uuid4, title, package,
+                    wsize, wtype, self.callback
+                )
 
-                    return None
-            
-        
-        return "nothing"
+                self.callback({"uuid": uuid4})
+            else:
+                if "uuid" in data:
+                    self.comm.request(
+                        "clientmgr", "notify_client", data["uuid"], data
+                    )
     
     def close(self):
         "Close client connection"

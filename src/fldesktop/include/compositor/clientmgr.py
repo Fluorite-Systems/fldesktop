@@ -6,7 +6,6 @@ from fldesktop.include.compositor.parser import Parser
 
 from typing import Any
 
-import json
 import msgpack
 import logging
 
@@ -35,18 +34,9 @@ class Client:
 
         self.on_close.connect(lambda: self.callback("close"))
     
-    def event_bk(self, wname: str, type: str, data: dict) -> None:
-        e = {
-            "name": wname,
-            "type": type,
-            "data": data
-        }
-
-        self.callback(json.dumps(e))
-    
     def event(self, **kwargs) -> None:
 
-        self.callback(json.dumps(kwargs))
+        self.callback(kwargs)
 
     def receive(self, data: dict):
         "Receive some info from backend"
@@ -66,18 +56,16 @@ class Client:
                 self.widget.update()
 
                 self.callback(
-                    json.dumps(
-                        {
-                            "status": "ok",
-                            "deleted": self.deleted_widgets
-                        }
-                    )
+                    {
+                        "status": "ok",
+                        "deleted": self.deleted_widgets
+                    }
                 )
                 self.deleted_widgets = []
 
             case "set_translations":
                 self.translations = data["translations"]
-                self.callback('{"status": "ok"}')
+                self.callback({"status": "ok"})
 
             case "update_children":
                 if data["name"] in self.widgets:
@@ -86,39 +74,35 @@ class Client:
                     for w in self.widgets:
                         logging.debug(f"Widget {w} has {self.widgets[w].children}")
                     self.callback(
-                        json.dumps(
-                            {
-                                "status": "ok",
-                                "deleted": self.deleted_widgets
-                            }
-                        )
+                        {
+                            "status": "ok",
+                            "deleted": self.deleted_widgets
+                        }
                     )
                     self.deleted_widgets = []
                 else:
-                    self.callback('{"status": "unknown_widget"}')
+                    self.callback({"status": "unknown_widget"})
 
             case "add_children":
                 if data["name"] in self.widgets:
                     self.widgets[data["name"]].add_children(data["children"])
-                    self.callback('{"status": "ok"}')
+                    self.callback({"status": "ok"})
                 else:
-                    self.callback('{"status": "unknown_widget"}')
+                    self.callback({"status": "unknown_widget"})
 
             case "delete_children":
                 if data["name"] in self.widgets: 
                     self.deleted_widgets = []
                     self.widgets[data["name"]].delete_children(data["children"]) 
                     self.callback(
-                        json.dumps(
-                            {
-                                "status": "ok",
-                                "deleted": self.deleted_widgets
-                            }
-                        )
+                        {
+                            "status": "ok",
+                            "deleted": self.deleted_widgets
+                        }
                     )
                     self.deleted_widgets = []
                 else:
-                    self.callback('{"status": "unknown_widget"}')
+                    self.callback({"status": "unknown_widget"})
 
 
             case "clear_children":
@@ -126,16 +110,14 @@ class Client:
                     self.deleted_widgets = []
                     self.widgets[data["name"]].clear_children()
                     self.callback(
-                        json.dumps(
-                            {
-                                "status": "ok",
-                                "deleted": self.deleted_widgets
-                            }
-                        )
+                        {
+                            "status": "ok",
+                            "deleted": self.deleted_widgets
+                        }
                     )
                     self.deleted_widgets = []
                 else:
-                    self.callback('{"status": "unknown_widget"}')
+                    self.callback({"status": "unknown_widget"})
 
             case "call_method":
                 if data["name"] in self.widgets:
@@ -144,26 +126,24 @@ class Client:
                         r = w.callables[data["method"]](**data["args"])
 
                         if r or str(data["method"]).startswith("get"):
-                            self.callback(
-                                json.dumps({"status": "ok", "reply": r})
-                            )
+                            self.callback({"status": "ok", "reply": r})
                         else:
-                            self.callback('{"status": "ok"}')
+                            self.callback({"status": "ok"})
                 else:
-                    self.callback('{"status": "unknown_widget"}')
+                    self.callback({"status": "unknown_widget"})
 
             case "append_title":
                 if "title" in data:
                     self.comm.request("wm", "append_window_title",
                                 self.winid, data["title"])
-                    self.callback('{"status": "ok"}')
+                    self.callback({"status": "ok"})
 
             case "spawn_effect":
                 if "effect" in data:
                     self.comm.request(
                         "wm", "spawn_effect", self.winid, data["effect"]
                     )
-                    self.callback('{"status": "ok"}')
+                    self.callback({"status": "ok"})
 
             case "file_dialog":
                 dtype = "open_file"
@@ -172,13 +152,11 @@ class Client:
                         dtype = "save_file"
                 self.comm.request(
                     "dialogmgr", dtype,
-                    lambda r: self.callback(
-                        json.dumps({"type": "files_choosen", "files": r})
-                    )
+                    lambda r: self.callback({"type": "files_choosen", "files": r})
                 )
-                self.callback('{"status": "ok"}')
+                self.callback({"status": "ok"})
             case _:
-                self.callback('{"status": "invalid_type"}')
+                self.callback({"status": "invalid_type"})
 
     def cleanup(self):
         "Clean up on close"
