@@ -119,7 +119,7 @@ class ImageViewer(QWidget):
         self.inputEvent.emit(
             {
                 "event_type": "mouse_wheel",
-                "delta": int(event.angleDelta().y())
+                "delta": -int(event.angleDelta().y())
             }
         )
 
