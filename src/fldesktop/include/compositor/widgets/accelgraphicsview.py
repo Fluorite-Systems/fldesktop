@@ -6,6 +6,7 @@ import mmap
 import os
 import logging
 import struct
+import uuid
 
 
 class ImageViewer(QWidget):
@@ -106,10 +107,10 @@ class ImageViewer(QWidget):
 
 
 class SharedMemoryReceiver:
-    def __init__(self, buffer_size: int, shm: str):
+    def __init__(self, buffer_size: int):
         self.buffer_size = buffer_size
         self.header_size = 8
-        self.shm_path = f"/dev/shm/{shm}"
+        self.shm_path = f"/dev/shm/{str(uuid.uuid4())}"
         self.mmap = None
         self.fd = None
         self.connected = False
@@ -118,11 +119,11 @@ class SharedMemoryReceiver:
     def connect(self) -> bool:
         self.close()
 
-        if not os.path.exists(self.shm_path):
-            return False
+        logging.debug(f"Creating SHM at {self.shm_path}")
 
         try:
-            self.fd = os.open(self.shm_path, os.O_RDWR)
+            self.fd = os.open(self.shm_path, os.O_RDWR | os.O_CREAT, 0o666)
+            os.ftruncate(self.fd, self.buffer_size * 2)
             self._shm_size = os.fstat(self.fd).st_size
 
             if self._shm_size < self.buffer_size * 2:
@@ -182,7 +183,7 @@ class SharedMemoryReceiver:
         except:
             return None
 
-    def close(self):
+    def close(self): 
         if self.mmap:
             try:
                 self.mmap.close()
@@ -195,6 +196,10 @@ class SharedMemoryReceiver:
             except:
                 pass
             self.fd = None
+        try:
+            os.unlink(self.shm_path)
+        except:
+            pass
         self.connected = False
 
 
@@ -202,9 +207,9 @@ class ReceiverThread(QThread):
     frameReceived = Signal(bytes, int, int)
     errorOccurred = Signal(str)
 
-    def __init__(self, buffer_size: int, shm: str):
+    def __init__(self, buffer_size: int):
         super().__init__()
-        self.rx = SharedMemoryReceiver(buffer_size, shm)
+        self.rx = SharedMemoryReceiver(buffer_size)
         self.running = False
 
     def run(self):
@@ -237,8 +242,8 @@ class ReceiverThread(QThread):
 
 
 class Receiver:
-    def __init__(self, buffer_size: int, shm: str):
-        self.thread = ReceiverThread(buffer_size, shm)
+    def __init__(self, buffer_size: int):
+        self.thread = ReceiverThread(buffer_size)
         self.thread.errorOccurred.connect(self._on_error)
         self._running = False
 
@@ -294,13 +299,21 @@ class AccelGraphicsView(Widget):
             **event
         )
 
-    def start(self, shm: str, buffer_size: int):
+    def start(self):
         if self.rx:
             self.rx.stop()
 
-        self.rx = Receiver(buffer_size, shm)
+        ssize = self.qwidget.screen().size()
+        bs = ssize.width() * ssize.height() * 3
+
+        self.rx = Receiver(bs)
         self.rx.thread.frameReceived.connect(self.qwidget.set_image)
         self.rx.start()
+
+        return {
+            "shm_path": self.rx.thread.rx.shm_path,
+            "buffer_size": bs
+        }
 
     def stop(self):
         if self.rx:
