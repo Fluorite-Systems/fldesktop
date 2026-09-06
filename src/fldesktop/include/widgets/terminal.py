@@ -13,16 +13,10 @@ class Terminal(GraphicsIsolatedWidget):
 
         super().__init__(self.quick_widget, parent)
         
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setSpacing(0)
-        
         self.quick_widget.setSource(QUrl.fromLocalFile(
             (Path(__file__).absolute().parent / "terminal.qml").as_posix()
         ))
         self.quick_widget.setResizeMode(QQuickWidget.ResizeMode.SizeRootObjectToView)
-        
-        self.layout.addWidget(self.quick_widget)
         
         self._qml_object = None
         #self.quick_widget.rootObjectChanged.connect(self._on_root_object_changed)
