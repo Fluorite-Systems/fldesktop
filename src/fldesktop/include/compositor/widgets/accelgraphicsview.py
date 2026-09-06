@@ -19,6 +19,7 @@ class ImageViewer(QWidget):
         self.setAttribute(Qt.WA_OpaquePaintEvent)
         self.setAttribute(Qt.WA_NoSystemBackground)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setMouseTracking(True)
         self._image_data = None
         self._width = 640
         self._height = 480
@@ -96,12 +97,29 @@ class ImageViewer(QWidget):
         )
 
     def mouseReleaseEvent(self, event):
-            self.inputEvent.emit(
+        self.inputEvent.emit(
             {
                 "event_type": "mouse_release",
                 "button": event.button().value,
                 "x": event.position().toPoint().x(),
                 "y": event.position().toPoint().y()
+            }
+        )
+
+    def mouseMoveEvent(self, event):
+        self.inputEvent.emit(
+            {
+                "event_type": "mouse_move",
+                "x": int(event.position().x()),
+                "y": int(event.position().y())
+            }
+        )
+
+    def wheelEvent(self, event):
+        self.inputEvent.emit(
+            {
+                "event_type": "mouse_wheel",
+                "delta": int(event.angleDelta().y())
             }
         )
 
