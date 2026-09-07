@@ -101,18 +101,27 @@ class Package:
             logging.debug(f"Running bwrap with these arguments: {args}")
 
             proc = QProcess()
-            proc.errorOccurred.connect(
-                lambda err, proc=proc: self.comm.request(
-                    "dialogmgr", "sys_error",
-                    (
-                        f"An error occured in package {self.package}: "
-                        f"{proc.errorString()}"
-                    )
+            proc.finished.connect(
+                lambda code, status, proc=proc: self.on_proc_finished(
+                    code, status, proc
                 )
             )
             proc.start("/usr/bin/bwrap", args)
 
             self.procs.append(proc)
+
+    def on_proc_finished(self, code: int, status, proc: QProcess):
+
+        logging.debug(f"{self.package} instance exited with code {code}")
+
+        if proc in self.procs:
+            self.procs.remove(proc)
+
+        if code != 0:
+            self.comm.request(
+                "dialogmgr", "sys_error",
+                f"Package \"{self.package}\" instance exited with code {code}"
+            )
 
 
 class PackageManager:
