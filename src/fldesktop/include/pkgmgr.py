@@ -182,11 +182,13 @@ class PackageManager:
             self.loaded_packages[i].unmount()
     
     def killall(self):
-        "Kill all processes"
+        "Terminate (or kill) all processes"
 
         for i in self.loaded_packages.values():
             for proc in i.procs:
-                proc.kill()
+                proc.terminate()
+                if not proc.waitForFinished(3000):
+                    proc.kill()
 
     def srv_cleanup(self):
         "Service cleanup method for Init"
