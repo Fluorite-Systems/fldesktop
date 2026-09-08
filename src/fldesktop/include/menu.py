@@ -72,8 +72,8 @@ class Menu(Surface):
                 self.comm.request("lockscreen", "raise_qc_btn")
             else:
                 self.show()
-                self.desktop.panel.raise_()
                 self.raise_()
+                self.desktop.panel.raise_()
 
         if self.isVisible():
             self.close_menu()
