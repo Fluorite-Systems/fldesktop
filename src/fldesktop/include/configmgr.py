@@ -7,6 +7,8 @@ FALLBACK_CONFIG = {
     "background-color": "#257565",
     "wallpaper": "/usr/share/wallpapers/Pine Path.jpg",
     "theme": "dark",
+    "glass-tint-color": "#000000",
+    "glass-tint-alpha": 0,
     "language": "en_US",
     "kb_locales": ["us"],
     "auth-type": "passwordless",

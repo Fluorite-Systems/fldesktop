@@ -4,7 +4,6 @@ from PySide6.QtGui import QPixmap, QPainter, QColor, QPen
 from PySide6.QtCore import (Qt, QRect, QObject, QPoint, QTimer,
                             QRandomGenerator)
 
-from fldesktop.include.thememgr import SURFACE_PRESETS
 from fldesktop.include.widgets.shadow import Shadow
 
 
@@ -43,14 +42,12 @@ class Surface(QWidget):
         self._background = self.comm.request("surfacemgr", "get_pixmap")
         self._invalidate_cache()
         self.update()
-    
-    def _update_theming(self):
-        "Select theming preset from config"
 
-        theme = self.comm.request("cfgmgr", "get", "theme")
-        
-        self.theme = SURFACE_PRESETS[theme] \
-            if theme in SURFACE_PRESETS else SURFACE_PRESETS["neutral"]
+    def _update_theming(self):
+        "Load theming configuration"
+
+        self.color = self.comm.request("cfgmgr", "get", "glass-tint-color")
+        self.alpha = self.comm.request("cfgmgr", "get", "glass-tint-alpha")
     
     def _invalidate_cache(self):
         "Invalidate cached contents"
@@ -95,8 +92,8 @@ class Surface(QWidget):
             )
 
             # Tint blurred background for some beauty
-            tint = QColor(*self.theme["base_color"],
-                    min(255, max(0, self.theme["base_alpha"] + self._tint)))
+            tint = QColor(self.color)
+            tint.setAlpha(min(255, max(0, self.alpha + self._tint)))
             
             painter = QPainter(blurred)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
