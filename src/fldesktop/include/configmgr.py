@@ -6,7 +6,6 @@ FALLBACK_CONFIG = {
     "background-type": "wallpaper",
     "background-color": "#257565",
     "wallpaper": "/usr/share/wallpapers/Pine Path.jpg",
-    "theme": "dark",
     "glass-tint-color": "#000000",
     "glass-tint-alpha": 0,
     "language": "en_US",

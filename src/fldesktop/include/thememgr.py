@@ -1,6 +1,7 @@
 from PySide6.QtGui import QPalette, QColor, QIcon, QFont
 from PySide6.QtWidgets import QApplication
 
+
 STYLESHEET = """
               QWidget#surface
               {
@@ -96,7 +97,7 @@ STYLESHEET = """
               }
 """
 
-FLUORITE_DARK_CS = {
+FLUORITE_CS = {
     "Window": "#232629",
     "WindowText": "#f2f4f7",
     "Base": "#2a2e32",
@@ -119,28 +120,6 @@ FLUORITE_DARK_CS = {
     "LinkVisited": "#9b59b6"
 }
 
-FLUORITE_LIGHT_CS = {
-    "Window": "#f6f7f8",
-    "WindowText": "#1e232a",
-    "Base": "#ffffff",
-    "AlternateBase": "#eef1f4",
-    "ToolTipBase": "#f7f7f7",
-    "ToolTipText": "#1e232a",
-    "PlaceholderText": "#707d8a",
-    "Text": "#1e232a",
-    "Button": "#fcfcfc",
-    "ButtonText": "#1e232a",
-    "BrightText": "#ffffff",
-    "Highlight": "#4a86e8",
-    "HighlightedText": "#ffffff",
-    "Light": "#ffffff",
-    "Midlight": "#f6f7f7",
-    "Dark": "#888e93",
-    "Mid": "#c4c8cc",
-    "Shadow": "#474a4c",
-    "Link": "#2980b9",
-    "LinkVisited": "#9b59b6"
-}
 
 STD_COLORS = {
     "white": "#f2f4f7",
@@ -192,27 +171,6 @@ STD_COLORS = {
     "darkcyan": "#3A85B0"
 }
 
-COLORSCHEMES = {
-    "dark": (FLUORITE_DARK_CS, "breeze-dark"),
-    "neutral": (FLUORITE_DARK_CS, "breeze-dark"),
-    "light": (FLUORITE_LIGHT_CS, "breeze-light")
-}
-
-SURFACE_PRESETS = {
-    "neutral": {
-        "base_color": (0, 0, 0),
-        "base_alpha": 0
-    },
-    "dark": {
-        "base_color": (0, 0, 0),
-        "base_alpha": 100
-    },
-    "light": {
-        "base_color": (255, 255, 255),
-        "base_alpha": 100
-    }
-}
-
 
 class ThemingManager:
     def __init__(self, comm):
@@ -225,44 +183,29 @@ class ThemingManager:
                 "stdcolors": self.get_stdcolors
             }
         )
-        
-        self.comm.subscribe("reload_config", self.setup_theme)
 
-        QApplication.instance().setStyle("oxygen")
+        self.setup_theming()
 
-        QApplication.instance().setFont(QFont("Noto Sans", 10))
-
-        self.setup_theme()
-
-    def setup_theme(self):
-        
-        theme = self.comm.request("cfgmgr", "get", "theme")
-
-        cs = COLORSCHEMES[theme] if theme in COLORSCHEMES \
-          else COLORSCHEMES["neutral"]
+    def setup_theming(self):
 
         palette = QPalette()
 
-        for i in cs[0]:
+        for i in FLUORITE_CS:
             palette.setColor(getattr(QPalette.ColorRole, i), 
-                             QColor(cs[0][i]))
+                             QColor(FLUORITE_CS[i]))
+
+        QIcon.setThemeName("breeze-dark")
 
         QApplication.instance().setPalette(palette)
-
-        QIcon.setThemeName(cs[1])
-
         QApplication.instance().setStyleSheet(STYLESHEET)
+        QApplication.instance().setStyle("oxygen")
+        QApplication.instance().setFont(QFont("Noto Sans", 10))
 
     def get_stdcolors(self):
 
-        theme = self.comm.request("cfgmgr", "get", "theme")
-
-        cs = COLORSCHEMES[theme] if theme in COLORSCHEMES \
-          else COLORSCHEMES["neutral"]
-
         colors = STD_COLORS
-        colors["fg"] = cs[0]["Text"]
-        colors["bg"] = cs[0]["Base"]
+        colors["fg"] = STD_COLORS["white"]
+        colors["bg"] = STD_COLORS["black"]
         colors["accent"] = STD_COLORS["blue"]
         colors["transparent"] = "#00000000"
 
