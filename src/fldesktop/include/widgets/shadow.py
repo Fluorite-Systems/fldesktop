@@ -12,6 +12,7 @@ class Shadow(QPushButton): # QPushButton because it works
 
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WA_StaticContents, True)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.setObjectName("Shadow")
                
