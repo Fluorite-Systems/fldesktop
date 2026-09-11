@@ -6,6 +6,35 @@ from fldesktop.include.quickcontrols import (QuickControls, calendar,
 from fldesktop.include.widgets.surface import Surface
 
 
+HL_DS_ST = """
+QPushButton#traybtn
+{
+    border: 1;
+    background-color: rgba(0, 0, 0, 0);
+    padding: 5px;
+    margin: 0px;
+}
+
+QPushButton#traybtn::hover { background-color: rgba(255, 255, 255, 50) }
+
+QPushButton#traybtn::pressed { background-color: rgba(255, 255, 255, 25) }
+"""
+
+HL_EN_ST = """
+QPushButton#traybtn
+{
+    border: 1;
+    background-color: rgba(255, 255, 255, 25);
+    padding: 5px;
+    margin: 0px;
+}
+
+QPushButton#traybtn::hover { background-color: rgba(255, 255, 255, 50) }
+
+QPushButton#traybtn::pressed { background-color: rgba(255, 255, 255, 25) }
+"""
+
+
 class AppBtn(QPushButton):
     def __init__(self, id: int, title: str, icon):
         super().__init__()
@@ -21,9 +50,9 @@ class AppBtn(QPushButton):
     def set_highlight(self, enabled: bool):
 
         if enabled:
-            self.setStyleSheet("background-color: rgba(200, 200, 200, 100)")
+            self.setStyleSheet(HL_EN_ST)
         else:
-            self.setStyleSheet("background-color: transparent")
+            self.setStyleSheet(HL_DS_ST)
 
     def set_title(self, title: str):
 
