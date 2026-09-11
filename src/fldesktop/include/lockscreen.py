@@ -102,6 +102,8 @@ class LockScreen(Surface):
         
         super().__init__(comm, parent, 5)
 
+        self.set_raycast_enabled(False)
+
         self.parent = parent
 
         self.comm = comm

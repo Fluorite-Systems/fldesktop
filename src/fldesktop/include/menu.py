@@ -88,6 +88,8 @@ class Menu(Surface):
 
         self.move(x, 30)
 
+        self.set_raycast_enabled(True)
+
         Animation(self.comm, self.parent(), self.grab(), "mopen",
                   {"pos": self.pos(), "size": self.size()},
                   lambda: show(self))
@@ -95,7 +97,8 @@ class Menu(Surface):
     def close_menu(self):
         "Close the menu with some anim"
 
-        self.hide()        
+        self.hide()
+        self.set_raycast_enabled(False)
         
         Animation(self.comm, self.parent(), self.grab(), "mclose",
                   {"pos": self.pos(), "size": self.size()},

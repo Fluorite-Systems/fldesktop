@@ -213,6 +213,8 @@ class Window(Surface):
     def animate_minimize(self) -> None:
 
         self.hide()
+        self.set_raycast_enabled(False)
+        
         Animation(
             self.comm, self.parent(), self.grab(), "wminimize",
             {"pos": self.pos(), "size": self.size()},
@@ -234,6 +236,8 @@ class Window(Surface):
         )
 
     def animate_unminimize(self) -> None:
+
+        self.set_raycast_enabled(True)
 
         Animation(
             self.comm, self.parent(), self.grab(), "wunminimize",
