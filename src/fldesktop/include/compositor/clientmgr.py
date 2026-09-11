@@ -29,7 +29,7 @@ class Client:
         # Create a window
         self.winid, self.on_close = self.comm.request(
             "wm", "create_window", self.name, self.widget,
-            QIcon(), self.package, wsize, wtype
+            self.get_win_icon(), self.package, wsize, wtype
         )
 
         self.on_close.connect(lambda: self.callback("close"))
@@ -164,6 +164,16 @@ class Client:
         while self.widgets:
             key = next(iter(self.widgets))
             self.widgets[key].delete()
+
+    def get_win_icon(self):
+
+        pkgs = self.comm.request("pkgmgr", "get_apps")
+
+        for name, value in pkgs.items():
+            if name == self.package:
+                return value.icon
+
+        return QIcon()
 
 
 class ClientManager(QObject):
