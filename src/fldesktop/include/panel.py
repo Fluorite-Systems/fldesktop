@@ -6,6 +6,30 @@ from fldesktop.include.quickcontrols import (QuickControls, calendar,
 from fldesktop.include.widgets.surface import Surface
 
 
+class AppBtn(QPushButton):
+    def __init__(self, id: int, title: str, icon):
+        super().__init__()
+
+        self.id = id
+
+        self.setIconSize(QSize(24, 24))
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.setObjectName("traybtn")
+        self.setIcon(icon)
+        self.setText(title)
+
+    def set_highlight(self, enabled: bool):
+
+        if enabled:
+            self.setStyleSheet("background-color: rgba(200, 200, 200, 100)")
+        else:
+            self.setStyleSheet("background-color: transparent")
+
+    def set_title(self, title: str):
+
+        self.setText(title)
+
+
 class Panel(Surface):
     def __init__(self, parent, comm):
         super().__init__(comm, parent, 5)
@@ -17,7 +41,10 @@ class Panel(Surface):
 
         self.comm.register("panel", {
             "raise": self.raise_,
-            "add_minimized": self.add_minimized,
+            "add_btn": self.add_btn,
+            "rm_btn": self.rm_btn,
+            "highlight_btn": self.highlight_btn,
+            "set_btn_text": self.set_btn_text,
             "get_qc_btn": self.get_qc_btn,
             "return_qc_btn": self.return_qc_btn
         })
@@ -28,9 +55,9 @@ class Panel(Surface):
         self.search_btn = self.comm.request("search", "get_btn")
         self.layout.addWidget(self.search_btn)
 
-        self.minimized_layout = QHBoxLayout()
-        self.minimized_layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.addLayout(self.minimized_layout)
+        self.taskbar_layout = QHBoxLayout()
+        self.taskbar_layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.addLayout(self.taskbar_layout)
 
         self.layout.addStretch()
 
@@ -51,24 +78,35 @@ class Panel(Surface):
 
         self.setGeometry(0, 0, dsize.width(), 26)
 
-    def add_minimized(self, icon, restore):
+    def add_btn(self, id, icon, text, on_click):
 
-        def restore_handler(restore, btn):
-            btn.close()
-            restore()
+        btn = AppBtn(id, text, icon)
 
-        btn = QPushButton(icon=icon)
-        
-        #btn.setFixedSize(24, 24)
-        btn.setIconSize(QSize(24, 24))
-        btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        btn.setObjectName("traybtn")
+        btn.clicked.connect(on_click)
 
-        btn.clicked.connect(
-            lambda _, r=restore, b=btn: restore_handler(r, b)
-        )
+        self.taskbar_layout.addWidget(btn)
 
-        self.minimized_layout.addWidget(btn)
+    def rm_btn(self, id):
+
+        for i in range(self.taskbar_layout.count()):
+            w = self.taskbar_layout.itemAt(i).widget()
+            if w.id == id:
+                w.close()
+                w.deleteLater()
+
+    def highlight_btn(self, id: int, highlighted: bool):
+
+        for i in range(self.taskbar_layout.count()):
+            w = self.taskbar_layout.itemAt(i).widget()
+            if w.id == id:
+                w.set_highlight(highlighted)
+
+    def set_btn_text(self, id: int, text: str):
+
+        for i in range(self.taskbar_layout.count()):
+            w = self.taskbar_layout.itemAt(i).widget()
+            if w.id == id:
+                w.set_title(text)
 
     def get_qc_btn(self) -> QPushButton:
 

@@ -166,7 +166,9 @@ class Window(Surface):
             lambda: ...
         )
         self.on_close.emit()
-        self.close() 
+        self.close()
+
+        self.comm.request("panel", "rm_btn", self.id)
 
     def replace_widget(self, new_widget: QWidget) -> None:
 
@@ -435,6 +437,8 @@ class WindowManager:
 
         win.on_close.connect(lambda: self.windows.remove(win))
 
+        self.comm.request("panel", "add_btn", self.curid, icon, name, lambda _, i=self.curid: self.on_window_btn_pressed(i))
+
         self.change_focus(win.id)
 
         return win.id, win.on_close
@@ -455,6 +459,7 @@ class WindowManager:
             if win.id == self.focus:
                 win.overlay.show()
                 win.overlay.raise_()
+                self.comm.request("panel", "highlight_btn", win.id, False)
         
         if id != None:
             self.focus = id
@@ -464,11 +469,23 @@ class WindowManager:
                     win.raise_()
                     win.overlay.lower()
                     win.overlay.hide()
+                    self.comm.request("panel", "highlight_btn", win.id, True)
                 
     def get_focus(self) -> int:
         "Get focused window's ID"
 
         return self.focus
+
+    def on_window_btn_pressed(self, winid: int):
+
+        for win in self.windows:
+            if win.id == winid:
+                if win.minimized:
+                    win.toggle_minimized()
+                elif self.get_focus() == win.id:
+                    win.toggle_minimized()
+                else:
+                    self.change_focus(win.id)
     
     def set_window_menu(self, data: tuple) -> None:
 
