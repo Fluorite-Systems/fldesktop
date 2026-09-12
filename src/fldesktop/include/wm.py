@@ -48,8 +48,6 @@ class Window(Surface):
         self.qicon = icon
         self.type = type
 
-        self.sidebar = None
-
         # Focusing overlay
         self.overlay = Overlay(self)
         self.overlay.setObjectName("ov")
@@ -384,8 +382,6 @@ class Window(Surface):
     
     def resizeEvent(self, event):
         self.overlay.resize(self.size())
-        if self.sidebar:
-            self.sidebar.refresh(self.size())
         return super().resizeEvent(event)
 
 
@@ -399,7 +395,6 @@ class WindowManager:
             "change_focus": self.change_focus,
             "get_focus": self.get_focus,
             "set_window_menu": self.set_window_menu,
-            "set_window_sidebar": self.set_window_sidebar,
             "append_window_title": self.append_window_title,
             "spawn_effect": self.spawn_effect
         })
@@ -502,19 +497,6 @@ class WindowManager:
                     w = win.tlayout.takeAt(4).widget()
                     w.close()
                 win.tlayout.insertWidget(4, btn)
-    
-    def set_window_sidebar(self, winid: int, sidebar) -> None:
-        
-        for win in self.windows:
-            if win.id == winid:
-                nw = QWidget()
-                nl = QHBoxLayout(nw)
-                nl.setContentsMargins(0, 0, 0, 0)
-                nl.addWidget(sidebar)
-                nl.addWidget(win.widget)
-                win.replace_widget(nw)
-                win.sidebar = sidebar
-                sidebar.refresh(win.size())
     
     def append_window_title(self, id: int, title: str) -> None:
 
