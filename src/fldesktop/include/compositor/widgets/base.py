@@ -76,12 +76,6 @@ class Widget:
             if "height" in self.props:
                 if type(self.props["height"]) == int:
                     self.qwidget.setFixedHeight(self.props["height"])
-            if "menu" in self.props:
-                menu = self._runner.parser.build_menu(self.props["menu"])
-                self.qwidget.setContextMenuPolicy(Qt.CustomContextMenu)
-                self.qwidget.customContextMenuRequested.connect(
-                    lambda p: menu.exec(self.qwidget.mapToGlobal(p))
-                )
 
     def _setup_setters(self):
         for prop in self.base_props:
@@ -108,6 +102,13 @@ class Widget:
                 self.qwidget.setFixedWidth(int(self.props["width"]))
             if self.props["height"]:
                 self.qwidget.setFixedHeight(int(self.props["height"]))
+                
+            if "menu" in self.props:
+                menu = self._runner.parser.build_menu(self.props["menu"])
+                self.qwidget.setContextMenuPolicy(Qt.CustomContextMenu)
+                self.qwidget.customContextMenuRequested.connect(
+                    lambda p: menu.exec(self.qwidget.mapToGlobal(p))
+                )
 
     def update_children(self, tree: dict):
         i = 0
