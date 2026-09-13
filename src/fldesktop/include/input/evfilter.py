@@ -29,6 +29,10 @@ class InputEventFilter(QObject):
             logging.warning(f"Failed to set layout {lang}: {e}")
 
     def eventFilter(self, obj, event):
+
+        if not isinstance(obj, QObject) or obj.__class__.__name__ == "QWidgetItem":
+            return False 
+        
         if event.type() == QEvent.Type.KeyPress:
             if event.modifiers() & (Qt.KeyboardModifier.ControlModifier |
                                     Qt.KeyboardModifier.AltModifier |

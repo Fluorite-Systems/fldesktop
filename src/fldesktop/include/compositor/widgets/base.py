@@ -27,18 +27,26 @@ class Widget:
             self.callables.update(
                 {
                     "show": self.qwidget.show,
-                    "hide": self.qwidget.hide,
-                    "set_width": lambda width: \
-                        self.qwidget.setFixedWidth(int(width)),
-                    "set_height": lambda height: \
-                        self.qwidget.setFixedHeight(int(height))
+                    "hide": self.qwidget.hide
                 }
             )
             self.base_props.update(
                 {
                     "width": None,
-                    "height": None
+                    "height": None,
+                    "drag_enabled": False,
+                    "drag_data": "",
+                    "drag_mime_type": "",
+                    "drop_enabled": False,
+                    "drop_mime_types": []
                 }
+            )
+
+            self.qwidget.setProperty(
+                "drop_callback", lambda data, mime: self._runner.event(
+                    name=self.name, type="data_dropped",
+                    data=data, mimetype=mime
+                )
             )
 
         self.props = {**self.base_props, **self.props}
@@ -76,6 +84,8 @@ class Widget:
             if "height" in self.props:
                 if type(self.props["height"]) == int:
                     self.qwidget.setFixedHeight(self.props["height"])
+            self.qwidget.installEventFilter(self._runner.drag_filter)
+            self.qwidget.installEventFilter(self._runner.drop_filter)
 
     def _setup_setters(self):
         for prop in self.base_props:
@@ -102,6 +112,27 @@ class Widget:
                 self.qwidget.setFixedWidth(int(self.props["width"]))
             if self.props["height"]:
                 self.qwidget.setFixedHeight(int(self.props["height"]))
+
+            if self.props["drag_enabled"]:
+                self.qwidget.setProperty(
+                    "drag_enabled", bool(self.props["drag_enabled"])
+                )
+            if self.props["drag_data"]:
+                self.qwidget.setProperty("drag_data", self.props["drag_data"])
+            if self.props["drag_mime_type"]:
+                self.qwidget.setProperty(
+                    "drag_mime_type", self.props["drag_mime_type"]
+                )
+
+            if self.props["drop_enabled"]:
+                self.qwidget.setAcceptDrops(bool(self.props["drop_enabled"]))
+                self.qwidget.setProperty(
+                    "drop_enabled", bool(self.props["drop_enabled"])
+                )
+            if self.props["drop_mime_types"]:
+                self.qwidget.setProperty(
+                    "drop_mime_types", self.props["drop_mime_types"]
+                )
                 
             if "menu" in self.props:
                 menu = self._runner.parser.build_menu(self.props["menu"])

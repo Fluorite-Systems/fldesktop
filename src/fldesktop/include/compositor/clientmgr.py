@@ -3,6 +3,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtCore import Signal, QObject
 
 from fldesktop.include.compositor.parser import Parser
+from fldesktop.include.compositor.dnd import DragFilter, DropFilter
 
 from typing import Any
 
@@ -25,6 +26,8 @@ class Client:
         self.translations = {}
         self.parser = Parser(self)
         self.uuid = uuid
+        self.drag_filter = DragFilter(self.widget)
+        self.drop_filter = DropFilter(self.widget)
     
         # Create a window
         self.winid, self.on_close = self.comm.request(

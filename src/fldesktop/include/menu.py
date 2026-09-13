@@ -14,6 +14,10 @@ class EventFilter(QObject):
         QApplication.instance().installEventFilter(self)
 
     def eventFilter(self, obj, event):
+
+        if not isinstance(obj, QObject) or obj.__class__.__name__ == "QWidgetItem":
+            return False  
+        
         if event.type() == QEvent.Type.MouseButtonPress:
             if self.menu.isVisible():
 
