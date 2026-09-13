@@ -39,7 +39,6 @@ class Parser:
                     )
 
         self.setup_menu()
-        self.setup_sidebar()
 
         return root
 
