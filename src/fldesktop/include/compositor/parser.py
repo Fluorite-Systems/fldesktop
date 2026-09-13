@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QWidget, QMenu
-from PySide6.QtGui import QAction, QIcon, QKeySequence, QShortcut
+from PySide6.QtWidgets import QMenu
+from PySide6.QtGui import QAction, QIcon
 
 from fldesktop.include.compositor.widgets import widgets
 from fldesktop.include.compositor.widgets.base import Widget
