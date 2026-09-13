@@ -29,15 +29,6 @@ class Parser:
 
         self.print_tree([root])
 
-        if "keybinds" in self.data:
-            for k in self.data["keybinds"]:
-                QShortcut(QKeySequence(k), self.runner.widget)\
-                    .activated.connect(
-                        lambda: self.runner.runtime.exec(
-                            self.data["keybinds"][k]
-                        )
-                    )
-
         self.setup_menu()
 
         return root
