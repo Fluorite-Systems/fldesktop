@@ -156,6 +156,8 @@ class Widget:
             if hasattr(self.parent, "qlayout"):
                 if hasattr(self, "qwidget"):
                     self.parent.qlayout.removeWidget(self.qwidget)
+                    self.qwidget.close()
+                    self.qwidget.deleteLater()
                 if hasattr(self, "qlayout"):
                     i = self.parent.qlayout.indexOf(self.qlayout)
                     if i != -1:

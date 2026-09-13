@@ -48,6 +48,8 @@ class Window(Surface):
         self.qicon = icon
         self.type = type
 
+        self.overlays = []
+
         # Focusing overlay
         self.overlay = Overlay(self)
         self.overlay.setObjectName("ov")
@@ -74,7 +76,7 @@ class Window(Surface):
         self.layout.addLayout(self.tlayout)
 
         # Title widgets
-        self.icon = QLabel(pixmap = icon.pixmap(QSize(24, 244)))
+        self.icon = QLabel(pixmap = icon.pixmap(QSize(24, 24)))
         self.title = QLabel(self.name)
         self.iconify_btn = QToolButton(
             icon=self.comm.request("iconmgr", "get", "window-minimize")
@@ -381,7 +383,11 @@ class Window(Surface):
         super().mouseReleaseEvent(event)
     
     def resizeEvent(self, event):
-        self.overlay.resize(self.size())
+        self.overlay.resize(event.size())
+
+        for i in self.overlays:
+            i.resize(self.widget.size())
+        
         return super().resizeEvent(event)
 
 
@@ -396,7 +402,9 @@ class WindowManager:
             "get_focus": self.get_focus,
             "set_window_menu": self.set_window_menu,
             "append_window_title": self.append_window_title,
-            "spawn_effect": self.spawn_effect
+            "spawn_effect": self.spawn_effect,
+            "add_window_overlay": self.add_window_overlay,
+            "rm_window_overlay": self.rm_window_overlay
         })
 
         self.windows = []
@@ -514,3 +522,24 @@ class WindowManager:
         for win in self.windows:
             if win.id == id:
                 win.effects.effect(effect)
+
+    def add_window_overlay(self, id: int, overlay: QWidget) -> None:
+
+        for win in self.windows:
+            if win.id == id:
+                overlay.setParent(win.widget)
+                overlay.show()
+                overlay.move(QPoint(0, 0))
+                overlay.resize(win.widget.size())
+                win.overlays.append(overlay)
+
+    def rm_window_overlay(self, id: int, overlay: QWidget,
+                          close: bool = True) -> None:
+
+        for win in self.windows:
+            if win.id == id:
+                if overlay in win.overlays:
+                    win.overlays.remove(overlay)
+                    if close:
+                        overlay.close()
+                        overlay.deleteLater()
