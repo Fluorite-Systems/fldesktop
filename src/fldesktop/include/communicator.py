@@ -37,9 +37,9 @@ class Communicator:
             if i["action"] == action:
                 self.signal_subs.remove(i)
     
-    def emit(self, signal: str, *args):
+    def emit(self, signal: str, *args, **kwargs):
         "Emit a signal"
 
         for i in self.signal_subs:
             if i["signal"] == signal:
-                i["action"](*args)
+                i["action"](*args, **kwargs)
