@@ -1,4 +1,4 @@
-from fldesktop.include.compositor.widgets.base import Widget
+from fldesktop.include.appserver.widgets.base import Widget
 
 
 class Stretch(Widget):

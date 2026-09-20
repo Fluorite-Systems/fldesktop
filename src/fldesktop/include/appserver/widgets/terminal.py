@@ -1,5 +1,5 @@
 from fldesktop.include.widgets.terminal import Terminal as TerminalWidget
-from fldesktop.include.compositor.widgets.base import Widget
+from fldesktop.include.appserver.widgets.base import Widget
 
 
 class Terminal(Widget):

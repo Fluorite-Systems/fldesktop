@@ -1,4 +1,4 @@
-from fldesktop.include.compositor.widgets import (
+from fldesktop.include.appserver.widgets import (
     button, canvas, checkbox, container, entry, filetree, flayout,
     hlayout, icon, imageview, label, listview, radiobutton, root,
     slider, stretch, tabs, terminal, textedit, vlayout,

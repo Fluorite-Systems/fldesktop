@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QPushButton, QSizePolicy
 from PySide6.QtGui import QIcon
-from fldesktop.include.compositor.widgets.base import Widget
+from fldesktop.include.appserver.widgets.base import Widget
 
 
 class Button(Widget):

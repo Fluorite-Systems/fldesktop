@@ -1,9 +1,9 @@
 from fldesktop.include import (communicator, desktop, dialogs,
                      thememgr, pkgmgr, lockscreen, os_manager,
-                     configmgr, compositor, search, wm, loginmgr,
+                     configmgr, appserver, search, wm, loginmgr,
                      localemgr, notifications, iconmgr, QApp,
                      PostInit, UserServiceStarter, fs3)
-from fldesktop.include.compositor.clientmgr import ClientManager
+from fldesktop.include.appserver.clientmgr import ClientManager
 from fldesktop.include.widgets.surface import SurfaceManager
 from fldesktop.include.input import InputManager
 
@@ -85,7 +85,7 @@ SERVICES = {
         "depends": ["Desktop"]
     },
     "AppServer": {
-        "object": compositor.AppServer,
+        "object": appserver.AppServer,
         "depends": ["WindowManager"]
     },
     "ClientManager": {

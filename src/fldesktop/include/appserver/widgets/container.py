@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QHBoxLayout
-from fldesktop.include.compositor.widgets.base import Widget
+from fldesktop.include.appserver.widgets.base import Widget
 from fldesktop.include.widgets.flowlayout import FlowLayout
 
 

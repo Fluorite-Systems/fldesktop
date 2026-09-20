@@ -5,9 +5,9 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Signal, QObject
 
-from fldesktop.include.compositor.builder import Builder
-from fldesktop.include.compositor.dnd import DragFilter, DropFilter
-from fldesktop.include.compositor.widgets.base import Widget
+from fldesktop.include.appserver.builder import Builder
+from fldesktop.include.appserver.dnd import DragFilter, DropFilter
+from fldesktop.include.appserver.widgets.base import Widget
 
 from typing import Any
 

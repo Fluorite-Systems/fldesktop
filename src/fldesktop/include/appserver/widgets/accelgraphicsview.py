@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QPainter, QImage, QKeySequence
 from PySide6.QtCore import Qt, Signal, QThread, QSize
-from fldesktop.include.compositor.widgets.base import Widget
+from fldesktop.include.appserver.widgets.base import Widget
 import mmap
 import os
 import logging

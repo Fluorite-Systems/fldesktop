@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QTabWidget, QWidget
-from fldesktop.include.compositor.widgets.base import Widget
-from fldesktop.include.compositor.widgets.vlayout import VLayout
+from fldesktop.include.appserver.widgets.base import Widget
+from fldesktop.include.appserver.widgets.vlayout import VLayout
 
 class Tabs(Widget):
     def __init__(self, runner, name, props, parent):

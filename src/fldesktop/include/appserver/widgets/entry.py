@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QLineEdit
-from fldesktop.include.compositor.widgets.base import Widget
+from fldesktop.include.appserver.widgets.base import Widget
 
 
 class Entry(Widget):

@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QLabel
 from PySide6.QtGui import QPixmap
-from fldesktop.include.compositor.widgets.base import Widget
+from fldesktop.include.appserver.widgets.base import Widget
 
 
 class Icon(Widget):

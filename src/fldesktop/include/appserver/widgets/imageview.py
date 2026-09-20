@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QLabel
 from PySide6.QtGui import QPixmap, QImageReader
 from PySide6.QtCore import Qt
-from fldesktop.include.compositor.widgets.base import Widget
+from fldesktop.include.appserver.widgets.base import Widget
 
 import base64
 

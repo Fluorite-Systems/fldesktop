@@ -1,5 +1,5 @@
-from fldesktop.include.compositor.widgets import widgets
-from fldesktop.include.compositor.widgets.base import Widget
+from fldesktop.include.appserver.widgets import widgets
+from fldesktop.include.appserver.widgets.base import Widget
 
 import logging
 import locale
