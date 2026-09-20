@@ -31,7 +31,8 @@ class OSManager:
             "/home/",
             "~/",
             "./",
-            "../"
+            "../",
+            "/tmp/"
         ] # ^^^^^ Prefixes are sorted like this for security reasons
 
         for p in prefixes:
