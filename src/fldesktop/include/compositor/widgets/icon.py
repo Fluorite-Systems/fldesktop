@@ -10,7 +10,7 @@ class Icon(Widget):
         self.qwidget = QLabel()
 
         self.base_props = {
-            "icon": ""
+            "Attr.UI.Widget.Icon.Icon": ""
         }
 
         self._setup()
@@ -21,7 +21,7 @@ class Icon(Widget):
         super().apply_props()
 
         icon = self._runner.comm.request(
-            "iconmgr", "parse", self.props["icon"]
+            "iconmgr", "parse", self.props["Attr.UI.Widget.Icon.Icon"]
         )
         self.qwidget.setPixmap(icon.pixmap(
             self.props["width"] if self.props["width"] else 64,

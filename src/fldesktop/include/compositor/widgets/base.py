@@ -5,13 +5,12 @@ import locale
 
 
 class Widget:
-    def __init__(self, runner, name, props, parent):
+    def __init__(self, runner, name, props={}, parent=None):
         self._runner = runner
         self.name = name
         self.props = props
         self.parent = parent
         self.type = "widget"
-        self.children = []
 
         self.callables = {}
         self.base_props = {}
@@ -20,7 +19,7 @@ class Widget:
         ...
 
     def _setup(self):
-        self._setup_layouting()
+        #self._setup_layouting()
         self._runner.widgets[self.name] = self
         
         if hasattr(self, "qwidget"):
@@ -84,8 +83,8 @@ class Widget:
             if "height" in self.props:
                 if type(self.props["height"]) == int:
                     self.qwidget.setFixedHeight(self.props["height"])
-            self.qwidget.installEventFilter(self._runner.drag_filter)
-            self.qwidget.installEventFilter(self._runner.drop_filter)
+            #self.qwidget.installEventFilter(self._runner.drag_filter)
+            #self.qwidget.installEventFilter(self._runner.drop_filter)
 
     def _setup_setters(self):
         for prop in self.base_props:
@@ -141,46 +140,8 @@ class Widget:
                     lambda p: menu.exec(self.qwidget.mapToGlobal(p))
                 )
 
-    def update_children(self, tree: dict):
-        i = 0
-        while i < len(self.children):
-            child = self.children[i]
-            if child.name not in tree:
-                child.delete()
-            else:
-                i += 1
-
-        # Теперь строим новое дерево
-        self._runner.parser.build_tree_from_objects(tree, self)
-
-    def clear_children(self):
-
-        for i in self.children:
-            i.delete()
-
-    def add_children(self, children: dict):
-
-        logging.debug(f"Adding children: {children}")
-
-        self._runner.parser.build_tree_from_objects(children, self)
-
-    def delete_children(self, children: list):
-
-        i = 0
-        while i < len(self.children):
-            child = self.children[i]
-            if child.name in children:
-                child.delete()
-            else:
-                i += 1
-
-
-    def delete(self):
+    def delete_bk(self):
         logging.debug(f"Deleting {self.type} {self.name}")
-        logging.debug(f"{self.name} has {self.children} at the moment of its death")
-        while self.children:
-            logging.debug(f"{self.name} deletes {self.children[0].name}!")
-            self.children[0].delete()
 
         if self.parent:
             self.parent.children.remove(self)
@@ -215,3 +176,22 @@ class Widget:
                 return trs[base_text]
 
         return base_text
+
+
+    def reparent(self, parent):
+
+        logging.debug(f"Reparenting {self} to {parent}")
+
+        if hasattr(parent, "qlayout"):
+            if hasattr(self, "qlayout"):
+                parent.qlayout.addLayout(self.qlayout)
+                logging.debug(f"Added {self}'s layout to {parent}'s one")
+            elif hasattr(self, "qwidget"):
+                parent.qlayout.addWidget(self.qwidget)
+                logging.debug(f"Added {self}'s widget to {parent}'s layout")
+
+        self.parent = parent
+
+    def set_index(self, index: int):
+
+        ...

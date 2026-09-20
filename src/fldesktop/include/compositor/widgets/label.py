@@ -5,8 +5,8 @@ from fldesktop.include.compositor.widgets.base import Widget
 
 
 class Label(Widget):
-    def __init__(self, runner, name, props, parent):
-        super().__init__(runner, name, props, parent)
+    def __init__(self, runner, name, props):
+        super().__init__(runner, name, props)
         self.type = "label"
         self.qwidget = QLabel()
 
@@ -15,9 +15,9 @@ class Label(Widget):
         }
 
         self.base_props = {
-            "text": "",
-            "alignment": "center",
-            "style": "normal"
+            "Attr.UI.Widget.Label.Text": "",
+            "Attr.UI.Widget.Label.Alignment": "center",
+            "Attr.UI.Widget.Label.Style": "normal"
         }
 
         self.qwidget.setSizePolicy(
@@ -30,11 +30,11 @@ class Label(Widget):
     def apply_props(self):
         super().apply_props()
 
-        self.qwidget.setText(self.tr(str(self.props["text"])))
+        self.qwidget.setText(self.tr(str(self.props["Attr.UI.Widget.Label.Text"])))
 
-        if self.props["alignment"] == "left":
+        if self.props["Attr.UI.Widget.Label.Alignment"] == "left":
             self.qwidget.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        elif self.props["alignment"] == "right":
+        elif self.props["Attr.UI.Widget.Label.Alignment"] == "right":
             self.qwidget.setAlignment(Qt.AlignmentFlag.AlignRight)
         else:
             self.qwidget.setAlignment(Qt.AlignmentFlag.AlignHCenter)
@@ -46,8 +46,10 @@ class Label(Widget):
             "normal": QFont("Noto Sans", 10)
         }
 
-        if self.props["style"] in styles:
-            self.qwidget.setFont(styles[self.props["style"]])
+        if self.props["Attr.UI.Widget.Label.Style"] in styles:
+            self.qwidget.setFont(
+                styles[self.props["Attr.UI.Widget.Label.Style"]]
+            )
         else:
             self.qwidget.setFont(styles["normal"])
 

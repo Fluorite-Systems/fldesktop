@@ -4,9 +4,9 @@ from fldesktop.include.compositor.widgets.base import Widget
 
 
 class Button(Widget):
-    def __init__(self, runner, name, props, parent):
-        super().__init__(runner, name, props, parent)
-        self.type = "button"
+    def __init__(self, runner, name, props):
+        super().__init__(runner, name, props)
+        self.type = "Node.UI.Widget.Button"
         self.qwidget = QPushButton()
 
         self.callables = {
@@ -15,26 +15,30 @@ class Button(Widget):
         }
 
         self.base_props = {
-            "text": "",
-            "icon": "",
-            "flat": False,
-            "compact": False
+            "Attr.UI.Widget.Button.Text": "",
+            "Attr.UI.Widget.Button.Icon": "",
+            "Attr.UI.Widget.Button.Flat": False,
+            "Attr.UI.Widget.Button.Compact": False
         }
 
         self._setup()
 
         self.qwidget.clicked.connect(
-            lambda: self._runner.event(name=self.name, type="button_pressed")
+            lambda: self._runner.event(self, name=self.name, type="button_pressed")
         )
 
     def apply_props(self):
         super().apply_props()
 
-        if self.props["text"]:
-            self.qwidget.setText(self.tr(str(self.props["text"])))
-        if self.props["icon"]:
-            self.qwidget.setIcon(QIcon.fromTheme(self.props["icon"]))
-        if self.props["flat"]:
-            self.qwidget.setFlat(self.props["flat"])
-        if self.props["compact"]:
+        if self.props["Attr.UI.Widget.Button.Text"]:
+            self.qwidget.setText(
+                self.tr(str(self.props["Attr.UI.Widget.Button.Text"]))
+            )
+        if self.props["Attr.UI.Widget.Button.Icon"]:
+            self.qwidget.setIcon(
+                QIcon.fromTheme(self.props["Attr.UI.Widget.Button.Icon"])
+            )
+        if self.props["Attr.UI.Widget.Button.Flat"]:
+            self.qwidget.setFlat(self.props["Attr.UI.Widget.Button.Flat"])
+        if self.props["Attr.UI.Widget.Button.Compact"]:
             self.qwidget.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)

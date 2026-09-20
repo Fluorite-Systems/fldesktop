@@ -2,7 +2,7 @@ from fldesktop.include import (communicator, desktop, dialogs,
                      thememgr, pkgmgr, lockscreen, os_manager,
                      configmgr, compositor, search, wm, loginmgr,
                      localemgr, notifications, iconmgr, QApp,
-                     PostInit, UserServiceStarter)
+                     PostInit, UserServiceStarter, fs3)
 from fldesktop.include.compositor.clientmgr import ClientManager
 from fldesktop.include.widgets.surface import SurfaceManager
 from fldesktop.include.input import InputManager
@@ -19,6 +19,10 @@ SERVICES = {
     },
     "UserServiceStarter": {
         "object": UserServiceStarter
+    },
+    "FS3": {
+        "object": fs3.FS3,
+        "importance": "critical"
     },
     "ConfigManager": {
         "object": configmgr.ConfigurationManager,

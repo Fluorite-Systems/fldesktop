@@ -2,12 +2,13 @@ from fldesktop.include.compositor.widgets import (
     button, canvas, checkbox, container, entry, filetree, flayout,
     hlayout, icon, imageview, label, listview, radiobutton, root,
     slider, stretch, tabs, terminal, textedit, vlayout,
-    accelgraphicsview, overlay
+    accelgraphicsview, overlay, base
 )
 
 
 widgets = {
     "root": root.RootWidget,
+    "widget": base.Widget,
     "vlayout": vlayout.VLayout,
     "hlayout": hlayout.HLayout,
     "flayout": flayout.FLayout,

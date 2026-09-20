@@ -3,8 +3,8 @@ from fldesktop.include.compositor.widgets.base import Widget
 
 
 class HLayout(Widget):
-    def __init__(self, runner, name, props, parent):
-        super().__init__(runner, name, props, parent)
+    def __init__(self, runner, name, props):
+        super().__init__(runner, name, props)
         self.type = "hlayout"
         self.qlayout = QHBoxLayout()
 

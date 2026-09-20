@@ -16,7 +16,7 @@ class ClientHandler:
         self.comm = comm
         self.callback = self.handle_callback
         self.is_active = True
-        self.uuid = None
+        self.uuid = str(uuid.uuid4())
         self.thread = None
         self.data_fmt = "json"
     
@@ -85,36 +85,10 @@ class ClientHandler:
             data = msgpack.unpackb(message, strict_map_key=False)
             self.data_fmt = "msgpack"
 
-        if "type" in data:
-            if data["type"] == "init_client":
-                # Create a window
-                uuid4 = str(uuid.uuid4())
-                self.uuid = uuid4
-
-                title = data["title"] if "title" in data else \
-                    self.comm.request(
-                        "localemgr", "tr", "Unnamed application"
-                    )
-                package = data["package"] if "package" in data else "none"
-                wsize = (
-                    int(data["width"]) if "width" in data else 500,
-                    int(data["height"]) if "height" in data else 400
-                )
-                wtype = data["windowtype"] if "windowtype" in data else \
-                                                                "normal"
-
-                self.comm.request(
-                    "clientmgr", "new_client",
-                    uuid4, title, package,
-                    wsize, wtype, self.callback
-                )
-
-                self.callback({"uuid": uuid4})
-            else:
-                if "uuid" in data:
-                    self.comm.request(
-                        "clientmgr", "notify_client", data["uuid"], data
-                    )
+        self.comm.request(
+            "clientmgr", "process_event", data,
+            self.uuid, self.callback
+        )
     
     def close(self):
         "Close client connection"
@@ -140,7 +114,13 @@ class ClientHandler:
 class AppServer:
     def __init__(self, comm):
         self.comm = comm
-        self.comm.register("appserver", {"stop": self.stop})
+        self.comm.register(
+            "appserver",
+            {
+                "stop": self.stop,
+                "handler_callback": self.handler_callback
+            }
+        )
             
         self.socket_path = os.path.join(
             os.environ["XDG_RUNTIME_DIR"], "flos.socket"
@@ -235,3 +215,9 @@ class AppServer:
         "Service cleanup method for Init"
 
         self.stop()
+
+    def handler_callback(self, uuid: str, data: dict):
+
+        for h in self._client_handlers:
+            if h.uuid == uuid:
+                h.handle_callback(data)

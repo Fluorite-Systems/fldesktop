@@ -1,9 +1,13 @@
+from inspect import ArgInfo
+from operator import call
+
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Signal, QObject
 
-from fldesktop.include.compositor.parser import Parser
+from fldesktop.include.compositor.builder import Builder
 from fldesktop.include.compositor.dnd import DragFilter, DropFilter
+from fldesktop.include.compositor.widgets.base import Widget
 
 from typing import Any
 
@@ -11,28 +15,60 @@ import msgpack
 import logging
 
 
+REQ_TYPES = {
+    "create_node": {
+        "attrs": dict
+    },
+    "delete_node": {
+        "id": int
+    },
+    "set_attrs": {
+        "id": int,
+        "attrs": dict
+    },
+    "del_attrs": {
+        "id": int,
+        "attrs": list
+    },
+    "get_attr": {
+        "id": int,
+        "attr": str
+    },
+    "get_attrs": {
+        "id": int
+    },
+    "query": {
+        "attrs": dict
+    },
+    "open": {
+        "id": int,
+        "mode": str
+    }
+}
+
+
 class Client:
-    def __init__(self, comm, name: str, pkg: str, 
-                 wsize: tuple, wtype: str,
-                 uuid: str, callback: Signal):
+    def __init__(self, comm, uuid: str, callback: Signal,
+                 title: str, package: str, 
+                 width: int, height: int, type: str):
         self.comm = comm
-        self.name = name
-        self.package = pkg
+        self.title = title
+        self.package = package
         self.callback = callback
         self.widget = QWidget()
-        self.main_layout = QVBoxLayout(self.widget)
+        self.qlayout = QVBoxLayout(self.widget)
         self.widgets = {}
         self.deleted_widgets = []
         self.translations = {}
-        self.parser = Parser(self)
+        self.parser = Builder(self)
         self.uuid = uuid
         self.drag_filter = DragFilter(self.widget)
         self.drop_filter = DropFilter(self.widget)
     
         # Create a window
         self.winid, self.on_close = self.comm.request(
-            "wm", "create_window", self.name, self.widget,
-            self.get_win_icon(), self.package, wsize, wtype
+            "wm", "create_window", self.title, self.widget,
+            self.get_win_icon(), self.package, (width, height), type
         )
 
         self.on_close.connect(lambda: self.callback("close"))
@@ -40,126 +76,6 @@ class Client:
     def event(self, **kwargs) -> None:
 
         self.callback(kwargs)
-
-    def receive(self, data: dict):
-        "Receive some info from backend"
-
-        #logging.debug(f"Got data from client {self.uuid}: {data}")
-
-        match data["type"]:
-            case "init_layout":
-                self.deleted_widgets = []
-
-                for k in list(self.widgets.keys()):
-                    if k in self.widgets:
-                        w = self.widgets[k]
-                        w.delete()
-
-                self.parser.build(data["payload"])
-                self.widget.update()
-
-                self.callback(
-                    {
-                        "status": "ok",
-                        "deleted": self.deleted_widgets
-                    }
-                )
-                self.deleted_widgets = []
-
-            case "set_translations":
-                self.translations = data["translations"]
-                self.callback({"status": "ok"})
-
-            case "update_children":
-                if data["name"] in self.widgets:
-                    self.deleted_widgets = []
-                    self.widgets[data["name"]].update_children(data["children"])
-                    for w in self.widgets:
-                        logging.debug(f"Widget {w} has {self.widgets[w].children}")
-                    self.callback(
-                        {
-                            "status": "ok",
-                            "deleted": self.deleted_widgets
-                        }
-                    )
-                    self.deleted_widgets = []
-                else:
-                    self.callback({"status": "unknown_widget"})
-
-            case "add_children":
-                if data["name"] in self.widgets:
-                    self.widgets[data["name"]].add_children(data["children"])
-                    self.callback({"status": "ok"})
-                else:
-                    self.callback({"status": "unknown_widget"})
-
-            case "delete_children":
-                if data["name"] in self.widgets: 
-                    self.deleted_widgets = []
-                    self.widgets[data["name"]].delete_children(data["children"]) 
-                    self.callback(
-                        {
-                            "status": "ok",
-                            "deleted": self.deleted_widgets
-                        }
-                    )
-                    self.deleted_widgets = []
-                else:
-                    self.callback({"status": "unknown_widget"})
-
-
-            case "clear_children":
-                if data["name"] in self.widgets:
-                    self.deleted_widgets = []
-                    self.widgets[data["name"]].clear_children()
-                    self.callback(
-                        {
-                            "status": "ok",
-                            "deleted": self.deleted_widgets
-                        }
-                    )
-                    self.deleted_widgets = []
-                else:
-                    self.callback({"status": "unknown_widget"})
-
-            case "call_method":
-                if data["name"] in self.widgets:
-                    w = self.widgets[data["name"]]
-                    if data["method"] in w.callables:
-                        r = w.callables[data["method"]](**data["args"])
-
-                        if r or str(data["method"]).startswith("get"):
-                            self.callback({"status": "ok", "reply": r})
-                        else:
-                            self.callback({"status": "ok"})
-                else:
-                    self.callback({"status": "unknown_widget"})
-
-            case "append_title":
-                if "title" in data:
-                    self.comm.request("wm", "append_window_title",
-                                self.winid, data["title"])
-                    self.callback({"status": "ok"})
-
-            case "spawn_effect":
-                if "effect" in data:
-                    self.comm.request(
-                        "wm", "spawn_effect", self.winid, data["effect"]
-                    )
-                    self.callback({"status": "ok"})
-
-            case "file_dialog":
-                dtype = "open_file"
-                if "dialog_type" in data:
-                    if data["dialog_type"] == "save_file":
-                        dtype = "save_file"
-                self.comm.request(
-                    "dialogmgr", dtype,
-                    lambda r: self.callback({"type": "files_choosen", "files": r})
-                )
-                self.callback({"status": "ok"})
-            case _:
-                self.callback({"status": "invalid_type"})
 
     def cleanup(self):
         "Clean up on close"
@@ -179,7 +95,7 @@ class Client:
         return QIcon()
 
 
-class ClientManager(QObject):
+class ClientManagerOld(QObject):
     new_client_s = Signal(str, str, str, tuple, str, Any)
     notify_client_s = Signal(str, bytes)
     kill_client_s = Signal(str)
@@ -229,3 +145,124 @@ class ClientManager(QObject):
         if uuid in self.clients:
             self.clients[uuid].cleanup()
             self.comm.request("wm", "close_window", self.clients[uuid].winid)
+
+
+class ClientManager(QObject):
+    process_event_s = Signal(dict, str, Any)
+
+    def __init__(self, comm):
+        super().__init__()
+        self.process_event_s.connect(self.process_event)
+
+        self.comm = comm
+        self.comm.register("clientmgr", {
+            "process_event": lambda *a: self.process_event_s.emit(*a)
+        })
+
+        self.comm.subscribe("fs3_node_created", self.on_fs3_node_created)
+        self.comm.subscribe("fs3_node_modified", self.on_fs3_node_modified)
+        self.comm.subscribe("fs3_node_deleted", self.on_fs3_node_deleted)
+
+        self.builder = Builder(self)
+
+    def process_event(self, data: dict, handler_uuid: str, callback):
+
+        logging.debug(f"Processing data {data}")
+
+        if not self.check_integrity(data):
+            callback({"status": "not ok"})
+
+        if data["cmd"] in [
+            "create_node", "delete_node",
+            "set_attrs", "del_attrs",
+            "get_attr", "get_attrs",
+            "query", "open"
+        ]:
+            args_needed = REQ_TYPES[data["cmd"]]
+            args = {k: v for k, v in data.items() if k in args_needed}
+            if "attrs" in args:
+                if "Attr.System.Type" in args["attrs"]:
+                    if args["attrs"]["Attr.System.Type"] \
+                        .startswith("Node.UI"):
+                        args["attrs"]["Attrs.UI.ClientHandlerUUID"] \
+                            = handler_uuid
+                        
+            reply = self.comm.request(
+                "fs3", data["cmd"], **args
+            )
+
+            if reply is not None:
+                callback({"status": "ok", "reply": reply})
+            else:
+                callback({"status": "ok"})
+
+    def check_integrity(self, event: dict):
+
+        if not isinstance(event, dict):
+            return False
+
+        if "cmd" not in event:
+            return False
+
+        if not isinstance(event["cmd"], str):
+            return False
+
+        if event["cmd"] not in REQ_TYPES:
+            return False
+
+        for t in REQ_TYPES:
+            if event["cmd"] == t:
+                for key, value in REQ_TYPES[t].items():
+                    if key not in event:
+                        return False
+                    if not isinstance(event[key], value):
+                        return False
+
+        return True
+
+    def on_fs3_node_created(self, id: int, attrs: dict):
+
+        if "Attr.System.Type" in attrs:
+            if isinstance(attrs["Attr.System.Type"], str):
+                if attrs["Attr.System.Type"] == "Node.UI.Window":
+
+                    callback = print
+
+                    params = {
+                        "title": "App",
+                        "package": "Unknown",
+                        "width": 500,
+                        "height": 300,
+                        "type": "normal"
+                    }
+                    for i in ["Title", "Package", "Width", "Height", "Type"]:
+                        param = f"Attr.UI.Window.{i}"
+                        if param in attrs:
+                            params[i.lower()] = attrs[param]
+
+                    cl = Client(
+                        self.comm, id, callback, **params
+                    )
+                    self.builder.clients[cl.uuid] = cl
+
+                elif attrs["Attr.System.Type"].startswith("Node.UI.Widget"):
+
+                    self.builder.create_widget(id, attrs)
+
+                elif attrs["Attr.System.Type"] == "Node.Relation":
+
+                    self.builder.process_relation(id, attrs)
+
+    def on_fs3_node_modified(self, id: int, attrs: dict):
+
+        ...
+
+    def on_fs3_node_deleted(self, id: int):
+
+        ...
+
+    def process_widget_callback(self, handler_uuid: str, data):
+
+        self.comm.request(
+            "appserver", "handler_callback", handler_uuid, data
+        )

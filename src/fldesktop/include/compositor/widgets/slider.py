@@ -4,8 +4,8 @@ from fldesktop.include.compositor.widgets.base import Widget
 
 
 class Slider(Widget):
-    def __init__(self, runner, name, props, parent):
-        super().__init__(runner, name, props, parent)
+    def __init__(self, runner, name, props):
+        super().__init__(runner, name, props)
         self.type = "slider"
         self.qwidget = QSlider()
 
@@ -39,6 +39,7 @@ class Slider(Widget):
     def vc_handler(self, value: int):
 
         self._runner.event(
+            self,
             name=self.name, type="slider_value_changed", value=value
         )
 

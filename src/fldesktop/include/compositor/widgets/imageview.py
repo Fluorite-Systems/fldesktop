@@ -13,11 +13,11 @@ class ImageView(Widget):
         self.qwidget = QLabel()
 
         self.base_props = {
-            "image": "",
-            "source": "",
-            "quality": "fast",
-            "keep_aspect_ratio": True,
-            "full_cover": False
+            "Attr.UI.Widget.ImageView.Image": "",
+            "Attr.UI.Widget.ImageView.Source": "",
+            "Attr.UI.Widget.ImageView.Quality": "fast",
+            "Attr.UI.Widget.ImageView.KeepAspectRatio": True,
+            "Attr.UI.Widget.ImageView.FullCover": False
         }
 
         self.pixmap = QPixmap()
@@ -28,15 +28,19 @@ class ImageView(Widget):
     def apply_props(self):
         super().apply_props()
 
-        if self.props["image"]:
+        if self.props["Attr.UI.Widget.ImageView.Image"]:
             self.pixmap = QPixmap()
             self.pixmap.loadFromData(
-                base64.b64decode(self.props["image"].encode())
+                base64.b64decode(
+                    self.props["Attr.UI.Widget.ImageView.Image"].encode()
+                )
             )
 
-        if self.props["source"]:
-            if self.props["quality"] == "fast":
-                reader = QImageReader(self.props["source"])
+        if self.props["Attr.UI.Widget.ImageView.Source"]:
+            if self.props["Attr.UI.Widget.ImageView.Quality"] == "fast":
+                reader = QImageReader(
+                    self.props["Attr.UI.Widget.ImageView.Source"]
+                )
                 reader.setScaledSize(self.qwidget.size().scaled(
                     self.qwidget.size().width(),
                     self.qwidget.size().height(),
@@ -44,7 +48,9 @@ class ImageView(Widget):
                 ))
                 self.pixmap = QPixmap.fromImage(reader.read())
             else:
-                self.pixmap = QPixmap(self.props["source"])
+                self.pixmap = QPixmap(
+                    self.props["Attr.UI.Widget.ImageView.Source"]
+                )
     
         self.resizeEvent(None)
 
@@ -52,11 +58,13 @@ class ImageView(Widget):
         self.qwidget.setPixmap(
             self.pixmap.scaled(
                 self.qwidget.size(),
-                (Qt.KeepAspectRatioByExpanding if self.props["full_cover"] \
-                    else Qt.KeepAspectRatio) if \
-                        self.props["keep_aspect_ratio"] else \
-                            Qt.AspectRatioMode.IgnoreAspectRatio,
-                Qt.FastTransformation if self.props["quality"] == "fast" \
-                    else Qt.SmoothTransformation
+                (Qt.KeepAspectRatioByExpanding if \
+                self.props["Attr.UI.Widget.ImageView.FullCover"] \
+                else Qt.KeepAspectRatio) if \
+                self.props["Attr.UI.Widget.ImageView.KeepAspectRatio"] else \
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.FastTransformation if \
+                self.props["Attr.UI.Widget.ImageView.Quality"] == "fast" \
+                else Qt.SmoothTransformation
             )
         )

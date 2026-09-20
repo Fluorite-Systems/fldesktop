@@ -20,6 +20,7 @@ class TextEdit(Widget):
 
         self.qwidget.textChanged.connect(
             lambda: self._runner.event(
+                self,
                 name=self.name, type="textedit_text_changed"
             )
         )
