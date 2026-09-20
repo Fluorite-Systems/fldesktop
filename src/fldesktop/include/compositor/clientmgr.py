@@ -20,29 +20,34 @@ REQ_TYPES = {
         "attrs": dict
     },
     "delete_node": {
-        "id": int
+        "id": str
     },
     "set_attrs": {
-        "id": int,
+        "id": str,
         "attrs": dict
     },
     "del_attrs": {
-        "id": int,
+        "id": str,
         "attrs": list
     },
     "get_attr": {
-        "id": int,
+        "id": str,
         "attr": str
     },
     "get_attrs": {
-        "id": int
+        "id": str
     },
     "query": {
         "attrs": dict
     },
     "open": {
-        "id": int,
+        "id": str,
         "mode": str
+    },
+    "call_method": {
+        "id": str,
+        "method": str,
+        "args": dict
     }
 }
 
@@ -60,7 +65,7 @@ class Client:
         self.widgets = {}
         self.deleted_widgets = []
         self.translations = {}
-        self.parser = Builder(self)
+        self.callables = {}
         self.uuid = uuid
         self.drag_filter = DragFilter(self.widget)
         self.drop_filter = DropFilter(self.widget)
@@ -172,6 +177,8 @@ class ClientManager(QObject):
         if not self.check_integrity(data):
             callback({"status": "not ok"})
 
+        reply = None
+
         if data["cmd"] in [
             "create_node", "delete_node",
             "set_attrs", "del_attrs",
@@ -191,11 +198,16 @@ class ClientManager(QObject):
                 "fs3", data["cmd"], **args
             )
 
-            if reply is not None:
-                callback({"status": "ok", "reply": reply})
-            else:
-                callback({"status": "ok"})
+        elif data["cmd"] == "call_method":
+            reply = self.builder.call_method(
+                data["id"], data["method"], data["args"]
+            )
 
+        if reply is not None:
+            callback({"status": "ok", "reply": reply})
+        else:
+            callback({"status": "ok"})
+        
     def check_integrity(self, event: dict):
 
         if not isinstance(event, dict):

@@ -57,6 +57,16 @@ class Builder:
         elif rfrom in self.clients:
             self.widgets[rto].reparent(self.clients[rfrom])
 
+    def call_method(self, id, method, kwargs):
+
+        if id in self.clients:
+            if method in self.clients[id].callables:
+                return self.clients[id].callables[method](**kwargs)
+
+        if id in self.widgets:
+            if method in self.widgets[id].callables:
+                return self.widgets[id].callables[method](**kwargs)
+
     def event(self, node, **kwargs):
 
         if "Attrs.UI.ClientHandlerUUID" not in node.props:
