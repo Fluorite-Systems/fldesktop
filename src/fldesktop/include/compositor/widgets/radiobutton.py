@@ -37,7 +37,7 @@ class RadioButton(Widget):
             self.tr(str(self.props["Attr.UI.Widget.RadioButton.Text"]))
         )
 
-    def select(self, _):
+    def select(self):
         self.qwidget.blockSignals(True)
         self.qwidget.setChecked(True)
         self.qwidget.blockSignals(False)
