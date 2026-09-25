@@ -59,6 +59,21 @@ class Builder:
         if rfrom in self.objects:
             self.objects[rto].reparent(self.objects[rfrom])
 
+    def on_node_modified(self, id):
+
+        ...
+
+    def on_node_deleted(self, id):
+
+        if id not in self.objects:
+            print(id, "not in", self.objects)
+            return
+
+        logging.debug(f"Object {id} was deleted, cleaning...")
+
+        self.objects[id].delete()
+        self.objects.pop(id)
+
     def call_method(self, id, method, kwargs):
 
         if id in self.objects:

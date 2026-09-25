@@ -51,7 +51,7 @@ class Database:
         if id in self.db:
             self.db.pop(id)
 
-        self.callback.emit("deleted", {"id": int})
+        self.callback.emit("deleted", {"id": id})
 
         self.gc.run()
 

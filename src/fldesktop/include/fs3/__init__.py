@@ -24,6 +24,8 @@ class FS3:
 
     def emit_event(self, type: str = "modified", **kwargs):
 
+        print(type, kwargs)
+
         self.comm.emit(
             f"fs3_node_{type}", **kwargs
         )

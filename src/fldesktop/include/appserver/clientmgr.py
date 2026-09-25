@@ -99,6 +99,10 @@ class Client:
 
         return QIcon()
 
+    def delete(self):
+
+        self.comm.request("wm", "close_window", self.winid)
+
 
 class ClientManagerOld(QObject):
     new_client_s = Signal(str, str, str, tuple, str, Any)
@@ -154,14 +158,17 @@ class ClientManagerOld(QObject):
 
 class ClientManager(QObject):
     process_event_s = Signal(dict, str, Any)
+    del_cl_objects_s = Signal(str)
 
     def __init__(self, comm):
         super().__init__()
         self.process_event_s.connect(self.process_event)
+        self.del_cl_objects_s.connect(self.del_client_objects)
 
         self.comm = comm
         self.comm.register("clientmgr", {
-            "process_event": lambda *a: self.process_event_s.emit(*a)
+            "process_event": lambda *a: self.process_event_s.emit(*a),
+            "del_client_objects": lambda *a: self.del_cl_objects_s.emit(*a)
         })
 
         self.comm.subscribe("fs3_node_created", self.on_fs3_node_created)
@@ -269,16 +276,26 @@ class ClientManager(QObject):
 
                     self.builder.process_relation(id, attrs)
 
-    def on_fs3_node_modified(self, id: int, attrs: dict):
+    def on_fs3_node_modified(self, id: str, attrs: dict):
 
-        ...
+        self.builder.on_node_modified(id)
 
-    def on_fs3_node_deleted(self, id: int):
+    def on_fs3_node_deleted(self, id: str):
 
-        ...
+        print("delete reveiced", id, self.builder.objects.keys())
+
+        self.builder.on_node_deleted(id)
 
     def process_widget_callback(self, handler_uuid: str, data):
 
         self.comm.request(
             "appserver", "handler_callback", handler_uuid, data
         )
+
+    def del_client_objects(self, handler_uuid: str):
+
+        objects = self.comm.request(
+            "fs3", "query", {"Attrs.UI.ClientHandlerUUID": handler_uuid}
+        )
+        for obj in objects:
+            self.comm.request("fs3", "delete_node", obj)

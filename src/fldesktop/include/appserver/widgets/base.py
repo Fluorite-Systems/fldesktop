@@ -140,20 +140,8 @@ class Widget:
                     lambda p: menu.exec(self.qwidget.mapToGlobal(p))
                 )
 
-    def delete_bk(self):
+    def delete(self):
         logging.debug(f"Deleting {self.type} {self.name}")
-
-        if self.parent:
-            self.parent.children.remove(self)
-            if hasattr(self.parent, "qlayout"):
-                if hasattr(self, "qwidget"):
-                    self.parent.qlayout.removeWidget(self.qwidget)
-                    self.qwidget.close()
-                    self.qwidget.deleteLater()
-                if hasattr(self, "qlayout"):
-                    i = self.parent.qlayout.indexOf(self.qlayout)
-                    if i != -1:
-                        self.parent.qlayout.takeAt(i)
 
         self._cleanup()
 
@@ -162,9 +150,6 @@ class Widget:
             self.qwidget.deleteLater()
         if hasattr(self, "qlayout"):
             self.qlayout.deleteLater()
-
-        self._runner.deleted_objects.append(self.name)
-        self._runner.objects.pop(self.name)
 
     def tr(self, base_text: str):
         "Translate text"

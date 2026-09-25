@@ -97,7 +97,7 @@ class ClientHandler:
             
         self.is_active = False
         
-        self.comm.request("clientmgr", "kill_client", self.uuid)
+        self.comm.request("clientmgr", "del_client_objects", self.uuid)
         
         try:
             self.connection.shutdown(socket.SHUT_RDWR)

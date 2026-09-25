@@ -54,6 +54,14 @@ class Sidebar(Surface):
         if self.isVisible():
             self.applets_layout.addWidget(applet.widget)
 
+    def del_applet(self, applet: Applet):
+
+        if self.isVisible():
+            index = self.applets_layout.indexOf(applet) + 1
+            if index < self.applets_layout.count():
+                self.applets_layout.itemAt(index).widget().close()
+        self.applets.remove(applet)
+
     def show(self):
         def phase2(self):
             super().show()

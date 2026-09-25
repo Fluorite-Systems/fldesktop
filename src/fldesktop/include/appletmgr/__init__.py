@@ -41,7 +41,11 @@ class AppletManager:
 
     def del_applet(self, applet: Applet):
 
-        ...
+        if applet not in self.applets:
+            return
+
+        self.sidebar.del_applet(applet)
+        self.applets.remove(applet)
 
     def enable_sidebar(self):
 

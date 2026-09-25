@@ -43,3 +43,13 @@ class Applet:
                 return value.icon
 
         return self.comm.request("iconmgr", "get", "application-generic")
+
+    def delete(self):
+
+        self.comm.request("appletmgr", "del_applet", self)
+        self.widget.close()
+        self.widget.deleteLater()
+        self.menu.close()
+        self.menu.deleteLater()
+        self.button.close()
+        self.button.deleteLater()

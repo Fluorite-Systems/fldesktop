@@ -33,4 +33,4 @@ class GarbageCollector:
     def run(self):
         "Run garbace collection"
 
-        # here comes nothing...
+        # Remove dead relations.... maybe tomorrow.
