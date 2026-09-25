@@ -2,6 +2,7 @@ from PySide6.QtCore import QObject, Signal, QTimer
 from fldesktop.include.fs3.models import Node
 from fldesktop.include.fs3.db.storagemgr import StorageManager
 from fldesktop.include.fs3.db.gc import GarbageCollector
+from pathlib import Path
 import threading
 import uuid
 import base64
@@ -148,7 +149,10 @@ class DatabaseManager(QObject):
 
         storage_path = self.core.comm.request("osmgr", "get_path", "fs3")
         if not storage_path:
-            storage_path = "/system/fs3"
+            if Path("/system").exists():
+                storage_path = "/system/fs3"
+            else:
+                storage_path = "/tmp/fs3" # When running in testing env
 
         self.db = Database(self.thread_callback, storage_path)
         self.db_thread = threading.Thread(
