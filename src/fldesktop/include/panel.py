@@ -60,9 +60,10 @@ class AppBtn(QPushButton):
 
 
 class Panel(Surface):
-    def __init__(self, parent, comm):
-        super().__init__(comm, parent, 5)
-        self.desktop = parent
+    def __init__(self, comm):
+        super().__init__(
+            comm, comm.request("desktop", "get_instance"), 5
+        )
         self.comm = comm
         self.setAttribute(Qt.WidgetAttribute.WA_AlwaysStackOnTop)
 
@@ -77,6 +78,7 @@ class Panel(Surface):
             "get_qc_btn": self.get_qc_btn,
             "return_qc_btn": self.return_qc_btn
         })
+        self.comm.subscribe("desktop_size_changed", self.refresh_geometry)
 
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -90,6 +92,12 @@ class Panel(Surface):
 
         self.layout.addStretch()
 
+        self.tray = self.comm.request("appletmgr", "get_tray")
+        self.layout.addWidget(self.tray)
+
+        self.sb_toggle = self.comm.request("appletmgr", "get_sb_toggle")
+        self.layout.addWidget(self.sb_toggle)
+
         self.ki = kbindicator.KeyboardIndicator(self.comm)
         self.layout.addWidget(self.ki.btn)
 
@@ -100,10 +108,12 @@ class Panel(Surface):
         self.layout.addWidget(self.qc.btn)
 
         self.setObjectName("panel")
+
+        self.show()
     
     def refresh_geometry(self):
         "Refreshes geometry"
-        dsize = self.desktop.size()
+        dsize = self.parent().size()
 
         self.setGeometry(0, 0, dsize.width(), 26)
 

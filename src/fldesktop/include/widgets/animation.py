@@ -160,6 +160,23 @@ class Animation(QWidget):
                 aps.setStartValue(params["size"])
                 aps.setEndValue(params["size"])
 
+            case "sbopen":
+                app.setStartValue(
+                    QPoint(params["pos"].x() + params["size"].width(), 26)
+                )
+                app.setEndValue(params["pos"])
+                aps.setStartValue(params["size"])
+                aps.setEndValue(params["size"])
+
+            case "sbclose":
+                app.setStartValue(params["pos"])
+                app.setEndValue(
+                    QPoint(params["pos"].x() + params["size"].width(), 26)
+                )
+                aps.setStartValue(params["size"])
+                aps.setEndValue(params["size"])
+
+
         ag.start()
 
     def finished_handler(self, callback):

@@ -3,7 +3,6 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QMenu,
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPixmap
 
-from fldesktop.include import panel
 from fldesktop.include.widgets.fade_effect import FadeEffect
 
 import os
@@ -64,8 +63,6 @@ class Desktop(QMainWindow):
                 "get_instance": self.get_instance
             }
         )
-
-        self.panel = panel.Panel(self, self.comm)
         
         self.bg = Background(self, self.comm)
 
@@ -109,6 +106,6 @@ class Desktop(QMainWindow):
 
         super().resizeEvent(event)
 
-        self.panel.refresh_geometry()
         self.comm.request("lockscreen", "refresh_size")
+        self.comm.emit("desktop_size_changed")
         self.bg.refresh()

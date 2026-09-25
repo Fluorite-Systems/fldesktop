@@ -20,7 +20,7 @@ class Widget:
 
     def _setup(self):
         #self._setup_layouting()
-        self._runner.widgets[self.name] = self
+        self._runner.objects[self.name] = self
         
         if hasattr(self, "qwidget"):
             self.callables.update(
@@ -163,8 +163,8 @@ class Widget:
         if hasattr(self, "qlayout"):
             self.qlayout.deleteLater()
 
-        self._runner.deleted_widgets.append(self.name)
-        self._runner.widgets.pop(self.name)
+        self._runner.deleted_objects.append(self.name)
+        self._runner.objects.pop(self.name)
 
     def tr(self, base_text: str):
         "Translate text"

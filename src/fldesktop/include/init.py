@@ -2,7 +2,8 @@ from fldesktop.include import (communicator, desktop, dialogs,
                      thememgr, pkgmgr, lockscreen, os_manager,
                      configmgr, appserver, search, wm, loginmgr,
                      localemgr, notifications, iconmgr, QApp,
-                     PostInit, UserServiceStarter, fs3)
+                     PostInit, UserServiceStarter, fs3, appletmgr,
+                     panel)
 from fldesktop.include.appserver.clientmgr import ClientManager
 from fldesktop.include.widgets.surface import SurfaceManager
 from fldesktop.include.input import InputManager
@@ -96,6 +97,10 @@ SERVICES = {
         "object": lockscreen.LockScreen,
         "depends": ["LoginManager", "Desktop"]
     },
+    "Panel": {
+        "object": panel.Panel,
+        "depends": ["Desktop", "AppletManager"]
+    },
     "NotifyManager": {
         "object": notifications.NotificationManager,
         "depends": ["Desktop"]
@@ -103,6 +108,10 @@ SERVICES = {
     "DialogManager": {
         "object": dialogs.DialogManager,
         "depends": ["WindowManager"]
+    },
+    "AppletManager": {
+        "object": appletmgr.AppletManager,
+        "depends": ["Desktop"]
     },
     "PostInit": {
         "object": PostInit,
@@ -115,7 +124,6 @@ SERVICES = {
         "depends": ["QApplication"]
     }
 }
-
 
 DEFAULTS = [
     ("object", lambda: ...), ("importance", "optional"),

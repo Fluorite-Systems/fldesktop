@@ -77,13 +77,13 @@ class Menu(Surface):
             else:
                 self.show()
                 self.raise_()
-                self.desktop.panel.raise_()
+                self.comm.request("panel", "raise")
 
         if self.isVisible():
             self.close_menu()
             return
 
-        x = int(self.anchor.x() - \
+        x = int(self.anchor.mapToGlobal(self.anchor.pos()).x() - \
                     (self.size().width() - self.anchor.size().width()) / 2)
         if x < 0:
             x = 4

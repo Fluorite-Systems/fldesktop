@@ -419,12 +419,16 @@ class SurfaceManager(QObject):
             return BrightestSpot((0, 0), 0.0, 0.0, QColor(0, 0, 0), is_pronounced=False, confidence=0.0)
 
         w, h = pixmap.width(), pixmap.height()
-
         image = pixmap.toImage().convertToFormat(QImage.Format.Format_RGB888)
-        
-        buffer = image.bits()
-        
-        img_array = np.array(buffer, dtype=np.uint8).reshape((h, w, 3)).copy()
+
+        bytes_per_line = image.bytesPerLine()
+
+        img_array = np.array(image.bits(), dtype=np.uint8).reshape((h, bytes_per_line))
+
+        img_array = img_array[:, :w * 3]
+
+        img_array = img_array.reshape((h, w, 3)).copy()
+
 
         r = img_array[:, :, 0].astype(np.float32)
         g = img_array[:, :, 1].astype(np.float32)

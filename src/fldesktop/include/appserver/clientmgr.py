@@ -255,7 +255,11 @@ class ClientManager(QObject):
                     cl = Client(
                         self.comm, id, callback, **params
                     )
-                    self.builder.clients[cl.uuid] = cl
+                    self.builder.objects[cl.uuid] = cl
+
+                elif attrs["Attr.System.Type"].startswith("Node.UI.Applet"):
+
+                    self.builder.create_applet(id, attrs)
 
                 elif attrs["Attr.System.Type"].startswith("Node.UI.Widget"):
 
