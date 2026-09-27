@@ -60,6 +60,7 @@ class Client:
         self.title = title
         self.package = package
         self.callback = callback
+        self.attrs = {}
         self.widget = QWidget()
         self.qlayout = QVBoxLayout(self.widget)
         self.widgets = {}
@@ -98,6 +99,10 @@ class Client:
                 return value.icon
 
         return QIcon()
+
+    def apply_attrs(self):
+
+        ...
 
     def delete(self):
 

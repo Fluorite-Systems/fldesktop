@@ -61,7 +61,15 @@ class Builder:
 
     def on_node_modified(self, id):
 
-        ...
+        if id not in self.objects:
+            return
+
+        logging.debug(f"Updating {id} attributes")
+
+        attrs = self.comm.request("fs3", "get_attrs", id)
+
+        self.objects[id].attrs = attrs
+        self.objects[id].apply_attrs()
 
     def on_node_deleted(self, id):
 
@@ -85,10 +93,10 @@ class Builder:
 
     def event(self, node, **kwargs):
 
-        if "Attrs.UI.ClientHandlerUUID" not in node.props:
+        if "Attrs.UI.ClientHandlerUUID" not in node.attrs:
             return
 
         self.cm.process_widget_callback(
-            node.props["Attrs.UI.ClientHandlerUUID"],
+            node.attrs["Attrs.UI.ClientHandlerUUID"],
             kwargs
         )

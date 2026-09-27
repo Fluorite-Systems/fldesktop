@@ -8,6 +8,7 @@ class Applet:
 
         self.comm = comm
         self.package = package
+        self.attrs = {}
 
         self.callables = {}
 
@@ -43,6 +44,10 @@ class Applet:
                 return value.icon
 
         return self.comm.request("iconmgr", "get", "application-generic")
+
+    def apply_attrs(self):
+
+        ...
 
     def delete(self):
 
