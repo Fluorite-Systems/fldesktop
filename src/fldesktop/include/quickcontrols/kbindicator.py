@@ -5,8 +5,6 @@ class KeyboardIndicator:
     def __init__(self, comm):
         self.comm = comm
 
-        print(self.comm.request("inputmgr", "get_current_locale"))
-
         self.btn = QPushButton(
             self.comm.request("inputmgr", "get_current_locale")
         )

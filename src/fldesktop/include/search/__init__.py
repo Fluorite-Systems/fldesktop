@@ -60,7 +60,6 @@ class Search:
                         continue
 
                 elif v["type"] == "items":
-                    print(v)
                     if not "items" in v:
                         p.remove(v)
                         continue

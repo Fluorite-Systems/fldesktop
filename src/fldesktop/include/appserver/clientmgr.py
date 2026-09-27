@@ -282,8 +282,6 @@ class ClientManager(QObject):
 
     def on_fs3_node_deleted(self, id: str):
 
-        print("delete reveiced", id, self.builder.objects.keys())
-
         self.builder.on_node_deleted(id)
 
     def process_widget_callback(self, handler_uuid: str, data):

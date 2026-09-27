@@ -66,7 +66,6 @@ class Builder:
     def on_node_deleted(self, id):
 
         if id not in self.objects:
-            print(id, "not in", self.objects)
             return
 
         logging.debug(f"Object {id} was deleted, cleaning...")
