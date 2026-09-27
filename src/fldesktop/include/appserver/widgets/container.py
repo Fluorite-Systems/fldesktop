@@ -4,8 +4,8 @@ from fldesktop.include.widgets.flowlayout import FlowLayout
 
 
 class Container(Widget):
-    def __init__(self, runner, name, props, parent):
-        super().__init__(runner, name, props, parent)
+    def __init__(self, runner, name, props):
+        super().__init__(runner, name, props)
         self.type = "container"
         self.qwidget = QScrollArea()
 

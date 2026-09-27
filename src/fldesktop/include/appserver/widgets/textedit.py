@@ -3,8 +3,8 @@ from fldesktop.include.appserver.widgets.base import Widget
 
 
 class TextEdit(Widget):
-    def __init__(self, runner, name, props, parent):
-        super().__init__(runner, name, props, parent)
+    def __init__(self, runner, name, props):
+        super().__init__(runner, name, props)
         self.type = "textedit"
         self.qwidget = QTextEdit()
 
