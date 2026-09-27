@@ -11,8 +11,6 @@ class EventFilter(QObject):
 
         self.menu = menu
 
-        QApplication.instance().installEventFilter(self)
-
     def eventFilter(self, obj, event):
 
         if not isinstance(obj, QObject) or obj.__class__.__name__ == "QWidgetItem":
@@ -45,6 +43,13 @@ class EventFilter(QObject):
                 
         return super().eventFilter(obj, event)
 
+    def install(self):
+
+        QApplication.instance().installEventFilter(self)
+
+    def remove(self):
+
+        QApplication.instance().removeEventFilter(self)
 
 class Menu(Surface): 
     def __init__(self, comm, widget: QWidget, anchor: QWidget, desktop):
@@ -61,6 +66,7 @@ class Menu(Surface):
         self.setObjectName("menu")
 
         self.filter = EventFilter(self)
+        self.filter.install()
 
         self.hide()
         self.lower()

@@ -49,6 +49,8 @@ class Applet:
         self.comm.request("appletmgr", "del_applet", self)
         self.widget.close()
         self.widget.deleteLater()
+        self.menu.filter.remove()
+        self.menu.filter.deleteLater()
         self.menu.close()
         self.menu.deleteLater()
         self.button.close()
