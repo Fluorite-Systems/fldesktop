@@ -1,5 +1,3 @@
-from cmath import phase
-
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QScrollArea, QPushButton,
                                QSizePolicy, QLabel, QFrame)
 from PySide6.QtCore import Qt
@@ -38,6 +36,7 @@ class Sidebar(Surface):
         self.mlayout.addWidget(self.scroller)
 
         self.applets_layout = QVBoxLayout(self.scrollable)
+        self.applets_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.applets = []
 
