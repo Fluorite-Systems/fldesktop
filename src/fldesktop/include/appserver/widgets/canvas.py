@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget
-from PySide6.QtGui import QPixmap, QPainter, QColor, QPen, QFont
-from PySide6.QtCore import QRect, Qt, QPoint
+from PySide6.QtGui import QPixmap, QPainter, QColor, QPen, QFont, QPainterPath
+from PySide6.QtCore import QRectF, Qt, QPointF
 
 from fldesktop.include.appserver.widgets.base import Widget
 
