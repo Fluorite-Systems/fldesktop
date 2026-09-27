@@ -3,8 +3,8 @@ from fldesktop.include.widgets.window_overlay import WindowOverlay
 
 
 class Overlay(Widget):
-    def __init__(self, runner, name, props):
-        super().__init__(runner, name, props)
+    def __init__(self, runner, name, attrs):
+        super().__init__(runner, name, attrs)
         self.type = "overlay"
         self.ovl = WindowOverlay(self._runner.comm, self._runner.winid)
         self.qwidget = self.ovl.view.cont

@@ -3,8 +3,8 @@ from fldesktop.include.appserver.widgets.base import Widget
 from fldesktop.include.appserver.widgets.vlayout import VLayout
 
 class Tabs(Widget):
-    def __init__(self, runner, name, props):
-        super().__init__(runner, name, props)
+    def __init__(self, runner, name, attrs):
+        super().__init__(runner, name, attrs)
         self.type = "tabs"
         self.qwidget = QTabWidget()
 
@@ -19,12 +19,12 @@ class Tabs(Widget):
         self.qwidget.setTabsClosable(True)
         self.qwidget.tabCloseRequested.connect(self.tab_close_handler)
 
-        if "tabs" in self.props:
-            for i in self.props["tabs"]:
-                name = self.props["tabs"][i]["title"] if "title" in self.props["tabs"][i] else str(i)
+        if "tabs" in self.attrs:
+            for i in self.attrs["tabs"]:
+                name = self.attrs["tabs"][i]["title"] if "title" in self.attrs["tabs"][i] else str(i)
                 p = VLayout(self._runner, str(i), {}, None)
                 p._setup()
-                self._runner.parser.build_tree_from_objects(self.props["tabs"][i]["children"], p)
+                self._runner.parser.build_tree_from_objects(self.attrs["tabs"][i]["children"], p)
                 w = QWidget()
                 w.setLayout(p.qlayout)
                 self.qwidget.addTab(w, name)

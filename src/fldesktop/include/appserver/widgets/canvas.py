@@ -6,8 +6,8 @@ from fldesktop.include.appserver.widgets.base import Widget
 
 
 class Canvas(Widget):
-    def __init__(self, runner, name, props):
-        super().__init__(runner, name, props)
+    def __init__(self, runner, name, attrs):
+        super().__init__(runner, name, attrs)
         self.type = "canvas"
         self.qwidget = QWidget()
 

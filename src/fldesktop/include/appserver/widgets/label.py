@@ -5,8 +5,8 @@ from fldesktop.include.appserver.widgets.base import Widget
 
 
 class Label(Widget):
-    def __init__(self, runner, name, props):
-        super().__init__(runner, name, props)
+    def __init__(self, runner, name, attrs):
+        super().__init__(runner, name, attrs)
         self.type = "label"
         self.qwidget = QLabel()
 
@@ -14,7 +14,7 @@ class Label(Widget):
             "get_text": self.get_text
         }
 
-        self.base_props = {
+        self.base_attrs = {
             "Attr.UI.Widget.Label.Text": "",
             "Attr.UI.Widget.Label.Alignment": "center",
             "Attr.UI.Widget.Label.Style": "normal"
@@ -27,14 +27,14 @@ class Label(Widget):
 
         self._setup()
 
-    def apply_props(self):
-        super().apply_props()
+    def apply_attrs(self):
+        super().apply_attrs()
 
-        self.qwidget.setText(self.tr(str(self.props["Attr.UI.Widget.Label.Text"])))
+        self.qwidget.setText(self.tr(str(self.attrs["Attr.UI.Widget.Label.Text"])))
 
-        if self.props["Attr.UI.Widget.Label.Alignment"] == "left":
+        if self.attrs["Attr.UI.Widget.Label.Alignment"] == "left":
             self.qwidget.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        elif self.props["Attr.UI.Widget.Label.Alignment"] == "right":
+        elif self.attrs["Attr.UI.Widget.Label.Alignment"] == "right":
             self.qwidget.setAlignment(Qt.AlignmentFlag.AlignRight)
         else:
             self.qwidget.setAlignment(Qt.AlignmentFlag.AlignHCenter)
@@ -46,9 +46,9 @@ class Label(Widget):
             "normal": QFont("Noto Sans", 10)
         }
 
-        if self.props["Attr.UI.Widget.Label.Style"] in styles:
+        if self.attrs["Attr.UI.Widget.Label.Style"] in styles:
             self.qwidget.setFont(
-                styles[self.props["Attr.UI.Widget.Label.Style"]]
+                styles[self.attrs["Attr.UI.Widget.Label.Style"]]
             )
         else:
             self.qwidget.setFont(styles["normal"])

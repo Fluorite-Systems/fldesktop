@@ -4,8 +4,8 @@ from fldesktop.include.appserver.widgets.base import Widget
 
 
 class Button(Widget):
-    def __init__(self, runner, name, props):
-        super().__init__(runner, name, props)
+    def __init__(self, runner, name, attrs):
+        super().__init__(runner, name, attrs)
         self.type = "Node.UI.Widget.Button"
         self.qwidget = QPushButton()
 
@@ -14,7 +14,7 @@ class Button(Widget):
             "disable": lambda _: self.qwidget.setEnabled(False) 
         }
 
-        self.base_props = {
+        self.base_attrs = {
             "Attr.UI.Widget.Button.Text": "",
             "Attr.UI.Widget.Button.Icon": "",
             "Attr.UI.Widget.Button.Flat": False,
@@ -27,18 +27,18 @@ class Button(Widget):
             lambda: self._runner.event(self, name=self.name, type="button_pressed")
         )
 
-    def apply_props(self):
-        super().apply_props()
+    def apply_attrs(self):
+        super().apply_attrs()
 
-        if self.props["Attr.UI.Widget.Button.Text"]:
+        if self.attrs["Attr.UI.Widget.Button.Text"]:
             self.qwidget.setText(
-                self.tr(str(self.props["Attr.UI.Widget.Button.Text"]))
+                self.tr(str(self.attrs["Attr.UI.Widget.Button.Text"]))
             )
-        if self.props["Attr.UI.Widget.Button.Icon"]:
+        if self.attrs["Attr.UI.Widget.Button.Icon"]:
             self.qwidget.setIcon(
-                QIcon.fromTheme(self.props["Attr.UI.Widget.Button.Icon"])
+                QIcon.fromTheme(self.attrs["Attr.UI.Widget.Button.Icon"])
             )
-        if self.props["Attr.UI.Widget.Button.Flat"]:
-            self.qwidget.setFlat(self.props["Attr.UI.Widget.Button.Flat"])
-        if self.props["Attr.UI.Widget.Button.Compact"]:
+        if self.attrs["Attr.UI.Widget.Button.Flat"]:
+            self.qwidget.setFlat(self.attrs["Attr.UI.Widget.Button.Flat"])
+        if self.attrs["Attr.UI.Widget.Button.Compact"]:
             self.qwidget.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)

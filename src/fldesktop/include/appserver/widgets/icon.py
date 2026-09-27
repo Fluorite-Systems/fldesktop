@@ -4,12 +4,12 @@ from fldesktop.include.appserver.widgets.base import Widget
 
 
 class Icon(Widget):
-    def __init__(self, runner, name, props):
-        super().__init__(runner, name, props)
+    def __init__(self, runner, name, attrs):
+        super().__init__(runner, name, attrs)
         self.type = "icon"
         self.qwidget = QLabel()
 
-        self.base_props = {
+        self.base_attrs = {
             "Attr.UI.Widget.Icon.Icon": ""
         }
 
@@ -17,13 +17,13 @@ class Icon(Widget):
 
         self.pixmap = QPixmap()
 
-    def apply_props(self) -> None:
-        super().apply_props()
+    def apply_attrs(self) -> None:
+        super().apply_attrs()
 
         icon = self._runner.comm.request(
-            "iconmgr", "parse", self.props["Attr.UI.Widget.Icon.Icon"]
+            "iconmgr", "parse", self.attrs["Attr.UI.Widget.Icon.Icon"]
         )
         self.qwidget.setPixmap(icon.pixmap(
-            self.props["width"] if self.props["width"] else 64,
-            self.props["height"] if self.props["height"] else 64
+            self.attrs["width"] if self.attrs["width"] else 64,
+            self.attrs["height"] if self.attrs["height"] else 64
         ))

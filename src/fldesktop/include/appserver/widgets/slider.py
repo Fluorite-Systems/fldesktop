@@ -4,8 +4,8 @@ from fldesktop.include.appserver.widgets.base import Widget
 
 
 class Slider(Widget):
-    def __init__(self, runner, name, props):
-        super().__init__(runner, name, props)
+    def __init__(self, runner, name, attrs):
+        super().__init__(runner, name, attrs)
         self.type = "slider"
         self.qwidget = QSlider()
 
@@ -14,7 +14,7 @@ class Slider(Widget):
             "disable": lambda _: self.qwidget.setEnabled(False)
         }
         
-        self.base_props = {
+        self.base_attrs = {
             "value": 0,
             "min_value": 0,
             "max_value": 99,
@@ -25,16 +25,16 @@ class Slider(Widget):
 
         self.qwidget.valueChanged.connect(self.vc_handler)
 
-    def apply_props(self):
-        super().apply_props()
+    def apply_attrs(self):
+        super().apply_attrs()
 
         self.qwidget.setOrientation(
-            Qt.Orientation.Vertical if self.props["orientation"] == "ver"\
+            Qt.Orientation.Vertical if self.attrs["orientation"] == "ver"\
             else Qt.Orientation.Horizontal
         )
 
-        self.qwidget.setMaximum(self.props["max_value"])
-        self.qwidget.setMinimum(self.props["min_value"])
+        self.qwidget.setMaximum(self.attrs["max_value"])
+        self.qwidget.setMinimum(self.attrs["min_value"])
         
     def vc_handler(self, value: int):
 

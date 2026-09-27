@@ -3,8 +3,8 @@ from fldesktop.include.appserver.widgets.base import Widget
 
 
 class Entry(Widget):
-    def __init__(self, runner, name, props):
-        super().__init__(runner, name, props)
+    def __init__(self, runner, name, attrs):
+        super().__init__(runner, name, attrs)
         self.type = "entry"
         self.qwidget = QLineEdit()
 
@@ -14,16 +14,16 @@ class Entry(Widget):
             "disable": lambda _: self.qwidget.setEnabled(False)
         }
 
-        self.base_props = {
+        self.base_attrs = {
             "text": ""
         }
 
         self._setup()
 
-    def apply_props(self):
-        super().apply_props()
+    def apply_attrs(self):
+        super().apply_attrs()
 
-        self.qwidget.setText(self.props["text"])
+        self.qwidget.setText(self.attrs["text"])
 
     def get_text(self, _) -> str:
         return self.qwidget.text()

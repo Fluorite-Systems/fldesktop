@@ -7,12 +7,12 @@ import base64
 
 
 class ImageView(Widget):
-    def __init__(self, runner, name, props):
-        super().__init__(runner, name, props)
+    def __init__(self, runner, name, attrs):
+        super().__init__(runner, name, attrs)
         self.type = "imageview"
         self.qwidget = QLabel()
 
-        self.base_props = {
+        self.base_attrs = {
             "Attr.UI.Widget.ImageView.Image": "",
             "Attr.UI.Widget.ImageView.Source": "",
             "Attr.UI.Widget.ImageView.Quality": "fast",
@@ -25,21 +25,21 @@ class ImageView(Widget):
 
         self._setup()
 
-    def apply_props(self):
-        super().apply_props()
+    def apply_attrs(self):
+        super().apply_attrs()
 
-        if self.props["Attr.UI.Widget.ImageView.Image"]:
+        if self.attrs["Attr.UI.Widget.ImageView.Image"]:
             self.pixmap = QPixmap()
             self.pixmap.loadFromData(
                 base64.b64decode(
-                    self.props["Attr.UI.Widget.ImageView.Image"].encode()
+                    self.attrs["Attr.UI.Widget.ImageView.Image"].encode()
                 )
             )
 
-        if self.props["Attr.UI.Widget.ImageView.Source"]:
-            if self.props["Attr.UI.Widget.ImageView.Quality"] == "fast":
+        if self.attrs["Attr.UI.Widget.ImageView.Source"]:
+            if self.attrs["Attr.UI.Widget.ImageView.Quality"] == "fast":
                 reader = QImageReader(
-                    self.props["Attr.UI.Widget.ImageView.Source"]
+                    self.attrs["Attr.UI.Widget.ImageView.Source"]
                 )
                 reader.setScaledSize(self.qwidget.size().scaled(
                     self.qwidget.size().width(),
@@ -49,7 +49,7 @@ class ImageView(Widget):
                 self.pixmap = QPixmap.fromImage(reader.read())
             else:
                 self.pixmap = QPixmap(
-                    self.props["Attr.UI.Widget.ImageView.Source"]
+                    self.attrs["Attr.UI.Widget.ImageView.Source"]
                 )
     
         self.resizeEvent(None)
@@ -59,12 +59,12 @@ class ImageView(Widget):
             self.pixmap.scaled(
                 self.qwidget.size(),
                 (Qt.KeepAspectRatioByExpanding if \
-                self.props["Attr.UI.Widget.ImageView.FullCover"] \
+                self.attrs["Attr.UI.Widget.ImageView.FullCover"] \
                 else Qt.KeepAspectRatio) if \
-                self.props["Attr.UI.Widget.ImageView.KeepAspectRatio"] else \
+                self.attrs["Attr.UI.Widget.ImageView.KeepAspectRatio"] else \
                 Qt.AspectRatioMode.IgnoreAspectRatio,
                 Qt.FastTransformation if \
-                self.props["Attr.UI.Widget.ImageView.Quality"] == "fast" \
+                self.attrs["Attr.UI.Widget.ImageView.Quality"] == "fast" \
                 else Qt.SmoothTransformation
             )
         )

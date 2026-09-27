@@ -3,8 +3,8 @@ from fldesktop.include.appserver.widgets.base import Widget
 
 
 class RadioButton(Widget):
-    def __init__(self, runner, name, props):
-        super().__init__(runner, name, props)
+    def __init__(self, runner, name, attrs):
+        super().__init__(runner, name, attrs)
         self.type = "radiobutton"
         self.qwidget = QRadioButton()
 
@@ -14,7 +14,7 @@ class RadioButton(Widget):
             "disable": lambda _: self.qwidget.setEnabled(False)
         }
 
-        self.base_props = {
+        self.base_attrs = {
             "Attr.UI.Widget.RadioButton.Text": ""
         }
 
@@ -30,11 +30,11 @@ class RadioButton(Widget):
                 name=self.name, type="radiobutton_selected"
             )
 
-    def apply_props(self):
-        super().apply_props()
+    def apply_attrs(self):
+        super().apply_attrs()
 
         self.qwidget.setText(
-            self.tr(str(self.props["Attr.UI.Widget.RadioButton.Text"]))
+            self.tr(str(self.attrs["Attr.UI.Widget.RadioButton.Text"]))
         )
 
     def select(self):
