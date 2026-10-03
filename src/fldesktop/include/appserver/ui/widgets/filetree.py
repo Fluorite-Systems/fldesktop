@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QTreeView, QFileSystemModel
 from PySide6.QtCore import QDir
-from fldesktop.include.appserver.widgets.base import Widget
+from fldesktop.include.appserver.ui.widgets.base import Widget
 
 
 class FileTree(Widget):

@@ -1,12 +1,12 @@
-from PySide6.QtWidgets import QTextEdit
-from fldesktop.include.appserver.widgets.base import Widget
+from PySide6.QtWidgets import QLineEdit
+from fldesktop.include.appserver.ui.widgets.base import Widget
 
 
-class TextEdit(Widget):
+class Entry(Widget):
     def __init__(self, runner, name, attrs):
         super().__init__(runner, name, attrs)
-        self.type = "textedit"
-        self.qwidget = QTextEdit()
+        self.type = "entry"
+        self.qwidget = QLineEdit()
 
         self.callables = {
             "get_text": self.get_text,
@@ -18,13 +18,6 @@ class TextEdit(Widget):
             "text": ""
         }
 
-        self.qwidget.textChanged.connect(
-            lambda: self._runner.event(
-                self,
-                name=self.name, type="textedit_text_changed"
-            )
-        )
-
         self._setup()
 
     def apply_attrs(self):
@@ -32,5 +25,5 @@ class TextEdit(Widget):
 
         self.qwidget.setText(self.attrs["text"])
 
-    def get_text(self) -> str:
-        return self.qwidget.toPlainText()
+    def get_text(self, _) -> str:
+        return self.qwidget.text()

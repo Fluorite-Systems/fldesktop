@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QPushButton
 
-from fldesktop.include.appletmgr.applet import Applet
+from fldesktop.include.appserver.ui.applet import Applet
 from fldesktop.include.appletmgr.sidebar import Sidebar
 
 class AppletManager:

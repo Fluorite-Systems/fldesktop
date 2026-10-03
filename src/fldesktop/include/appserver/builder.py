@@ -1,6 +1,7 @@
-from fldesktop.include.appserver.widgets import widgets
-from fldesktop.include.appserver.widgets.base import Widget
-from fldesktop.include.appletmgr.applet import Applet
+from fldesktop.include.appserver.ui.widgets import widgets
+from fldesktop.include.appserver.ui.widgets.base import Widget
+from fldesktop.include.appserver.ui.applet import Applet
+from fldesktop.include.appserver.ui.window import Window
 
 import logging
 import locale
@@ -31,6 +32,10 @@ class Builder:
         widget = widgets[wtype](self, wname, node_attrs)
 
         self.objects[wname] = widget
+
+    def create_window(self, node_id: str, node_attrs: dict):
+
+        self.objects[node_id] = Window(self.cm.comm, node_attrs)
 
     def process_relation(self, node_id: int, node_attrs: dict):
 

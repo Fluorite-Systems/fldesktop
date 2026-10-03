@@ -1,13 +1,10 @@
-from inspect import ArgInfo
-from operator import call
-
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import Signal, QObject
 
 from fldesktop.include.appserver.builder import Builder
 from fldesktop.include.appserver.dnd import DragFilter, DropFilter
-from fldesktop.include.appserver.widgets.base import Widget
+from fldesktop.include.appserver.ui.widgets.base import Widget
 
 from typing import Any
 
@@ -248,7 +245,7 @@ class ClientManager(QObject):
 
         if "Attr.System.Type" in attrs:
             if isinstance(attrs["Attr.System.Type"], str):
-                if attrs["Attr.System.Type"] == "Node.UI.Window":
+                if attrs["Attr.System.Type"] == "Node.UI.Window" and False:
 
                     callback = print
 
@@ -268,6 +265,10 @@ class ClientManager(QObject):
                         self.comm, id, callback, **params
                     )
                     self.builder.objects[cl.uuid] = cl
+
+                if attrs["Attr.System.Type"] == "Node.UI.Window":
+
+                    self.builder.create_window(id, attrs)
 
                 elif attrs["Attr.System.Type"].startswith("Node.UI.Applet"):
 

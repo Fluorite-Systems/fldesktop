@@ -1,8 +1,6 @@
-from fldesktop.include.appserver.widgets import (
-    button, canvas, checkbox, container, entry, filetree, flayout,
-    hlayout, icon, imageview, label, listview, radiobutton, root,
-    slider, stretch, tabs, terminal, textedit, vlayout,
-    accelgraphicsview, overlay, base
+from fldesktop.include.appserver.ui.widgets import accelgraphicsview, base, button, canvas, checkbox, container, entry, filetree, flayout, hlayout, icon, imageview, label, listview, overlay, radiobutton, root, slider, stretch, tabs, terminal, textedit
+from fldesktop.include.appserver.ui.widgets import (
+    vlayout
 )
 
 

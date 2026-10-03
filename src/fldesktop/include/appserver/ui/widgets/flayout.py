@@ -1,5 +1,5 @@
 from fldesktop.include.widgets.flowlayout import FlowLayout
-from fldesktop.include.appserver.widgets.base import Widget
+from fldesktop.include.appserver.ui.widgets.base import Widget
 
 
 class FLayout(Widget):
