@@ -110,6 +110,7 @@ class Panel(Surface):
         self.setObjectName("panel")
 
         self.show()
+        self.refresh_geometry()
     
     def refresh_geometry(self):
         "Refreshes geometry"
