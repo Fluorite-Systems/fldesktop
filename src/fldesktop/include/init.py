@@ -3,7 +3,7 @@ from fldesktop.include import (communicator, desktop, dialogs,
                      configmgr, appserver, search, wm, loginmgr,
                      localemgr, notifications, iconmgr, QApp,
                      PostInit, UserServiceStarter, fs3, appletmgr,
-                     panel)
+                     panel, startupscreen)
 from fldesktop.include.appserver.clientmgr import ClientManager
 from fldesktop.include.widgets.surface import SurfaceManager
 from fldesktop.include.input import InputManager
@@ -16,24 +16,28 @@ import traceback
 SERVICES = {
     "OSManager": {
         "object": os_manager.OSManager,
-        "importance": "critical"
+        "importance": "critical",
+        "runlevel": 1
     },
     "UserServiceStarter": {
         "object": UserServiceStarter
     },
     "FS3": {
         "object": fs3.FS3,
-        "importance": "critical"
+        "importance": "critical",
+        "runlevel": 1
     },
     "ConfigManager": {
         "object": configmgr.ConfigurationManager,
         "importance": "critical",
-        "depends": ["QApplication", "OSManager"]
+        "depends": ["QApplication", "OSManager"],
+        "runlevel": 1,
     },
     "LocaleManager": {
         "object": localemgr.LocaleManager,
         "importance": "critical",
-        "depends": ["ConfigManager"]
+        "depends": ["ConfigManager"],
+        "runlevel": 1
     },
     "PackageManager": {
         "object": pkgmgr.PackageManager,
@@ -50,12 +54,12 @@ SERVICES = {
     "InputManager": {
         "object": InputManager,
         "depends": ["QApplication", "LocaleManager"]
-
     },
     "SurfaceManager": {
         "object": SurfaceManager,
         "importance": "critical",
-        "depends": ["QApplication"]
+        "depends": ["QApplication"],
+        "runlevel": 1
     },
     "Desktop": {
         "object": desktop.Desktop,
@@ -64,11 +68,13 @@ SERVICES = {
             "QApplication", "ConfigManager",
             "IconManager", "PackageManager",
             "SurfaceManager", "InputManager"
-        ]
+        ],
+        "runlevel": 1
     },
     "QApplication": {
         "object": QApp,
-        "importance": "critical"
+        "importance": "critical",
+        "runlevel": 1
     },
     "IconManager": {
         "object": iconmgr.IconManager,
@@ -78,7 +84,8 @@ SERVICES = {
     "ThemingManager": {
         "object": thememgr.ThemingManager,
         "importance": "critical",
-        "depends": ["QApplication"]
+        "depends": ["QApplication"],
+        "runlevel": 1
     },
     "WindowManager": {
         "object": wm.WindowManager,
@@ -92,6 +99,11 @@ SERVICES = {
     "ClientManager": {
         "object": ClientManager,
         "depends": ["AppServer"]
+    },
+    "StartupScreen": {
+        "object": startupscreen.StartupScreenManager,
+        "depends": ["Desktop"],
+        "runlevel": 1
     },
     "Lockscreen": {
         "object": lockscreen.LockScreen,
@@ -115,19 +127,21 @@ SERVICES = {
     },
     "PostInit": {
         "object": PostInit,
-        "depends": ["QApplication"]
+        "depends": ["QApplication"],
+        "runlevel": 1
     },
     "QtEventLoop": {
         "object": QApp.exec,
         "importance": "critical",
         "restart": True,
-        "depends": ["QApplication"]
+        "depends": ["QApplication"],
+        "runlevel": 1
     }
 }
 
 DEFAULTS = [
     ("object", lambda: ...), ("importance", "optional"),
-    ("depends", []), ("restart", False)
+    ("runlevel", 2), ("depends", []), ("restart", False)
 ]
 
 
@@ -147,6 +161,9 @@ class Service:
 
     def start(self) -> None:
         "Start service and catch exceptions"
+
+        if self.started:
+            return
 
         logging.info(f"Starting service {self.name}")
 
@@ -189,6 +206,7 @@ class Init:
         self.comm.register(
             "init",
             {
+                "run": self.run,
                 "cleanup": self.cleanup,
                 "failure": self.on_failure
             }
@@ -229,13 +247,14 @@ class Init:
         for s in self.services:
             logging.debug(s.name)
                 
-    def run(self) -> None:
+    def run(self, runlevel: int = 1) -> None:
         "Start services"
 
         logging.info("Starting services...")
         
         for service in self.services:
-            service.start()
+            if service.runlevel <= runlevel:
+                service.start()
 
     def cleanup(self) -> None:
         "Cleanup services"
