@@ -26,7 +26,7 @@ class FadeEffect(QWidget):
         self.fi_anim.setStartValue(QColor(0, 0, 0, 255))
         self.fi_anim.setEndValue(QColor(0, 0, 0, 0))
 
-        self.fi_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self.fi_anim.setEasingCurve(QEasingCurve.Type.Linear)
         self.fi_anim.finished.connect(self.hide)
 
         self.fo_anim = QPropertyAnimation(self, b"currentColor")
