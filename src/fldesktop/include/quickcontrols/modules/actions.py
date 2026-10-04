@@ -2,6 +2,10 @@ from PySide6.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QMenu)
 from PySide6.QtGui import QIcon
 from PySide6.QtCore import QPoint, Qt
 
+from fldesktop.include.widgets.menu import Menu
+
+import os
+
 
 class Actions(QWidget):
     def __init__(self, comm, parent):
@@ -40,9 +44,9 @@ class Actions(QWidget):
         self.pwr_btn.setIcon(
             self.comm.request("iconmgr", "get", "system-shutdown")
         )
-
-        self.pwr_menu = QMenu()
-        self.pwr_menu.setWindowFlags(Qt.SubWindow | Qt.Popup)
+        self.pwr_menu = Menu(
+            self.comm, self.comm.request("desktop", "get_instance")
+        )
         self.shutdown_act = self.pwr_menu.addAction(
             QIcon.fromTheme("system-shutdown-symbolic"),
             self.comm.request("localemgr", "tr", "Shutdown")
@@ -72,10 +76,9 @@ class Actions(QWidget):
         )
 
         self.pwr_btn.clicked.connect(
-            lambda: self.pwr_menu.exec(self.pwr_btn.mapToGlobal(
-                QPoint(self.pwr_btn.x(), 
-                       self.pwr_btn.y() + self.pwr_btn.height())
-            ))
+            lambda: self.pwr_menu.exec(
+                self.pwr_btn.mapToGlobal(QPoint(0, self.pwr_btn.height()))
+            )
         )
 
         for i in [self.lock_btn, self.sleep_btn, self.pwr_btn]:

@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPixmap
 
 from fldesktop.include.widgets.fade_effect import FadeEffect
+from fldesktop.include.widgets.menu import Menu
 
 import os
 
@@ -67,8 +68,7 @@ class Desktop(QWidget):
         self.bg = Background(self, self.comm)
 
         # Context menu when right-clicked at the background
-        self.menu = QMenu()
-        self.menu.setWindowFlags(Qt.SubWindow | Qt.Popup)
+        self.menu = Menu(self.comm, self)
         self.ch_bg_action = self.menu.addAction(
             self.comm.request("localemgr", "tr", "Change background")
         )
