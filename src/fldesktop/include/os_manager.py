@@ -70,7 +70,6 @@ class OSManager:
         "Get data path (useful for testing)"
 
         prefixes = [
-            "/system/",
             "/usr/lib/python3/dist-packages/fldesktop/",
             "/",
             "/home/",

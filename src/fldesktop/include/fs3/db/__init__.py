@@ -9,6 +9,7 @@ import base64
 import logging
 import time
 import queue
+import os
 
 
 class Database:
@@ -149,8 +150,8 @@ class DatabaseManager(QObject):
 
         storage_path = self.core.comm.request("osmgr", "get_path", "fs3")
         if not storage_path:
-            if Path("/system").exists():
-                storage_path = "/system/fs3"
+            if Path("/home").exists() and os.access("/home", os.W_OK):
+                storage_path = "/home/fs3"
             else:
                 storage_path = "/tmp/fs3" # When running in testing env
 
