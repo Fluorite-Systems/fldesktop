@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import (QApplication, QMainWindow, QMenu,
+from PySide6.QtWidgets import (QApplication, QWidget, QMenu,
                                QLabel)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPixmap
@@ -54,7 +54,7 @@ class Background(QLabel):
         self.comm.request("surfacemgr", "refresh")
 
 
-class Desktop(QMainWindow):
+class Desktop(QWidget):
     def __init__(self, comm) -> None:
         super().__init__()
 
