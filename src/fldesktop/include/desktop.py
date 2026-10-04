@@ -68,6 +68,7 @@ class Desktop(QWidget):
 
         # Context menu when right-clicked at the background
         self.menu = QMenu()
+        self.menu.setWindowFlags(Qt.SubWindow | Qt.Popup)
         self.ch_bg_action = self.menu.addAction(
             self.comm.request("localemgr", "tr", "Change background")
         )
