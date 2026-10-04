@@ -147,11 +147,14 @@ class StartupScreenManager:
         self.startup.raise_()
         self.startup.refresh_geometry()
 
-        self.timer = QTimer(singleShot=True, interval=15000)
+        self.comm.request("fade_effect", "fadein")
+
+        self.timer = QTimer(singleShot=True, interval=5000)
         self.timer.timeout.connect(self.continue_boot)
         self.timer.start()
 
     def continue_boot(self):
+        self.comm.request("fade_effect", "fadeout")
         self.startup.hide()
         self.comm.request("init", "run", runlevel=3)
 

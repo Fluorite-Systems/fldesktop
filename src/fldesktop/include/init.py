@@ -128,7 +128,7 @@ SERVICES = {
     "PostInit": {
         "object": PostInit,
         "depends": ["QApplication"],
-        "runlevel": 1
+        "runlevel": 2
     },
     "QtEventLoop": {
         "object": QApp.exec,
