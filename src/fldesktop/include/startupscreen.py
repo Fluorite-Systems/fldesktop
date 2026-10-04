@@ -163,6 +163,9 @@ class StartupScreenManager:
         self.startup = StartupScreen(self.comm)
         self.shutdown = ShutdownScreen(self.comm)
 
+        self.poll_timer = QTimer(interval=500)
+        self.poll_timer.timeout.connect(self.do_poll)
+
         self.show_startup()
 
     def show_startup(self):
@@ -172,14 +175,29 @@ class StartupScreenManager:
 
         self.comm.request("fade_effect", "fadein")
 
-        self.timer = QTimer(singleShot=True, interval=5000)
-        self.timer.timeout.connect(self.continue_boot)
-        self.timer.start()
+        self.poll_timer.start()
 
-    def continue_boot(self):
-        self.comm.request("fade_effect", "fadeout")
-        self.startup.hide()
-        self.comm.request("init", "run", runlevel=3)
+    def do_poll(self):
+        state = self.get_system_state()
+        if state in ("running", "degraded"):
+            self.poll_timer.stop()
+            self.comm.request("fade_effect", "fadeout")
+            self.startup.hide()
+            self.comm.request("init", "run", runlevel=3)
+
+    def get_system_state(self) -> str:
+        try:
+            result = subprocess.run(
+                ["systemctl", "is-system-running"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            return (result.stdout or result.stderr).strip() or "unknown"
+        except subprocess.TimeoutExpired:
+            return "timeout"
+        except FileNotFoundError:
+            return "no-systemctl"
 
     def show_shutdown(self, reboot: bool = False):
 
