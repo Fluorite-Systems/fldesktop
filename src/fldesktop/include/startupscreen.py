@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
-from PySide6.QtGui import QPainter, QColor, QBrush, QRadialGradient, QPixmap
+from PySide6.QtGui import QPainter, QColor, QBrush, QRadialGradient, QPixmap, QFont
 from PySide6.QtCore import Qt, QTimer, QPointF
 
 import subprocess
@@ -9,13 +9,13 @@ import platform
 
 
 class ProgressBar(QWidget):
-    def __init__(self, color: QColor):
+    def __init__(self):
         super().__init__()
 
         self.setFixedHeight(50)
 
         self._x = 0
-        self._color = color
+        self._color = Qt.white
         self._adv_timer = QTimer(self, interval=10)
         self._adv_timer.timeout.connect(self._adv)
 
@@ -83,9 +83,7 @@ class StartupScreen(QWidget):
         self.l = QLabel(pixmap=self.load_dist_logo())
         self.l.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.pb = ProgressBar(self.comm.request(
-            "surfacemgr", "get_brightest_spot"
-        ).color)
+        self.pb = ProgressBar()
         self.pb.setFixedWidth(250)
 
         self.layout.addWidget(self.l)
@@ -118,12 +116,37 @@ class ShutdownScreen(QWidget):
         self.comm = comm
         self.comm.subscribe("desktop_size_changed", self.refresh_geometry)
 
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet("background-color: black;")
+
         self.layout = QVBoxLayout(self)
-        self.l = QLabel("stopping application")
+        self.layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.l = QLabel()
+        self.set_reboot(False)
+        f = self.l.font()
+        f.setPointSize(20)
+        self.l.setFont(f)
+        self.l.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.pb = ProgressBar()
+        self.pb.setFixedWidth(250)
+
         self.layout.addWidget(self.l)
+        self.layout.addWidget(self.pb)
 
     def refresh_geometry(self):
         self.setFixedSize(self.parent().size())
+
+    def set_reboot(self, reboot: bool):
+        if reboot:
+            self.l.setText(
+                self.comm.request("localemgr", "tr", "Rebooting")
+            )
+        else:
+            self.l.setText(
+                self.comm.request("localemgr", "tr", "Shutting down")
+            )
 
 
 class StartupScreenManager:
@@ -158,7 +181,13 @@ class StartupScreenManager:
         self.startup.hide()
         self.comm.request("init", "run", runlevel=3)
 
-    def show_shutdown(self):
+    def show_shutdown(self, reboot: bool = False):
+
+        self.comm.request("fade_effect", "fadeout")
+
+        self.shutdown.set_reboot(reboot)
         self.shutdown.show()
         self.shutdown.raise_()
         self.shutdown.refresh_geometry()
+
+        self.comm.request("fade_effect", "fadein")

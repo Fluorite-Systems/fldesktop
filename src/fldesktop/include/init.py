@@ -17,6 +17,7 @@ SERVICES = {
     "OSManager": {
         "object": os_manager.OSManager,
         "importance": "critical",
+        "depends": ["QApplication"],
         "runlevel": 1
     },
     "UserServiceStarter": {

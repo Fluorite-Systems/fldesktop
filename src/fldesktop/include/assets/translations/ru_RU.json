@@ -16,5 +16,7 @@
     "Connections available": "Доступны подключения",
     "Connections unavailable": "Подлючения недоступны",
     "Disconnected from network": "Отключено от сети",
-    "Wired network": "Проводное подключение"
+    "Wired network": "Проводное подключение",
+    "Shutting down": "Завершение работы",
+    "Rebooting": "Перезагрузка"
 }
