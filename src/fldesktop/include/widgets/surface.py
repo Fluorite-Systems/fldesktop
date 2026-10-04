@@ -83,7 +83,8 @@ class RayCast:
 
 
 class Surface(QWidget):
-    def __init__(self, comm, parent: QWidget=None, tint: int=1):
+    def __init__(self, comm, parent: QWidget=None,
+                 tint: int=1, shadow: bool = True):
         super().__init__(parent)
 
         self.comm = comm
@@ -92,6 +93,7 @@ class Surface(QWidget):
         self._cached_pos = None
         self._cached_size = None
         self._tint = 255 // (10 - tint)
+        self._enable_shadow = shadow
 
         if self._tint < 0:
             self._tint = 0
@@ -274,35 +276,41 @@ class Surface(QWidget):
         super().update()
 
     def raise_(self):
-        self.shadow.raise_()
+        if self._enable_shadow:
+            self.shadow.raise_()
         super().raise_()
 
     def lower(self):
-        self.shadow.lower()
+        if self._enable_shadow:
+            self.shadow.lower()
         super().lower()
     
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self.shadow.resize(event.size())
+        if self._enable_shadow:
+            self.shadow.resize(event.size())
         self.comm.request("surfacemgr", "raycast")
     
     def moveEvent(self, event):
         super().moveEvent(event)
-        self.shadow.move(event.pos())
+        if self._enable_shadow:
+            self.shadow.move(event.pos())
         self.comm.request("surfacemgr", "raycast")
     
     def showEvent(self, event):
         super().showEvent(event)
         self.update()
-        self.shadow.show()
-        self.shadow.raise_()
+        if self._enable_shadow:
+            self.shadow.show()
+            self.shadow.raise_()
         self.raise_()
         self.comm.request("surfacemgr", "raycast")
         self.need_raycast = True
 
     def hideEvent(self, event):
         super().hideEvent(event)
-        self.shadow.hide()
+        if self._enable_shadow:
+            self.shadow.hide()
         self.comm.request("surfacemgr", "raycast")
         self.need_raycast = False
 
