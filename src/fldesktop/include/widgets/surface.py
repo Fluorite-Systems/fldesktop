@@ -9,7 +9,6 @@ from fldesktop.include.widgets.shadow import Shadow
 
 from dataclasses import dataclass
 import numpy as np
-import cv2
 
 
 @dataclass(frozen=True)
@@ -20,6 +19,95 @@ class BrightestSpot:
     color: QColor
     is_pronounced: bool
     confidence: float
+
+
+CC_STAT_LEFT = 0
+CC_STAT_TOP = 1
+CC_STAT_WIDTH = 2
+CC_STAT_HEIGHT = 3
+CC_STAT_AREA = 4
+
+
+def _connected_components_with_stats(binary_image: np.ndarray):
+
+    h, w = binary_image.shape
+    binary = binary_image > 0
+
+    labels = np.zeros((h, w), dtype=np.int32)
+
+    parent = [0]
+
+    def find(x):
+        root = x
+        while parent[root] != root:
+            root = parent[root]
+        while parent[x] != root:
+            parent[x], x = root, parent[x]
+        return root
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            if ra < rb:
+                parent[rb] = ra
+            else:
+                parent[ra] = rb
+
+    for y in range(h):
+        row = binary[y]
+        for x in range(w):
+            if not row[x]:
+                continue
+            neighbors = []
+            for dy in (-1, 0, 1):
+                ny = y + dy
+                if ny < 0 or ny >= h:
+                    continue
+                for dx in (-1, 0, 1):
+                    if dy == 0 and dx == 0:
+                        continue
+                    nx = x + dx
+                    if nx < 0 or nx >= w:
+                        continue
+                    lbl = labels[ny, nx]
+                    if lbl > 0:
+                        neighbors.append(lbl)
+            if not neighbors:
+                parent.append(len(parent))
+                labels[y, x] = len(parent) - 1
+            else:
+                m = min(neighbors)
+                labels[y, x] = m
+                for n in neighbors:
+                    union(m, n)
+
+    if len(parent) > 1:
+        roots = np.array([find(i) for i in range(len(parent))], dtype=np.int32)
+        unique_roots = np.unique(roots[1:])
+        remap = np.zeros(len(parent), dtype=np.int32)
+        for new_id, r in enumerate(unique_roots, start=1):
+            remap[r] = new_id
+        labels = remap[roots[labels]]
+
+    num_labels = int(labels.max()) + 1
+
+    stats = np.zeros((num_labels, 5), dtype=np.int32)
+    centroids = np.zeros((num_labels, 2), dtype=np.float64)
+
+    for lbl in range(1, num_labels):
+        ys, xs = np.where(labels == lbl)
+        if len(xs) == 0:
+            continue
+        left = int(xs.min())
+        top = int(ys.min())
+        width = int(xs.max()) - left + 1
+        height = int(ys.max()) - top + 1
+        area = int(len(xs))
+        stats[lbl] = [left, top, width, height, area]
+        centroids[lbl, 0] = float(xs.mean())
+        centroids[lbl, 1] = float(ys.mean())
+
+    return num_labels, labels, stats, centroids
 
 
 class RayCast:
@@ -437,34 +525,35 @@ class SurfaceManager(QObject):
 
         img_array = img_array.reshape((h, w, 3)).copy()
 
-
         r = img_array[:, :, 0].astype(np.float32)
         g = img_array[:, :, 1].astype(np.float32)
         b = img_array[:, :, 2].astype(np.float32)
         gray_f = 0.299 * r + 0.587 * g + 0.114 * b
         gray = gray_f.astype(np.uint8)
-        
+
         ambient_brightness = float(np.mean(gray))
         std_deviation = float(np.std(gray))
 
-        _, thresh = cv2.threshold(gray, 225, 255, cv2.THRESH_BINARY)
-        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(thresh)
-        
+        thresh = np.where(gray > 225, np.uint8(255), np.uint8(0))
+
+        num_labels, labels, stats, centroids = _connected_components_with_stats(thresh)
+
         best_label = -1
         best_score = -1
 
         if num_labels > 1:
             for i in range(1, num_labels):
-                area = stats[i, cv2.CC_STAT_AREA]
+                area = int(stats[i, CC_STAT_AREA])
 
                 if area < 4:
                     continue
-                    
+
                 mask = (labels == i)
-                mean_val = cv2.mean(gray, mask=mask.astype(np.uint8))[0]
-                
+
+                mean_val = float(gray[mask].mean())
+
                 score = area * (mean_val ** 2)
-                
+
                 if score > best_score:
                     best_score = score
                     best_label = i
@@ -474,7 +563,7 @@ class SurfaceManager(QObject):
             center_y, center_x = np.unravel_index(max_idx, gray.shape)
             target_area = 1
         else:
-            target_area = stats[best_label, cv2.CC_STAT_AREA]
+            target_area = int(stats[best_label, CC_STAT_AREA])
             target_mask = (labels == best_label)
             masked_gray = np.zeros_like(gray)
             masked_gray[target_mask] = gray[target_mask]
@@ -492,8 +581,8 @@ class SurfaceManager(QObject):
             confidence = contrast_factor * (1.0 + np.log1p(area_factor * 3000))
 
         is_light_source = (
-            confidence > 3.5 and 
-            max_brightness >= 235.0 and 
+            confidence > 3.5 and
+            max_brightness >= 235.0 and
             relative_brightness > 45.0
         )
 
@@ -504,11 +593,11 @@ class SurfaceManager(QObject):
         core_pixels_x = np.where(row_center > threshold)[0]
         col_center = gray[:, center_x]
         core_pixels_y = np.where(col_center > threshold)[0]
-        
+
         core_width = (core_pixels_x[-1] - core_pixels_x[0]) if len(core_pixels_x) > 0 else 1
         core_height = (core_pixels_y[-1] - core_pixels_y[0]) if len(core_pixels_y) > 0 else 1
         core_radius = max(core_width, core_height) // 2
-        
+
         search_radius = int(core_radius * 1.5)
         min_allowed_radius = max(8, int(min(w, h) * 0.015))
         max_allowed_radius = int(min(w, h) * 0.12)
@@ -519,25 +608,37 @@ class SurfaceManager(QObject):
         x_min = max(0, center_x - search_radius)
         x_max = min(w, center_x + search_radius + 1)
 
-        best_color = QColor(int(img_array[center_y, center_x, 0]), 
-                            int(img_array[center_y, center_x, 1]), 
+        best_color = QColor(int(img_array[center_y, center_x, 0]),
+                            int(img_array[center_y, center_x, 1]),
                             int(img_array[center_y, center_x, 2]))
         max_saturation = -1
 
         y_indices, x_indices = np.ogrid[y_min:y_max, x_min:x_max]
         inside_circle = (x_indices - center_x) ** 2 + (y_indices - center_y) ** 2 <= search_radius ** 2
         sub_array = img_array[y_min:y_max, x_min:x_max]
-        
-        for y_idx in range(sub_array.shape[0]):
-            for x_idx in range(sub_array.shape[1]):
-                if inside_circle[y_idx, x_idx]:
-                    current_color = QColor(int(sub_array[y_idx, x_idx, 0]), 
-                                        int(sub_array[y_idx, x_idx, 1]), 
-                                        int(sub_array[y_idx, x_idx, 2]))
-                    saturation = current_color.hsvSaturation()
-                    if saturation > max_saturation:
-                        max_saturation = saturation
-                        best_color = current_color
+
+        sub_r = sub_array[:, :, 0].astype(np.int32)
+        sub_g = sub_array[:, :, 1].astype(np.int32)
+        sub_b = sub_array[:, :, 2].astype(np.int32)
+
+        sub_max = np.maximum(np.maximum(sub_r, sub_g), sub_b)
+        sub_min = np.minimum(np.minimum(sub_r, sub_g), sub_b)
+        sub_delta = sub_max - sub_min
+
+        with np.errstate(divide='ignore', invalid='ignore'):
+            sat = np.where(sub_max == 0, 0, (sub_delta * 255) // sub_max)
+        sat = sat.astype(np.int32)
+
+        sat_masked = np.where(inside_circle, sat, -1)
+
+        if sat_masked.size > 0:
+            flat_idx = int(np.argmax(sat_masked))
+            best_y_local, best_x_local = np.unravel_index(flat_idx, sat_masked.shape)
+            max_saturation = int(sat_masked[best_y_local, best_x_local])
+            if max_saturation >= 0:
+                best_color = QColor(int(sub_array[best_y_local, best_x_local, 0]),
+                                    int(sub_array[best_y_local, best_x_local, 1]),
+                                    int(sub_array[best_y_local, best_x_local, 2]))
 
         return BrightestSpot(
             coords=(int(center_x), int(center_y)),
