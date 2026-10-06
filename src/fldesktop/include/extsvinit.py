@@ -90,9 +90,14 @@ class Service:
         if self.user != 0 and os.getuid() != self.user:
             return (
                 f"setpriv --reuid={self.user} --regid={self.user} "
-                f"--init-groups --inh-caps=-all -- {cmd}"
+                f"--init-groups --inh-caps=-all -- "
+                f"/bin/sh -c {self._quote(cmd)}"
             )
         return cmd
+
+    @staticmethod
+    def _quote(s: str) -> str:
+        return "'" + s.replace("'", "'\\''") + "'"
 
     def _log_stream(self, stream, level: int):
         for line in iter(stream.readline, b""):
