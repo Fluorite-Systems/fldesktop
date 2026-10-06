@@ -26,12 +26,12 @@ SERVICES = {
     "cage": {
         "exec": (
             "export XDG_RUNTIME_DIR=/run/user/1000 && "
-            "export HOME=/home && "
-            "export XDG_CACHE_HOME=/home/.cache && "
+            "export HOME=/home/fluorite && "
+            "export XDG_CACHE_HOME=/home/fluorite/.cache && "
             "exec seatd-launch -- cage -- sleep infinity"
         ),
         "wait": "while [ ! -S /run/user/1000/wayland-0 ]; do sleep 0.05; done",
-        "user": 1000
+        "user": 0
     },
     "dbus": {
         "exec": "mkdir -p /var/run/dbus /var/lib/dbus && dbus-uuidgen --ensure 2>/dev/null; exec dbus-daemon --system --nofork",
