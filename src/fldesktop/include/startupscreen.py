@@ -104,9 +104,12 @@ class StartupScreen(QWidget):
                 
         return QPixmap()
 
-
     def refresh_geometry(self):
         self.resize(self.parent().size())
+
+    def showEvent(self, event):
+        QTimer.singleShot(1000, lambda: self.comm.emit("startupscreen_shown"))
+        return super().showEvent(event)
 
 
 class ShutdownScreen(QWidget):
@@ -148,6 +151,10 @@ class ShutdownScreen(QWidget):
                 self.comm.request("localemgr", "tr", "Shutting down")
             )
 
+    def showEvent(self, event):
+        QTimer.singleShot(500, lambda: self.comm.emit("shutdownscreen_shown"))
+        return super().showEvent(event)
+
 
 class StartupScreenManager:
     def __init__(self, comm):
@@ -169,6 +176,7 @@ class StartupScreenManager:
         self.show_startup()
 
     def show_startup(self):
+
         self.startup.show()
         self.startup.raise_()
         self.startup.refresh_geometry()
@@ -178,26 +186,13 @@ class StartupScreenManager:
         self.poll_timer.start()
 
     def do_poll(self):
-        state = self.get_system_state()
-        if state in ("running", "degraded"):
+        state = self.comm.request("extsvinit", "is_running") or \
+                    self.comm.request("lifecycle", "is_dev_environment")
+        if state:
             self.poll_timer.stop()
             self.comm.request("fade_effect", "fadeout")
             self.startup.hide()
             self.comm.request("init", "run", runlevel=3)
-
-    def get_system_state(self) -> str:
-        try:
-            result = subprocess.run(
-                ["systemctl", "is-system-running"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            return (result.stdout or result.stderr).strip() or "unknown"
-        except subprocess.TimeoutExpired:
-            return "timeout"
-        except FileNotFoundError:
-            return "no-systemctl"
 
     def show_shutdown(self, reboot: bool = False):
 

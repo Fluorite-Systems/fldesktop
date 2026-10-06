@@ -1,9 +1,9 @@
-from fldesktop.include import (communicator, desktop, dialogs,
+from fldesktop.include import (communicator, desktop, dialogs, lifecycle,
                      thememgr, pkgmgr, lockscreen, os_manager,
                      configmgr, appserver, search, wm, loginmgr,
                      localemgr, notifications, iconmgr, QApp,
                      PostInit, UserServiceStarter, fs3, appletmgr,
-                     panel, startupscreen)
+                     panel, startupscreen, extsvinit)
 from fldesktop.include.appserver.clientmgr import ClientManager
 from fldesktop.include.widgets.surface import SurfaceManager
 from fldesktop.include.input import InputManager
@@ -14,14 +14,22 @@ import traceback
 
 
 SERVICES = {
+    "LifeCycle": {
+        "object": lifecycle.LifeCycle,
+        "importance": "critical",
+        "depends": ["ExtSvInit"],
+        "runlevel": 1
+    },
     "OSManager": {
         "object": os_manager.OSManager,
         "importance": "critical",
         "depends": ["QApplication"],
         "runlevel": 1
     },
-    "UserServiceStarter": {
-        "object": UserServiceStarter
+    "ExtSvInit": {
+        "object": extsvinit.ExtSvInit,
+        "importance": "critical",
+        "runlevel": 1
     },
     "FS3": {
         "object": fs3.FS3,
@@ -75,6 +83,7 @@ SERVICES = {
     "QApplication": {
         "object": QApp,
         "importance": "critical",
+        "depends": ["PreInit"],
         "runlevel": 1
     },
     "IconManager": {
@@ -186,6 +195,7 @@ class Service:
                 self.comm.request("init", "failure")
         else:
             self.started = True
+            self.comm.emit(f"init_started_{self.name}")
 
     def cleanup(self) -> None:
         "Cleanup service (if supported by object)"

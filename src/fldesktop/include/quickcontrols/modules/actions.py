@@ -61,17 +61,17 @@ class Actions(QWidget):
 
         self.shutdown_act.triggered.connect(
             lambda: self.action_handler(
-                lambda: self.comm.request("osmgr", "poweroff")
+                lambda: self.comm.request("lifecycle", "shutdown")
             )
         )
         self.reboot_act.triggered.connect(
             lambda: self.action_handler(
-                lambda: self.comm.request("osmgr", "reboot")
+                lambda: self.comm.request("lifecycle", "reboot")
             )
         )
         self.logout_act.triggered.connect(
             lambda: self.action_handler(
-                lambda: self.comm.request("osmgr", "logout")
+                lambda: self.comm.request("lifecycle", "logout")
             )
         )
 
