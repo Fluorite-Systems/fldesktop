@@ -87,22 +87,45 @@ class Service:
         self.shutdown = threading.Event()
 
     def _wrap(self, cmd: str) -> str:
-        if self.user != 0:
-            return f"runuser -u $(id -un {self.user}) -- {cmd}"
+        if self.user != 0 and os.getuid() != self.user:
+            return (
+                f"setpriv --reuid={self.user} --regid={self.user} "
+                f"--init-groups --inh-caps=-all -- {cmd}"
+            )
         return cmd
+
+    def _log_stream(self, stream, level: int):
+        for line in iter(stream.readline, b""):
+            text = line.decode(errors="replace").rstrip()
+            if text:
+                logging.log(level, f"[{self.name}] {text}")
 
     def supervise(self):
 
         while not self.shutdown.is_set():
 
-            self.proc = subprocess.Popen(
-                self._wrap(self.exec),
-                shell=True,
-                start_new_session=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+            try:
+                self.proc = subprocess.Popen(
+                    self._wrap(self.exec),
+                    shell=True,
+                    start_new_session=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                )
+            except Exception:
+                logging.exception(f"[{self.name}] failed to spawn")
+                if self.shutdown.wait(1):
+                    break
+                continue
+
             self.is_running = True
+
+            log_thread = threading.Thread(
+                target=self._log_stream,
+                args=(self.proc.stdout, logging.INFO),
+                daemon=True,
+            )
+            log_thread.start()
 
             while not self.shutdown.is_set():
                 if self.proc.poll() is not None:
@@ -114,14 +137,24 @@ class Service:
             if self.shutdown.is_set():
                 break
 
-            time.sleep(1)
+            logging.warning(
+                f"[{self.name}] exited with code {self.proc.returncode}, restarting"
+            )
+            if self.shutdown.wait(1):
+                break
 
         if self.proc is not None and self.proc.poll() is None:
-            self.proc.terminate()
+            try:
+                os.killpg(os.getpgid(self.proc.pid), signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
             try:
                 self.proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                self.proc.kill()
+                try:
+                    os.killpg(os.getpgid(self.proc.pid), signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
 
     def wait_ready(self):
 
@@ -129,14 +162,30 @@ class Service:
             self.is_ready = True
             return
 
-        subprocess.run(
-            self._wrap(self.wait),
-            shell=True,
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        self.is_ready = True
+        while not self.shutdown.is_set():
+            try:
+                r = subprocess.run(
+                    self._wrap(self.wait),
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                )
+            except Exception:
+                logging.exception(f"[{self.name}] wait spawn failed")
+                if self.shutdown.wait(1):
+                    return
+                continue
+
+            if r.returncode == 0:
+                self.is_ready = True
+                return
+
+            out = r.stdout.decode(errors="replace").rstrip()
+            logging.warning(
+                f"[{self.name}] wait failed rc={r.returncode} {out!r}, retrying"
+            )
+            if self.shutdown.wait(1):
+                return
 
     def start(self, blocking: bool = True):
 
