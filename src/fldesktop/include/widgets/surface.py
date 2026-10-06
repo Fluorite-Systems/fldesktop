@@ -214,7 +214,7 @@ class Surface(QWidget):
         "Load theming configuration"
 
         self.color = self.comm.request("cfgmgr", "get", "glass-tint-color")
-        self.alpha = max(
+        self.alpha = min(
             self.comm.request("cfgmgr", "get", "glass-tint-alpha") \
                 * self._tint_mul, 255
         )
