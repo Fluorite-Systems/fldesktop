@@ -24,7 +24,10 @@ SERVICES = {
         "user": 0
     },
     "cage": {
-        "exec": "exec cage",
+        "exec": (
+            "export XDG_RUNTIME_DIR=/run/user/1000 && "
+            "exec cage"
+        ),
         "wait": "while [ ! -S /run/user/1000/wayland-0 ]; do sleep 0.05; done",
         "user": 1000
     },
@@ -135,7 +138,7 @@ class Service:
         )
         self.is_ready = True
 
-    def start(self):
+    def start(self, blocking: bool = True):
 
         if self.thread.is_alive():
             return
@@ -145,7 +148,9 @@ class Service:
         self.shutdown.clear()
         self.is_ready = False
         self.thread.start()
-        self.wait_ready()
+
+        if blocking:
+            self.wait_ready()
 
     def stop(self):
 
@@ -190,13 +195,15 @@ class InitWorker:
         logging.debug("Starting external services...")
 
         for sv in self.services.values():
-            sv.start()
+            sv.start(blocking=False)
 
     def run_service(self, name):
 
-        for sv in self.services:
-            if sv == name:
-                self.services[sv].start()
+        svc = self.services.get(name)
+        if svc is None:
+            logging.warning(f"Unknown service: {name}")
+            return
+        svc.start(blocking=True)
 
     def shutdown(self):
 
@@ -205,20 +212,33 @@ class InitWorker:
         for sv in self.services.values():
             sv.stop()
 
-    def run_cmd(self, type: str, args: dict):
+        self.stop.set()
 
-        match type:
-            case "full_init":
-                self.full_init()
-            case "run_service":
-                self.run_service(args["service"])
-            case "shutdown":
-                self.shutdown()
+    def run_cmd(self, type: str, args: dict, result: dict):
+
+        try:
+            match type:
+                case "full_init":
+                    self.full_init()
+                case "run_service":
+                    self.run_service(args["service"])
+                case "shutdown":
+                    self.shutdown()
+            result["ok"] = True
+        except Exception as e:
+            logging.exception(f"Command failed: {type}")
+            result["ok"] = False
+            result["error"] = e
+        finally:
+            result["event"].set()
 
     def mainloop(self):
 
         while not self.stop.is_set():
-            cmd = self.queue.get()
+            try:
+                cmd = self.queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
             self.run_cmd(**cmd)
 
 
@@ -239,19 +259,48 @@ class ExtSvInit:
         self.worker_thread = threading.Thread(target=self.worker.mainloop)
 
         self.worker_thread.start()
-        
+
+    def _submit(self, type: str, args: dict) -> bool:
+        result = {"ok": False, "error": None, "event": threading.Event()}
+        self.worker.queue.put({
+            "type": type,
+            "args": args,
+            "result": result,
+        })
+        result["event"].wait()
+        if not result["ok"]:
+            raise result["error"]
+        return True
+
     def full_init(self):
         logging.debug("full init requested")
-        self.worker.queue.put({"type": "full_init", "args": {}})
-
-    def run_service(self, service: str):
         self.worker.queue.put(
-            {"type": "run_service", "args": {"service": service}}
+            {
+                "type": "full_init",
+                "args": {},
+                "result": {
+                    "ok": False,
+                    "error": None,
+                    "event": threading.Event()
+                }
+            }
         )
 
+    def run_service(self, service: str):
+        return self._submit("run_service", {"service": service})
+
     def shutdown(self):
-        self.worker.queue.put({"type": "shutdown", "args": {}})
-        self.worker.stop.set()
+        self.worker.queue.put(
+            {
+                "type": "shutdown",
+                "args": {},
+                "result": {
+                    "ok": False,
+                    "error": None,
+                    "event": threading.Event()
+                }
+            }
+        )
 
     def is_running(self):
         return self.worker.is_running()
