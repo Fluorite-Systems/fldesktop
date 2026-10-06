@@ -3,6 +3,8 @@ import threading
 import queue
 import logging
 import time
+import signal
+import os
 
 
 SERVICES = {
@@ -63,24 +65,48 @@ class Service:
         self.user = user
         self.depends = depends
 
-        self.is_running = False
         self.proc = None
+        self.is_running = False
 
         self.thread = threading.Thread(target=self.supervise)
         self.shutdown = threading.Event()
 
     def supervise(self):
 
-        self.proc = subprocess.Popen(self.exec, shell=True)
-
         while not self.shutdown.is_set():
-            code = self.proc.poll()
-            if code is not None:
-                break
-            time.sleep(0.1)
 
-        if self.proc.poll() is None:
+            if self.user != 0:
+                cmd = f"runuser -u $(id -un {self.user}) -- {self.exec}"
+            else:
+                cmd = self.exec
+
+            self.proc = subprocess.Popen(
+                cmd,
+                shell=True,
+                start_new_session=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            self.is_running = True
+
+            while not self.shutdown.is_set():
+                if self.proc.poll() is not None:
+                    break
+                time.sleep(0.1)
+
+            self.is_running = False
+
+            if self.shutdown.is_set():
+                break
+
+            time.sleep(1)
+
+        if self.proc is not None and self.proc.poll() is None:
             self.proc.terminate()
+            try:
+                self.proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
 
     def start(self):
 
@@ -89,6 +115,7 @@ class Service:
 
         logging.debug(f"Starting external service {self.name}...")
 
+        self.shutdown.clear()
         self.thread.start()
 
     def stop(self):
@@ -99,7 +126,14 @@ class Service:
         logging.debug(f"Stopping external service {self.name}...")
 
         self.shutdown.set()
-        self.thread.join()
+
+        if self.proc is not None and self.proc.poll() is None:
+            try:
+                os.killpg(os.getpgid(self.proc.pid), signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+
+        self.thread.join(timeout=10)
 
 
 class InitWorker:
