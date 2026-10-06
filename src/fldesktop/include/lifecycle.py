@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 import glob
@@ -40,6 +41,15 @@ class LifeCycle:
             cards = glob.glob("/dev/dri/card*")
             renders = glob.glob("/dev/dri/renderD*")
             events = glob.glob("/dev/input/event*")
+
+            logging.debug(
+                (
+                    f"Waiting for udev. "
+                    f"Cards: {bool(cards)}, "
+                    f"renders: {bool(renders)}, "
+                    f"events: {bool(renders)}"
+                )
+            )
 
             if bool(cards) and bool(renders) and bool(events):
                 break
