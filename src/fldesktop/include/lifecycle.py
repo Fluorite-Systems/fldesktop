@@ -39,7 +39,6 @@ class LifeCycle:
         os.environ["XDG_RUNTIME_DIR"] = "/run/user/1000/"
         os.makedirs(os.environ["XDG_RUNTIME_DIR"], exist_ok=True)
 
-        self.comm.request("extsvinit", "run_service", "seatd")
         self.comm.request("extsvinit", "run_service", "cage")
 
     def wait_udev(self):

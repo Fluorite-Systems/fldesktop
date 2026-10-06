@@ -23,17 +23,12 @@ SERVICES = {
         "wait": "while [ ! -S /run/udev/control ]; do sleep 0.05; done",
         "user": 0
     },
-    "seatd": {
-        "exec": "exec /usr/sbin/seatd -g seat",
-        "wait": "while [ ! -S /run/seatd.sock ]; do sleep 0.05; done",
-        "user": 0
-    },
     "cage": {
         "exec": (
             "export XDG_RUNTIME_DIR=/run/user/1000 && "
             "export HOME=/home && "
             "export XDG_CACHE_HOME=/home/.cache && "
-            "exec cage -- sleep infinity"
+            "exec seatd-launch -- cage -- sleep infinity"
         ),
         "wait": "while [ ! -S /run/user/1000/wayland-0 ]; do sleep 0.05; done",
         "user": 1000
