@@ -36,6 +36,8 @@ class LifeCycle:
             return
         
         os.environ["QT_QPA_PLATFORM"] = "eglfs"
+        os.environ["XDG_RUNTIME_DIR"] = "/run/user/1000/"
+        os.makedirs(os.environ["XDG_RUNTIME_DIR"], exist_ok=True)
 
     def wait_udev(self):
 
