@@ -180,11 +180,8 @@ class Surface(QWidget):
         self._cached = None
         self._cached_pos = None
         self._cached_size = None
-        self._tint = 255 // (10 - tint)
+        self._tint_mul = 1.0 + max(0.0, min(tint, 10.0)) / 10
         self._enable_shadow = shadow
-
-        if self._tint < 0:
-            self._tint = 0
 
         self._update_theming()
 
@@ -217,8 +214,11 @@ class Surface(QWidget):
         "Load theming configuration"
 
         self.color = self.comm.request("cfgmgr", "get", "glass-tint-color")
-        self.alpha = self.comm.request("cfgmgr", "get", "glass-tint-alpha")
-    
+        self.alpha = max(
+            self.comm.request("cfgmgr", "get", "glass-tint-alpha") \
+                * self._tint_mul, 255
+        )
+
     def _invalidate_cache(self):
         "Invalidate cached contents"
         
@@ -263,7 +263,7 @@ class Surface(QWidget):
 
             # Tint blurred background for some beauty
             tint = QColor(self.color)
-            tint.setAlpha(min(255, max(0, self.alpha + self._tint)))
+            tint.setAlpha(self.alpha)
 
             painter = QPainter(blurred)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
