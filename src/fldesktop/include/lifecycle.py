@@ -21,6 +21,7 @@ class LifeCycle:
         self.comm.subscribe("shutdownscreen_shown", self.stop_services)
 
         self.wait_udev()
+        self.setup_env()
 
     def is_dev_environment(self):
         return any(os.path.exists(p) for p in (
@@ -28,6 +29,13 @@ class LifeCycle:
             "/run/runit",
             "/run/openrc",
         ))
+
+    def setup_env(self):
+
+        if self.is_dev_environment():
+            return
+        
+        os.environ["QT_QPA_PLATFORM"] = "eglfs"
 
     def wait_udev(self):
 
