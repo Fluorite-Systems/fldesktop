@@ -124,6 +124,12 @@ class InitWorker:
         for sv in self.services.values():
             sv.start()
 
+    def run_service(self, name):
+
+        for sv in self.services:
+            if sv == name:
+                self.services[sv].start()
+
     def shutdown(self):
 
         logging.debug("Stopping external services...")
@@ -136,6 +142,8 @@ class InitWorker:
         match type:
             case "full_init":
                 self.full_init()
+            case "run_service":
+                self.run_service(args["service"])
             case "shutdown":
                 self.shutdown()
 
