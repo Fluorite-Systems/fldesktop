@@ -9,9 +9,14 @@ SERVICES = {
     "udev": {
         "exec": (
             "mkdir -p /run/udev && "
+            "/usr/lib/systemd/systemd-udevd --daemon && "
+            "while [ ! -S /run/udev/control ]; do sleep 0.1; done && "
             "udevadm trigger --type=subsystems --action=add && "
             "udevadm trigger --type=devices --action=add && "
-            "udevadm settle && exec /usr/lib/systemd/systemd-udevd -N late"
+            "udevadm settle && "
+            "udevadm control --exit && "
+            "sleep 0.5 && "
+            "exec /usr/lib/systemd/systemd-udevd -N late"
         ),
         "user": 0,
         "depends": [],
