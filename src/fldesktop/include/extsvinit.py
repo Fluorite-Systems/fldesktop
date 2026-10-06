@@ -20,68 +20,80 @@ SERVICES = {
             "sleep 0.5 && "
             "exec /usr/lib/systemd/systemd-udevd -N late"
         ),
-        "user": 0,
-        "depends": [],
+        "wait": "while [ ! -S /run/udev/control ]; do sleep 0.05; done",
+        "user": 0
+    },
+    "cage": {
+        "exec": "exec cage",
+        "wait": "while [ ! -S /run/user/1000/wayland-0 ]; do sleep 0.05; done",
+        "user": 1000
     },
     "dbus": {
         "exec": "mkdir -p /var/run/dbus /var/lib/dbus && dbus-uuidgen --ensure 2>/dev/null; exec dbus-daemon --system --nofork",
-        "user": 0,
-        "depends": ["udev"],
+        "wait": "while [ ! -S /run/dbus/system_bus_socket ]; do sleep 0.05; done",
+        "user": 0
     },
     "bluetooth": {
         "exec": "exec /usr/lib/bluetooth/bluetoothd --nodetach",
-        "user": 0,
-        "depends": ["dbus"],
+        "wait": "while [ ! -S /run/dbus/system_bus_socket ]; do sleep 0.05; done",
+        "user": 0
     },
     "networkmanager": {
         "exec": "exec /usr/sbin/NetworkManager --no-daemon",
-        "user": 0,
-        "depends": ["dbus"],
+        "wait": "while [ ! -S /run/dbus/system_bus_socket ]; do sleep 0.05; done",
+        "user": 0
     },
     "cups": {
         "exec": "exec /usr/sbin/cupsd -f",
-        "user": 0,
-        "depends": ["dbus"],
+        "wait": "while [ ! -S /run/cups/cups.sock ]; do sleep 0.05; done",
+        "user": 0
     },
     "pipewire": {
-        "exec": "exec /usr/bin/pipewire",
-        "user": 1000,
-        "depends": ["dbus"],
+        "exec": (
+            "export XDG_RUNTIME_DIR=/run/user/1000 && "
+            "mkdir -p $XDG_RUNTIME_DIR && "
+            "chmod 0700 $XDG_RUNTIME_DIR && "
+            "chown 1000:1000 $XDG_RUNTIME_DIR && "
+            "exec dbus-run-session -- pipewire"
+        ),
+        "wait": "while [ ! -S /run/user/1000/pipewire-0 ]; do sleep 0.05; done",
+        "user": 1000
     },
     "wireplumber": {
         "exec": "exec /usr/bin/wireplumber",
-        "user": 1000,
-        "depends": ["pipewire"],
+        "wait": "while [ ! -S /run/user/1000/pipewire-0 ]; do sleep 0.05; done",
+        "user": 1000
     }
 }
 
 
 class Service:
-    def __init__(self, name: str, exec: str = "",
-                 user: int = 0, depends: list = []):
+    def __init__(self, name: str, exec: str = "", wait: str = "",
+                 user: int = 0):
 
         self.name = name
         self.exec = exec
+        self.wait = wait
         self.user = user
-        self.depends = depends
 
         self.proc = None
         self.is_running = False
+        self.is_ready = False
 
         self.thread = threading.Thread(target=self.supervise)
         self.shutdown = threading.Event()
+
+    def _wrap(self, cmd: str) -> str:
+        if self.user != 0:
+            return f"runuser -u $(id -un {self.user}) -- {cmd}"
+        return cmd
 
     def supervise(self):
 
         while not self.shutdown.is_set():
 
-            if self.user != 0:
-                cmd = f"runuser -u $(id -un {self.user}) -- {self.exec}"
-            else:
-                cmd = self.exec
-
             self.proc = subprocess.Popen(
-                cmd,
+                self._wrap(self.exec),
                 shell=True,
                 start_new_session=True,
                 stdout=subprocess.DEVNULL,
@@ -108,6 +120,21 @@ class Service:
             except subprocess.TimeoutExpired:
                 self.proc.kill()
 
+    def wait_ready(self):
+
+        if not self.wait:
+            self.is_ready = True
+            return
+
+        subprocess.run(
+            self._wrap(self.wait),
+            shell=True,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        self.is_ready = True
+
     def start(self):
 
         if self.thread.is_alive():
@@ -116,7 +143,9 @@ class Service:
         logging.debug(f"Starting external service {self.name}...")
 
         self.shutdown.clear()
+        self.is_ready = False
         self.thread.start()
+        self.wait_ready()
 
     def stop(self):
 
