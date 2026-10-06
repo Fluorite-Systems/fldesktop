@@ -26,7 +26,7 @@ SERVICES = {
     "cage": {
         "exec": (
             "export XDG_RUNTIME_DIR=/run/user/1000 && "
-            "exec cage"
+            "exec cage -- sleep infinity"
         ),
         "wait": "while [ ! -S /run/user/1000/wayland-0 ]; do sleep 0.05; done",
         "user": 1000
