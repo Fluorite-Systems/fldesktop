@@ -26,8 +26,8 @@ SERVICES = {
     "cage": {
         "exec": (
             "export XDG_RUNTIME_DIR=/run/user/1000 && "
-            "export HOME=/home/fluorite && "
-            "export XDG_CACHE_HOME=/home/fluorite/.cache && "
+            "export HOME=/home && "
+            "export XDG_CACHE_HOME=/home/.cache && "
             "exec seatd-launch -- cage -- sleep infinity"
         ),
         "wait": "while [ ! -S /run/user/1000/wayland-0 ]; do sleep 0.05; done",
