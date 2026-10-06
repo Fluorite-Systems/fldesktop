@@ -24,7 +24,7 @@ SERVICES = {
         "user": 0
     },
     "seatd": {
-        "exec": "exec /usr/sbin/seatd -g _seatd",
+        "exec": "exec /usr/sbin/seatd -g seatd",
         "wait": "while [ ! -S /run/seatd.sock ]; do sleep 0.05; done",
         "user": 0
     },
