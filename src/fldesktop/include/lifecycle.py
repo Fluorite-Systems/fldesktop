@@ -13,35 +13,37 @@ class LifeCycle:
                 "shutdown": self.shutdown,
                 "reboot": self.reboot,
                 "logout": self.logout,
-                "is_dev_environment": self.is_dev_environment
+                "is_dev_environment": self.get_is_dev_env
             }
         )
 
         self.comm.subscribe("startupscreen_shown", self.start_services)
         self.comm.subscribe("shutdownscreen_shown", self.stop_services)
 
+        self.is_dev_environment = any(
+            os.path.exists(p) for p in (
+                "/run/systemd/system",
+                "/run/runit",
+                "/run/openrc"
+            )
+        )
+
         self.wait_udev()
         self.setup_env()
 
-    def is_dev_environment(self):
-        return any(os.path.exists(p) for p in (
-            "/run/systemd/system",
-            "/run/runit",
-            "/run/openrc",
-        ))
-
     def setup_env(self):
 
-        if self.is_dev_environment():
+        if self.is_dev_environment:
             return
-        
-        os.environ["QT_QPA_PLATFORM"] = "eglfs"
+
         os.environ["XDG_RUNTIME_DIR"] = "/run/user/1000/"
         os.makedirs(os.environ["XDG_RUNTIME_DIR"], exist_ok=True)
 
+        self.comm.request("extsvinit", "run_service", "cage")
+
     def wait_udev(self):
 
-        if self.is_dev_environment():
+        if self.is_dev_environment:
             return
 
         self.comm.request("extsvinit", "run_service", "udev")
@@ -68,7 +70,7 @@ class LifeCycle:
 
     def start_services(self):
 
-        if self.is_dev_environment():
+        if self.is_dev_environment:
             return
 
         self.comm.request("extsvinit", "full_init")
@@ -89,3 +91,6 @@ class LifeCycle:
 
         self.stop_services()
         self.comm.request("init", "cleanup")
+
+    def get_is_dev_env(self):
+        return self.is_dev_environment
