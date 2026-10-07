@@ -23,15 +23,13 @@ SERVICES = {
         "wait": "while [ ! -S /run/udev/control ]; do sleep 0.05; done",
         "user": 0
     },
-    "cage": {
+    "weston": {
         "exec": (
             "export XDG_RUNTIME_DIR=/run/user/1000 && "
-            "export HOME=/home && "
-            "export XDG_CACHE_HOME=/home/.cache && "
-            "exec seatd-launch -- cage -- sleep infinity"
+            "exec seatd-launch -- weston --shell=kiosk-shell.so --socket=wayland-0"
         ),
         "wait": "while [ ! -S /run/user/1000/wayland-0 ]; do sleep 0.05; done",
-        "user": 0
+        "user": 0,
     },
     "dbus": {
         "exec": "mkdir -p /var/run/dbus /var/lib/dbus && dbus-uuidgen --ensure 2>/dev/null; exec dbus-daemon --system --nofork",
