@@ -38,7 +38,7 @@ class LifeCycle:
 
         os.environ["XDG_RUNTIME_DIR"] = "/run/user/1000/"
         os.makedirs(os.environ["XDG_RUNTIME_DIR"], exist_ok=True)
-        os.chmod(os.environ["XDG_RUNTIME_DIR"], 700)
+        os.chmod(os.environ["XDG_RUNTIME_DIR"], 0o700)
         os.chown(os.environ["XDG_RUNTIME_DIR"], 1000, 1000)
 
         self.comm.request("extsvinit", "run_service", "weston")
