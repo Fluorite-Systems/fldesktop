@@ -26,7 +26,10 @@ SERVICES = {
     "weston": {
         "exec": (
             "export XDG_RUNTIME_DIR=/run/user/1000 && "
-            "exec seatd-launch -- weston --shell=kiosk-shell.so --socket=wayland-0"
+            "export XDG_VTNR=2 && "
+            "chvt 2 && "
+            "exec seatd-launch -- setpriv --reuid=1000 --regid=1000 --init-groups -- "
+            "weston --shell=kiosk-shell.so --socket=wayland-0"
         ),
         "wait": "while [ ! -S /run/user/1000/wayland-0 ]; do sleep 0.05; done",
         "user": 0,
