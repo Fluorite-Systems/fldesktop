@@ -41,6 +41,8 @@ class LifeCycle:
         os.chmod(os.environ["XDG_RUNTIME_DIR"], 0o700)
         os.chown(os.environ["XDG_RUNTIME_DIR"], 0, 0)
 
+        os.environ["QT_QPA_PLATFORM"] = "wayland"
+
         self.comm.request("extsvinit", "run_service", "weston")
 
     def wait_udev(self):
