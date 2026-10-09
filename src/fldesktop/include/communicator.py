@@ -1,24 +1,21 @@
 class Communicator:
     def __init__(self):
-        self.services = []
+        self.services = {}
         self.signal_subs = []
 
     def register(self, name: str, actions: dict):
         "Register in communicator"
 
-        self.services.append((name, actions))
+        self.services[name] = actions
 
     def request(self, name: str, action: str, *args, **kwargs):
         "Requests something from service"
 
-        r = None
-
-        for s in self.services:
-            if s[0] == name:
-                if action in s[1]:
-                    r = s[1][action](*args, **kwargs)
+        if name not in self.services:
+            return
         
-        return r
+        if action in self.services[name]:
+            return self.services[name][action](*args, **kwargs)
 
     def subscribe(self, signal: str, action):
         "Subscribe to some signal"
