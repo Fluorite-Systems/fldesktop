@@ -1,7 +1,7 @@
-from fldesktop.include.appserver.ui.widgets import widgets
-from fldesktop.include.appserver.ui.widgets.base import Widget
-from fldesktop.include.appserver.ui.applet import Applet
-from fldesktop.include.appserver.ui.window import Window
+from fldesktop.include.uikit.widgets import widgets
+from fldesktop.include.uikit.widgets.base import Widget
+from fldesktop.include.uikit.applet import Applet
+from fldesktop.include.uikit.window import Window
 
 import logging
 import locale

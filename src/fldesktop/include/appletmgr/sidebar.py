@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QScrollArea, QPushButton,
 from PySide6.QtCore import Qt
 
 from fldesktop.include.widgets.surface import Surface
-from fldesktop.include.appserver.ui.applet import Applet
+from fldesktop.include.uikit.applet import Applet
 from fldesktop.include.widgets.animation import Animation
 
 

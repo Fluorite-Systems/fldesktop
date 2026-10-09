@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QPixmap, QPainter, QColor, QPen, QFont, QPainterPath
 from PySide6.QtCore import QRectF, Qt, QPointF
 
-from fldesktop.include.appserver.ui.widgets.base import Widget
+from fldesktop.include.uikit.widgets.base import Widget
 
 
 class Canvas(Widget):

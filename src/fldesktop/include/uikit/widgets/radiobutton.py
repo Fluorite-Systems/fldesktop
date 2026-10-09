@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QRadioButton
-from fldesktop.include.appserver.ui.widgets.base import Widget
+from fldesktop.include.uikit.widgets.base import Widget
 
 
 class RadioButton(Widget):

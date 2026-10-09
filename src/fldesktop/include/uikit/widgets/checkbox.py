@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QCheckBox
-from fldesktop.include.appserver.ui.widgets.base import Widget
+from fldesktop.include.uikit.widgets.base import Widget
 
 
 class CheckBox(Widget):

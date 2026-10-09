@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
-from fldesktop.include.appserver.ui.ui import UI
+from fldesktop.include.uikit.ui import UI
 from fldesktop.include.appserver.dnd import DragFilter, DropFilter
 
 
