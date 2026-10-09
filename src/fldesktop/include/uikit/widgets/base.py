@@ -1,26 +1,35 @@
 from PySide6.QtCore import Qt
 
+from fldesktop.include.uikit.ui import UI
+
 import logging
 import locale
 
 
-class Widget:
-    def __init__(self, runner, name, attrs={}, parent=None):
-        self._runner = runner
-        self.name = name
-        self.attrs = attrs
-        self.parent = parent
+BASEATTRS = {
+    "width": None,
+    "height": None,
+    "drag_enabled": False,
+    "drag_data": "",
+    "drag_mime_type": "",
+    "drop_enabled": False,
+    "drop_mime_types": []
+}
+
+
+class Widget(UI):
+    def __init__(self, comm, name, attrs={}, baseattrs={}):
+        baseattrs.update(BASEATTRS)
+        super().__init__(comm, name, attrs, baseattrs)
         self.type = "widget"
 
         self.callables = {}
-        self.base_attrs = {}
 
     def _cleanup(self):
         ...
 
     def _setup(self):
         #self._setup_layouting()
-        self._runner.objects[self.name] = self
         
         if hasattr(self, "qwidget"):
             self.callables.update(
@@ -29,65 +38,27 @@ class Widget:
                     "hide": self.qwidget.hide
                 }
             )
-            self.base_attrs.update(
-                {
-                    "width": None,
-                    "height": None,
-                    "drag_enabled": False,
-                    "drag_data": "",
-                    "drag_mime_type": "",
-                    "drop_enabled": False,
-                    "drop_mime_types": []
-                }
+            self.baseattrs.update(
+                
             )
 
             self.qwidget.setProperty(
-                "drop_callback", lambda data, mime: self._runner.event(
-                    name=self.name, type="data_dropped",
+                "drop_callback", lambda data, mime: self.event(
+                    type="data_dropped",
                     data=data, mimetype=mime
                 )
             )
 
-        self.attrs = {**self.base_attrs, **self.attrs}
+        self.attrs = {**self.baseattrs, **self.attrs}
 
         self._setup_setters()
         self.apply_attrs()
 
-    def _setup_layouting(self):
-        "Setups widget"
-
-        logging.debug(
-            f"Building {self.type} {self.name}; parent is {self.parent.name}"\
-                if self.parent else f"Building {self.type} {self.name}"
-        )
-
-        if self.parent:
-            if self.parent.type in ["app", "vlayout", "hlayout",
-                                    "flayout", "container"]:
-                if hasattr(self, "qwidget"):
-                    self.parent.qlayout.addWidget(self.qwidget)
-                elif hasattr(self, "qlayout"):
-                    self.parent.qlayout.addLayout(self.qlayout)
-                else:
-                    self.parent.qlayout.addStretch()
-            else:
-                if hasattr(self, "qwidget"):
-                    self.qwidget.setParent(self.parent.qwidget)
-                else:
-                    self.parent.qwidget.setLayout(self.qlayout)
-
-        if hasattr(self, "qwidget"):
-            if "width" in self.attrs:
-                if type(self.attrs["width"]) == int:
-                    self.qwidget.setFixedWidth(self.attrs["width"])
-            if "height" in self.attrs:
-                if type(self.attrs["height"]) == int:
-                    self.qwidget.setFixedHeight(self.attrs["height"])
-            #self.qwidget.installEventFilter(self._runner.drag_filter)
-            #self.qwidget.installEventFilter(self._runner.drop_filter)
+        #self.qwidget.installEventFilter(self._runner.drag_filter)
+        #self.qwidget.installEventFilter(self._runner.drop_filter)
 
     def _setup_setters(self):
-        for prop in self.base_attrs:
+        for prop in self.baseattrs:
 
             def make_setter(name):
                 def setter(**kwargs):
@@ -105,6 +76,7 @@ class Widget:
             self.callables[f"set_{prop}"] = setter
 
     def apply_attrs(self):
+        super().apply_attrs()
 
         if hasattr(self, "qwidget"):
             if self.attrs["width"]:
@@ -154,6 +126,8 @@ class Widget:
     def tr(self, base_text: str):
         "Translate text"
         loc = locale.getlocale()[0]
+
+        return base_text
 
         if loc in self._runner.translations:
             trs = self._runner.translations[loc]

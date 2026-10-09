@@ -3,19 +3,22 @@ from fldesktop.include.uikit.widgets.base import Widget
 
 
 class Entry(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "entry"
+    def __init__(self, comm, name, attrs):
+
         self.qwidget = QLineEdit()
+
+        super().__init__(
+            comm, name, attrs,
+            {"text": ""}
+        )
+
+        self.type = "entry"
+        
 
         self.callables = {
             "get_text": self.get_text,
             "enable": lambda _: self.qwidget.setEnabled(True),
             "disable": lambda _: self.qwidget.setEnabled(False)
-        }
-
-        self.base_attrs = {
-            "text": ""
         }
 
         self._setup()

@@ -2,7 +2,7 @@ from fldesktop.include import (communicator, desktop, dialogs, lifecycle,
                      thememgr, pkgmgr, lockscreen, os_manager,
                      configmgr, appserver, search, wm, loginmgr,
                      localemgr, notifications, iconmgr, QApp,
-                     PostInit, UserServiceStarter, fs3, appletmgr,
+                     PostInit, fs3, uikit, appletmgr,
                      panel, startupscreen, extsvinit)
 from fldesktop.include.appserver.clientmgr import ClientManager
 from fldesktop.include.widgets.surface import SurfaceManager
@@ -78,6 +78,12 @@ SERVICES = {
             "IconManager", "PackageManager",
             "SurfaceManager", "InputManager"
         ],
+        "runlevel": 1
+    },
+    "UIKit": {
+        "object": uikit.UIKit,
+        "importance": "critical",
+        "depends": ["Desktop", "FS3"],
         "runlevel": 1
     },
     "QApplication": {

@@ -6,10 +6,13 @@ from fldesktop.include.uikit.widgets.base import Widget
 
 
 class Canvas(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "canvas"
+    def __init__(self, comm, name, attrs):
+
         self.qwidget = QWidget()
+
+        super().__init__(comm, name, attrs)
+
+        self.type = "canvas"
 
         self.callables = {
             "resize": self.resize,

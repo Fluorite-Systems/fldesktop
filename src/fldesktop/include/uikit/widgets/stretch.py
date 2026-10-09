@@ -4,16 +4,19 @@ from fldesktop.include.uikit.widgets.base import Widget
 
 
 class Stretch(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "stretch"
+    def __init__(self, comm, name, attrs):
 
         self.qwidget = QWidget()
 
-        self.base_attrs = {
-            "Attr.UI.Widget.Stretch.Vertical": True,
-            "Attr.UI.Widget.Stretch.Horizontal": True
-        }
+        super().__init__(
+            comm, name, attrs,
+            {
+                "Attr.UI.Widget.Stretch.Vertical": True,
+                "Attr.UI.Widget.Stretch.Horizontal": True
+            }
+        )
+
+        self.type = "stretch"
 
         self._setup()
 

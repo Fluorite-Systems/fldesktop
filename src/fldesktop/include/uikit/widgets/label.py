@@ -5,19 +5,22 @@ from fldesktop.include.uikit.widgets.base import Widget
 
 
 class Label(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "label"
+    def __init__(self, comm, name, attrs):
+
         self.qwidget = QLabel()
+
+        super().__init__(
+            comm, name, attrs,
+            {
+                "Attr.UI.Widget.Label.Text": "",
+                "Attr.UI.Widget.Label.Alignment": "center",
+                "Attr.UI.Widget.Label.Style": "normal"
+            }
+        )
+        self.type = "label"
 
         self.callables = {
             "get_text": self.get_text
-        }
-
-        self.base_attrs = {
-            "Attr.UI.Widget.Label.Text": "",
-            "Attr.UI.Widget.Label.Alignment": "center",
-            "Attr.UI.Widget.Label.Style": "normal"
         }
 
         self.qwidget.setSizePolicy(

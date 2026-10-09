@@ -3,19 +3,21 @@ from fldesktop.include.uikit.widgets.base import Widget
 
 
 class RadioButton(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "radiobutton"
+    def __init__(self, comm, name, attrs):
+
         self.qwidget = QRadioButton()
+
+        super().__init__(
+            comm, name, attrs,
+            {"Attr.UI.Widget.RadioButton.Text": ""}
+        )
+
+        self.type = "radiobutton"
 
         self.callables = {
             "select": self.select,
             "enable": lambda _: self.qwidget.setEnabled(True),
             "disable": lambda _: self.qwidget.setEnabled(False)
-        }
-
-        self.base_attrs = {
-            "Attr.UI.Widget.RadioButton.Text": ""
         }
 
         self._setup()            
@@ -25,10 +27,7 @@ class RadioButton(Widget):
     def _handle_toggle(self, checked: bool):
         
         if checked:
-            self._runner.event(
-                self,
-                name=self.name, type="radiobutton_selected"
-            )
+            self.event(type="radiobutton_selected")
 
     def apply_attrs(self):
         super().apply_attrs()

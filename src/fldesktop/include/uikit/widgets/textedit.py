@@ -3,10 +3,16 @@ from fldesktop.include.uikit.widgets.base import Widget
 
 
 class TextEdit(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "textedit"
+    def __init__(self, comm, name, attrs):
+
         self.qwidget = QTextEdit()
+
+        super().__init__(
+            comm, name, attrs,
+            {"text": ""}
+        )
+        
+        self.type = "textedit"        
 
         self.callables = {
             "get_text": self.get_text,
@@ -14,15 +20,8 @@ class TextEdit(Widget):
             "disable": lambda _: self.qwidget.setEnabled(False)
         }
 
-        self.base_attrs = {
-            "text": ""
-        }
-
         self.qwidget.textChanged.connect(
-            lambda: self._runner.event(
-                self,
-                name=self.name, type="textedit_text_changed"
-            )
+            lambda: self.event(type="textedit_text_changed")
         )
 
         self._setup()

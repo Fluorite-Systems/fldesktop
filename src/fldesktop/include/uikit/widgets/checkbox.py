@@ -3,17 +3,21 @@ from fldesktop.include.uikit.widgets.base import Widget
 
 
 class CheckBox(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "checkbox"
+    def __init__(self, comm, name, attrs):
+
         self.qwidget = QCheckBox()
+
+        super().__init__(
+            comm, name, attrs,
+            {"text": ""}
+        )
+
+        self.type = "checkbox"
 
         self.callables = {
             "enable": lambda _: self.qwidget.setEnabled(True),
             "disable": lambda _: self.qwidget.setEnabled(False)
         }
-
-        self.base_attrs = {"text": ""}
 
         self._setup()
 

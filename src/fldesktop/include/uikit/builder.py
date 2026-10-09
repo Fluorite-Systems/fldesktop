@@ -29,7 +29,7 @@ class Builder:
 
         wname = node_id#f"{wtype}_{node_id}"
 
-        widget = widgets[wtype](self, wname, node_attrs)
+        widget = widgets[wtype](self.cm.comm, wname, node_attrs)
 
         self.objects[wname] = widget
 
@@ -100,6 +100,9 @@ class Builder:
 
         if "Attrs.UI.ClientHandlerUUID" not in node.attrs:
             return
+
+        # <===========================================================================
+        return
 
         self.cm.process_widget_callback(
             node.attrs["Attrs.UI.ClientHandlerUUID"],

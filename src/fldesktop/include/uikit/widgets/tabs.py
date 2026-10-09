@@ -3,10 +3,10 @@ from fldesktop.include.uikit.widgets.base import Widget
 from fldesktop.include.uikit.widgets.vlayout import VLayout
 
 class Tabs(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "tabs"
+    def __init__(self, comm, name, attrs):
         self.qwidget = QTabWidget()
+        super().__init__(comm, name, attrs)
+        self.type = "tabs"
 
         self.tabs = []
 

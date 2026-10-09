@@ -7,18 +7,22 @@ import base64
 
 
 class ImageView(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "imageview"
+    def __init__(self, comm, name, attrs):
+
         self.qwidget = QLabel()
 
-        self.base_attrs = {
-            "Attr.UI.Widget.ImageView.Image": "",
-            "Attr.UI.Widget.ImageView.Source": "",
-            "Attr.UI.Widget.ImageView.Quality": "fast",
-            "Attr.UI.Widget.ImageView.KeepAspectRatio": True,
-            "Attr.UI.Widget.ImageView.FullCover": False
-        }
+        super().__init__(
+            comm, name, attrs,
+            {
+                "Attr.UI.Widget.ImageView.Image": "",
+                "Attr.UI.Widget.ImageView.Source": "",
+                "Attr.UI.Widget.ImageView.Quality": "fast",
+                "Attr.UI.Widget.ImageView.KeepAspectRatio": True,
+                "Attr.UI.Widget.ImageView.FullCover": False
+            }
+        )
+
+        self.type = "imageview"        
 
         self.pixmap = QPixmap()
         self.qwidget.resizeEvent = self.resizeEvent

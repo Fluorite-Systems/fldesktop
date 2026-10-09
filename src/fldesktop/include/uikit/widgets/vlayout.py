@@ -3,9 +3,9 @@ from fldesktop.include.uikit.widgets.base import Widget
 
 
 class VLayout(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "vlayout"
+    def __init__(self, comm, name, attrs):
         self.qlayout = QVBoxLayout()
+        super().__init__(comm, name, attrs)
+        self.type = "vlayout"
 
         self._setup()

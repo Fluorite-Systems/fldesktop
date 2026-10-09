@@ -280,12 +280,14 @@ class Receiver:
 
 
 class AccelGraphicsView(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs) 
-        self.type = "accelgraphicsview"
+    def __init__(self, comm, name, attrs):
 
-        self.rx = None
         self.qwidget = ImageViewer()
+
+        super().__init__(comm, name, attrs) 
+
+        self.type = "accelgraphicsview"
+        self.rx = None        
 
         self.callables = {
             "start": self.start,
@@ -302,8 +304,7 @@ class AccelGraphicsView(Widget):
 
     def _handle_resize(self, size: QSize):
         
-        self._runner.event(
-            name=self.name,
+        self.event(
             type="accelgraphicsview_view_size_changed",
             width=size.width(),
             height=size.height()
@@ -311,8 +312,7 @@ class AccelGraphicsView(Widget):
 
     def _handle_input(self, event: dict):
 
-        self._runner.event(
-            name=self.name,
+        self.event(
             type="accelgraphicsview_input",
             **event
         )

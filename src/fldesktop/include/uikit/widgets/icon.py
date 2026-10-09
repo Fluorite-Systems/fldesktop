@@ -4,14 +4,16 @@ from fldesktop.include.uikit.widgets.base import Widget
 
 
 class Icon(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "icon"
+    def __init__(self, comm, name, attrs):
+
         self.qwidget = QLabel()
 
-        self.base_attrs = {
-            "Attr.UI.Widget.Icon.Icon": ""
-        }
+        super().__init__(
+            comm, name, attrs,
+            {"Attr.UI.Widget.Icon.Icon": ""}
+        )
+
+        self.type = "icon"
 
         self._setup()
 
@@ -20,7 +22,7 @@ class Icon(Widget):
     def apply_attrs(self) -> None:
         super().apply_attrs()
 
-        icon = self._runner.comm.request(
+        icon = self.comm.request(
             "iconmgr", "parse", self.attrs["Attr.UI.Widget.Icon.Icon"]
         )
         self.qwidget.setPixmap(icon.pixmap(

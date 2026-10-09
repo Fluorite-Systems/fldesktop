@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 from fldesktop.include.uikit.ui import UI
-from fldesktop.include.appserver.dnd import DragFilter, DropFilter
+from fldesktop.include.uikit.dnd import DragFilter, DropFilter
 
 
 class Window(UI):
@@ -28,7 +28,7 @@ class Window(UI):
             self.get_win_icon(), self.attrs["Attr.UI.Window.Package"], (400, 400), self.attrs["Attr.UI.Window.Type"]
         )
 
-        self.on_close.connect(lambda: self.callback("close"))
+        self.on_close.connect(lambda: self.event(type="close"))
     
 
     def get_win_icon(self):

@@ -4,27 +4,31 @@ from fldesktop.include.uikit.widgets.base import Widget
 
 
 class Button(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "Node.UI.Widget.Button"
+    def __init__(self, comm, name, attrs):
+
         self.qwidget = QPushButton()
 
+        super().__init__(
+            comm, name, attrs,
+            {
+                "Attr.UI.Widget.Button.Text": "",
+                "Attr.UI.Widget.Button.Icon": "",
+                "Attr.UI.Widget.Button.Flat": False,
+                "Attr.UI.Widget.Button.Compact": False
+            }
+        )
+
+        self.type = "Node.UI.Widget.Button"
+        
         self.callables = {
             "enable": lambda _: self.qwidget.setEnabled(True),
             "disable": lambda _: self.qwidget.setEnabled(False) 
         }
 
-        self.base_attrs = {
-            "Attr.UI.Widget.Button.Text": "",
-            "Attr.UI.Widget.Button.Icon": "",
-            "Attr.UI.Widget.Button.Flat": False,
-            "Attr.UI.Widget.Button.Compact": False
-        }
-
         self._setup()
 
         self.qwidget.clicked.connect(
-            lambda: self._runner.event(self, name=self.name, type="button_pressed")
+            lambda: self.event(type="button_pressed")
         )
 
     def apply_attrs(self):

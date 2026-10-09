@@ -4,21 +4,25 @@ from fldesktop.include.uikit.widgets.base import Widget
 
 
 class Slider(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "slider"
+    def __init__(self, comm, name, attrs):
+
         self.qwidget = QSlider()
+
+        super().__init__(
+            comm, name, attrs,
+            {
+                "value": 0,
+                "min_value": 0,
+                "max_value": 99,
+                "orientation": "hor"
+            }
+        )
+
+        self.type = "slider"
 
         self.callables = {
             "enable": lambda _: self.qwidget.setEnabled(True),
             "disable": lambda _: self.qwidget.setEnabled(False)
-        }
-        
-        self.base_attrs = {
-            "value": 0,
-            "min_value": 0,
-            "max_value": 99,
-            "orientation": "hor"
         }
 
         self._setup()
@@ -38,8 +42,5 @@ class Slider(Widget):
         
     def vc_handler(self, value: int):
 
-        self._runner.event(
-            self,
-            name=self.name, type="slider_value_changed", value=value
-        )
+        self.event(type="slider_value_changed", value=value)
 

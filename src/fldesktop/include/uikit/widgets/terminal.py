@@ -3,9 +3,9 @@ from fldesktop.include.uikit.widgets.base import Widget
 
 
 class Terminal(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "terminal"
+    def __init__(self, comm, name, attrs):
         self.qwidget = TerminalWidget()
+        super().__init__(comm, name, attrs)
+        self.type = "terminal"
 
         self._setup()

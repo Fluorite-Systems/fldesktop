@@ -4,10 +4,13 @@ from fldesktop.include.widgets.flowlayout import FlowLayout
 
 
 class Container(Widget):
-    def __init__(self, runner, name, attrs):
-        super().__init__(runner, name, attrs)
-        self.type = "container"
+    def __init__(self, comm, name, attrs):
+
         self.qwidget = QScrollArea()
+
+        super().__init__(comm, name, attrs)
+
+        self.type = "container"
 
         self.container = QWidget()
         self.qwidget.setWidgetResizable(True)
