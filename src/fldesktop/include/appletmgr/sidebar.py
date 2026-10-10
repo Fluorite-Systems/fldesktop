@@ -9,11 +9,7 @@ from fldesktop.include.widgets.animation import Animation
 
 class Sidebar(Surface):
     def __init__(self, comm):
-        super().__init__(
-            comm,
-            comm.request("desktop", "get_instance"),
-            5
-        )
+        super().__init__(comm, 5, layer="top", hover_materialize=True)
 
         self.comm = comm
         self.comm.subscribe("desktop_size_changed", self.update_geometry)
@@ -40,12 +36,15 @@ class Sidebar(Surface):
 
         self.applets = []
 
+        self.attach()
         self.update_geometry()
 
     def update_geometry(self):
 
-        self.setFixedSize(175, self.parent().height() - 26)
-        self.move(self.parent().width() - self.width(), 26)
+        if not self.parent(): return
+
+        self.setFixedSize(175, self.parent().height())
+        self.move(self.parent().width() - self.width(), 0)
 
     def add_applet(self, applet: Applet):
 
@@ -65,6 +64,7 @@ class Sidebar(Surface):
         def phase2(self):
             super().show()
             self.comm.request("panel", "raise")
+            self.comm.emit("desktop_size_changed") # dirty haccck
         
         for i in self.applets:
             #l = QLabel("applet idk")

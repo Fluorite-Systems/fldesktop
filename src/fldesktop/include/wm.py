@@ -11,21 +11,6 @@ from fldesktop.include.thememgr import STD_COLORS
 import logging
 
 
-class Overlay(QLabel):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, 
-                        False)
-        self.setObjectName("overlay")
-    
-    def mousePressEvent(self, event):
-        self.parent().mousePressEvent(event)
-        
-    def enterEvent(self, event):
-        self.setCursor(Qt.CursorShape.ArrowCursor)
-        return super().enterEvent(event)
-
-
 class Window(Surface):
     on_close = Signal()
 
@@ -34,7 +19,7 @@ class Window(Surface):
                     comm, icon: QIcon, size: tuple = (400, 400),
                     type: str = "normal"
                 ) -> None:
-        super().__init__(comm, parent)
+        super().__init__(comm, 1, auto_attach=False)
 
         self.setObjectName("surface")
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -49,12 +34,6 @@ class Window(Surface):
         self.type = type
 
         self.overlays = []
-
-        # Focusing overlay
-        self.overlay = Overlay(self)
-        self.overlay.setObjectName("ov")
-        self.overlay.show()
-        self.overlay.lower()
 
         # Effects manager
         self.effects = WindowEffects(self)
@@ -215,7 +194,6 @@ class Window(Surface):
     def animate_minimize(self) -> None:
 
         self.hide()
-        self.set_raycast_enabled(False)
         
         Animation(
             self.comm, self.parent(), self.grab(), "wminimize",
@@ -238,8 +216,6 @@ class Window(Surface):
         )
 
     def animate_unminimize(self) -> None:
-
-        self.set_raycast_enabled(True)
 
         Animation(
             self.comm, self.parent(), self.grab(), "wunminimize",
@@ -301,15 +277,14 @@ class Window(Surface):
             resizing_dir = "b"
         
         return resizing_dir
+
+    def on_activate(self):
+        self.raise_()
+        self.comm.request("wm", "change_focus", self.id)
+        self.comm.request("panel", "raise")
     
     def mousePressEvent(self, event) -> None:
-        self.raise_()
-        # Change focus
-        if self.comm.request("wm", "get_focus") != self.id:
-            self.comm.request("wm", "change_focus", self.id)
-            self.comm.request("panel", "raise")
-            return
-
+        
         if not self.maximized:
             x = event.pos().x()
             y = event.pos().y()
@@ -369,10 +344,24 @@ class Window(Surface):
             # Calculate the new position based on the mouse movement
             delta = event.pos() - self.drag_start_pos
             new_pos = self.pos() + delta
+            final_pos = QPoint()
+
+            sbv = self.comm.request("appletmgr", "is_sidebar_visible")
+
             if new_pos.y() > 26:
-                self.move(new_pos)
+                final_pos.setY(new_pos.y())
             else:
-                self.move(QPoint(new_pos.x(), 26))
+                final_pos.setY(26)
+            if sbv:
+                mx = self.parent().width() - self.width() - 175
+                if new_pos.x() < mx:
+                    final_pos.setX(new_pos.x())
+                else:
+                    final_pos.setX(mx)
+            else:
+                final_pos.setX(new_pos.x())
+                
+            self.move(final_pos)
         
     def mouseReleaseEvent(self, event) -> None:
         if self.resizing:
@@ -383,7 +372,7 @@ class Window(Surface):
         super().mouseReleaseEvent(event)
     
     def resizeEvent(self, event):
-        self.overlay.resize(event.size())
+        #self.overlay.resize(event.size())
 
         for i in self.overlays:
             i.resize(self.widget.size())
@@ -460,8 +449,6 @@ class WindowManager:
 
         for win in self.windows:
             if win.id == self.focus:
-                win.overlay.show()
-                win.overlay.raise_()
                 self.comm.request("panel", "highlight_btn", win.id, False)
         
         if id != None:
@@ -470,8 +457,6 @@ class WindowManager:
             for win in self.windows:
                 if win.id == id:
                     win.raise_()
-                    win.overlay.lower()
-                    win.overlay.hide()
                     self.comm.request("panel", "highlight_btn", win.id, True)
                 
     def get_focus(self) -> int:

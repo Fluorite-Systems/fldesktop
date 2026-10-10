@@ -13,6 +13,7 @@ class AppletManager:
                 "enable_sidebar": self.enable_sidebar,
                 "disable_sidebar": self.disable_sidebar,
                 "toggle_sidebar": self.toggle_sidebar,
+                "is_sidebar_visible": self.is_sidebar_visible,
                 "get_tray": self.get_tray,
                 "get_sb_toggle": self.get_sb_toggle
             }
@@ -29,7 +30,7 @@ class AppletManager:
         self.sb_toggle.setFlat(True)
         self.sb_toggle.clicked.connect(self.toggle_sidebar)
 
-        self.sbv = False
+        self.sbv = True
 
         self.applets = []
 
@@ -64,6 +65,10 @@ class AppletManager:
         else:
             self.disable_sidebar()
         self.sbv = not self.sbv
+
+    def is_sidebar_visible(self):
+
+        return self.sbv
 
     def get_tray(self):
 

@@ -1,10 +1,6 @@
 from PySide6.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QMenu)
 from PySide6.QtGui import QIcon
-from PySide6.QtCore import QPoint, Qt
-
-from fldesktop.include.widgets.menu import Menu
-
-import os
+from PySide6.QtCore import QPoint
 
 
 class Actions(QWidget):
@@ -44,9 +40,7 @@ class Actions(QWidget):
         self.pwr_btn.setIcon(
             self.comm.request("iconmgr", "get", "system-shutdown")
         )
-        self.pwr_menu = Menu(
-            self.comm, self.comm.request("desktop", "get_instance")
-        )
+        self.pwr_menu = QMenu()
         self.shutdown_act = self.pwr_menu.addAction(
             QIcon.fromTheme("system-shutdown-symbolic"),
             self.comm.request("localemgr", "tr", "Shutdown")

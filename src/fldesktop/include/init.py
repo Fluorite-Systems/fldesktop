@@ -1,11 +1,10 @@
-from fldesktop.include import (communicator, desktop, dialogs, lifecycle,
+from fldesktop.include import (communicator, desktop, dialogs, lifecycle, superfx,
                      thememgr, pkgmgr, lockscreen, os_manager,
                      configmgr, appserver, search, wm, loginmgr,
                      localemgr, notifications, iconmgr, QApp,
                      PostInit, fs3, uikit, appletmgr,
                      panel, startupscreen, extsvinit)
 from fldesktop.include.appserver.clientmgr import ClientManager
-from fldesktop.include.widgets.surface import SurfaceManager
 from fldesktop.include.input import InputManager
 
 import logging
@@ -64,20 +63,20 @@ SERVICES = {
         "object": InputManager,
         "depends": ["QApplication", "LocaleManager"]
     },
-    "SurfaceManager": {
-        "object": SurfaceManager,
-        "importance": "critical",
-        "depends": ["QApplication"],
-        "runlevel": 1
-    },
     "Desktop": {
         "object": desktop.Desktop,
         "importance": "critical",
         "depends": [
             "QApplication", "ConfigManager",
             "IconManager", "PackageManager",
-            "SurfaceManager", "InputManager"
+            "InputManager"
         ],
+        "runlevel": 1
+    },
+    "SuperFX": {
+        "object": superfx.SuperFX,
+        "importance": "critical",
+        "depends": ["Desktop"],
         "runlevel": 1
     },
     "UIKit": {

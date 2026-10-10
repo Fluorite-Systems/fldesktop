@@ -53,7 +53,7 @@ class EventFilter(QObject):
 
 class Menu(Surface): 
     def __init__(self, comm, widget: QWidget, anchor: QWidget, desktop):
-        super().__init__(comm, desktop)
+        super().__init__(comm, layer="top", hover_materialize=True, auto_attach=False)
         self.desktop = desktop
         self.anchor = anchor
         self.active = False
@@ -68,8 +68,8 @@ class Menu(Surface):
         self.filter = EventFilter(self)
         self.filter.install()
 
-        self.hide()
         self.lower()
+        self.hide()
 
     def open(self):
         "Opens menu with some anim"
@@ -98,8 +98,6 @@ class Menu(Surface):
 
         self.move(x, 30)
 
-        self.set_raycast_enabled(True)
-
         Animation(self.comm, self.parent(), self.grab(), "mopen",
                   {"pos": self.pos(), "size": self.size()},
                   lambda: show(self))
@@ -108,7 +106,6 @@ class Menu(Surface):
         "Close the menu with some anim"
 
         self.hide()
-        self.set_raycast_enabled(False)
         
         Animation(self.comm, self.parent(), self.grab(), "mclose",
                   {"pos": self.pos(), "size": self.size()},

@@ -62,12 +62,16 @@ class AppBtn(QPushButton):
 class Panel(Surface):
     def __init__(self, comm):
         super().__init__(
-            comm, comm.request("desktop", "get_instance"), 5
+            comm,
+            layer="top",
+            hover_materialize=True
         )
         self.comm = comm
         self.setAttribute(Qt.WidgetAttribute.WA_AlwaysStackOnTop)
 
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+
+        self.set_glow_enabled(False)
 
         self.comm.register("panel", {
             "raise": self.raise_,
@@ -114,9 +118,12 @@ class Panel(Surface):
     
     def refresh_geometry(self):
         "Refreshes geometry"
-        dsize = self.parent().size()
 
-        self.setGeometry(0, 0, dsize.width(), 26)
+        dsize = self.comm.request("desktop", "get_instance").size()
+
+        reserved = self.comm.request("appletmgr", "is_sidebar_visible") * 175
+
+        self.setGeometry(0, 0, dsize.width() - reserved, 26)
 
     def add_btn(self, id, icon, text, on_click):
 

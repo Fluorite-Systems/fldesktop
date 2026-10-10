@@ -52,7 +52,7 @@ class Menu(Surface):
     hovered = Signal(QAction)
 
     def __init__(self, comm, parent: Optional[QWidget] = None, title: str = ""):
-        super().__init__(comm, parent)
+        super().__init__(comm, 2)
         self._title = title
         self._actions: list[QAction] = []
         self._buttons: list[_MenuItemButton] = []

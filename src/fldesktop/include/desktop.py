@@ -3,21 +3,29 @@ from PySide6.QtWidgets import (QApplication, QWidget, QMenu,
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPixmap
 
+from fldesktop.include.widgets.surface import Surface
 from fldesktop.include.widgets.fade_effect import FadeEffect
-from fldesktop.include.widgets.menu import Menu
 
 import os
 
 
-class Background(QLabel):
+class Background(Surface):
     def __init__(self, desktop, comm) -> None:
-        super().__init__(desktop)
+        super().__init__(
+            comm, glass=False,
+            never_materialize=True
+        )
+
+        self.lbl = QLabel(self)
+        self.lbl.show()
 
         self.comm = comm
 
         self.comm.subscribe("reload_config", self.reload)
 
         self.load_bg()
+
+        self.lower()
 
     def load_bg(self) -> None:
         "Load background"
@@ -42,11 +50,12 @@ class Background(QLabel):
     def refresh(self) -> None:
         "Resize background"
 
-        parent = self.parent()
+        parent = self.comm.request("desktop", "get_instance")
 
-        self.setGeometry(0, 0, parent.size().width(), parent.size().height())
+        self.setFixedSize(parent.size())
+        self.lbl.setFixedSize(self.size())
 
-        self.setPixmap(self.pic.scaled(parent.size(), 
+        self.lbl.setPixmap(self.pic.scaled(parent.size(), 
                             Qt.AspectRatioMode.KeepAspectRatioByExpanding, 
                             Qt.TransformationMode.SmoothTransformation)
         )
@@ -68,7 +77,7 @@ class Desktop(QWidget):
         self.bg = Background(self, self.comm)
 
         # Context menu when right-clicked at the background
-        self.menu = Menu(self.comm, self)
+        self.menu = QMenu()
         self.ch_bg_action = self.menu.addAction(
             self.comm.request("localemgr", "tr", "Change background")
         )

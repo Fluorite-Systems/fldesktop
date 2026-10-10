@@ -21,8 +21,6 @@ class OverlayView(Surface):
 
         self.setMinimumSize(200, 100)
 
-        self.set_raycast_enabled(False)
-
         self.ml = QVBoxLayout(self)
         self.tl = QHBoxLayout()
         self.cont = Container(parent.on_resize)
