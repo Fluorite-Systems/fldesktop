@@ -19,7 +19,7 @@ class Window(Surface):
                     comm, icon: QIcon, size: tuple = (400, 400),
                     type: str = "normal"
                 ) -> None:
-        super().__init__(comm, 1, auto_attach=False)
+        super().__init__(comm, auto_attach=False)
 
         self.setObjectName("surface")
         self.setAttribute(Qt.WA_DeleteOnClose)
