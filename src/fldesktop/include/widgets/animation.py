@@ -158,7 +158,7 @@ class Animation(Surface):
 
             case "sbopen":
                 app.setStartValue(
-                    QPoint(params["pos"].x() + params["size"].width(), 26)
+                    QPoint(params["pos"].x() + params["size"].width(), 0)
                 )
                 app.setEndValue(params["pos"])
                 aps.setStartValue(params["size"])
@@ -167,7 +167,7 @@ class Animation(Surface):
             case "sbclose":
                 app.setStartValue(params["pos"])
                 app.setEndValue(
-                    QPoint(params["pos"].x() + params["size"].width(), 26)
+                    QPoint(params["pos"].x() + params["size"].width(), 0)
                 )
                 aps.setStartValue(params["size"])
                 aps.setEndValue(params["size"])
