@@ -7,11 +7,13 @@ from fldesktop.include.superfx.glrender import (
     PROP_LAYER,
     PROP_NEVER_MAT,
     PROP_TINT_SCALE,
+    PROP_TINT_COLOR
 )
 
 
 class Surface(QWidget):
-    def __init__(self, comm, tint=1, size=(400, 300), parent=None,
+    def __init__(self, comm, tint_color=None, tint_alpha=1,
+                 size=(400, 300), parent=None,
                  z=1.0, glass=True, layer=None,
                  hover_materialize=False,
                  never_materialize=False,
@@ -19,10 +21,19 @@ class Surface(QWidget):
         super().__init__(parent)
 
         self.comm = comm
-        self.tint = int(tint)
 
         self.setAttribute(
             Qt.WidgetAttribute.WA_TranslucentBackground, True)
+
+        self.setProperty(PROP_TINT_SCALE, tint_alpha)
+        if tint_color is not None:
+            self.setProperty(
+                PROP_TINT_COLOR,
+                tuple(
+                    max(0, min(255, int(round(c * 255))))
+                    for c in tint_color
+                )
+            )
 
         if isinstance(size, (tuple, list)) and len(size) == 2:
             self.resize(int(size[0]), int(size[1]))

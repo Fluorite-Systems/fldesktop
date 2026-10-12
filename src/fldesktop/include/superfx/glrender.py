@@ -10,13 +10,13 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from PySide6.QtWidgets import QApplication, QWidget
 
 from OpenGL.GL import *
-
 from fldesktop.include.superfx.shaders import *
 
 
 PROP_LAYER = "compositor.layer"
 PROP_ENABLE_GLOW = "compositor.enable_glow"
 PROP_TINT_SCALE = "compositor.tint_amount_scale"
+PROP_TINT_COLOR = "compositor.tint_color"
 PROP_HOVER_MAT = "compositor.materialize_on_hover"
 PROP_NEVER_MAT = "compositor.never_materialize"
 
@@ -31,7 +31,7 @@ FPS_REFRESH_S = 1.0
 FRAME_INTERVAL_MS = 16
 STYLE_PRIORITY = ("Oxygen", "Breeze", "Breeze-Dark")
 
-ALWAYS_REFRESH_SNAPSHOTS = True
+SAFETY_REFRESH_MS = 250.0
 
 DEMO_WINDOW_SIZE = (480, 400)
 DEMO_TITLE_H = 30
@@ -70,18 +70,6 @@ def _alive(w):
     except (RuntimeError, SystemError):
         return False
 
-def _paintable(w):
-    if not _alive(w):
-        return False
-    try:
-        if not w.isVisible():
-            return False
-        if not w.testAttribute(
-                Qt.WidgetAttribute.WA_WState_Polished):
-            return False
-    except (RuntimeError, SystemError):
-        return False
-    return True
 
 def _prop(w, name):
     try:
@@ -107,9 +95,22 @@ def _app_closing():
     return app is None or app.closingDown()
 
 
+def _paintable(w):
+    if not _alive(w):
+        return False
+    try:
+        if not w.isVisible():
+            return False
+        if not w.testAttribute(Qt.WidgetAttribute.WA_WState_Polished):
+            return False
+    except (RuntimeError, SystemError):
+        return False
+    return True
+
+
 class _Reg:
     __slots__ = ("widget", "z", "glass", "layer",
-                 "tex", "img", "tex_wh", "dirty")
+                 "tex", "img", "tex_wh", "dirty", "last_refresh")
 
     def __init__(self, widget, z, glass, layer):
         self.widget = widget
@@ -120,6 +121,7 @@ class _Reg:
         self.img = None
         self.tex_wh = None
         self.dirty = True
+        self.last_refresh = 0.0
 
     @property
     def geom(self):
@@ -578,6 +580,7 @@ class GLRender(QOpenGLWidget):
                 glDeleteTextures(1, [r.tex])
             r.tex = self._make_tex(ww, wh)
             r.tex_wh = (ww, wh)
+
         glBindTexture(GL_TEXTURE_2D, r.tex)
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ww, wh,
                         GL_RGBA, GL_UNSIGNED_BYTE, arr.tobytes())
@@ -631,6 +634,17 @@ class GLRender(QOpenGLWidget):
         except (TypeError, ValueError):
             return 1.0
 
+    def _tint_color(self, w):
+        v = _prop(w, PROP_TINT_COLOR)
+        if v is None:
+            return (1.0, 1.0, 1.0)
+        try:
+            if len(v) == 3:
+                return (float(v[0]), float(v[1]), float(v[2]))
+        except (TypeError, ValueError, IndexError):
+            pass
+        return (1.0, 1.0, 1.0)
+
     def _draw_window(self, r, blurred_tex, W, H, pad_px, draw_surface):
         x, y, ww, wh = r.geom
         w_pad = ww + 2 * pad_px
@@ -665,6 +679,7 @@ class GLRender(QOpenGLWidget):
         self._set("window", "uShadowSpreadPx", cfg.shadow_spread * ref)
         self._set("window", "uShadowAlpha", cfg.shadow_alpha)
         self._set("window", "uTint", *cfg.tint)
+        self._set("window", "uTintColor", *self._tint_color(r.widget))
         self._set("window", "uTintAmount",
                   cfg.tint_amount * self._tint_scale(r.widget))
         self._set("window", "uEnableGlow",
@@ -759,6 +774,7 @@ class GLRender(QOpenGLWidget):
         blurred = blurred_wallpaper
 
         pad_px = int(min(W, H) * self.config.shadow_spread * 5.0) + 16
+        now = time.perf_counter()
 
         visible = []
         for r in self._regs:
@@ -778,17 +794,16 @@ class GLRender(QOpenGLWidget):
 
         for r in visible:
             is_mat = (r.widget is self._materialized_widget)
+            ww = r.widget.width()
+            wh = r.widget.height()
 
-            need_refresh = (
-                ALWAYS_REFRESH_SNAPSHOTS
-                or is_mat
-                or r.dirty
-                or r.tex is None
-                or r.tex_wh != (r.widget.width(), r.widget.height()))
+            stale_size = (r.tex is None) or (r.tex_wh != (ww, wh))
+            overdue = (now - r.last_refresh) * 1000.0 >= SAFETY_REFRESH_MS
 
-            if need_refresh:
+            if stale_size or r.dirty or overdue:
                 self._refresh_surface_tex(r)
                 r.dirty = False
+                r.last_refresh = now
 
             source_blur = blurred_wallpaper if is_mat else blurred
 
@@ -811,7 +826,6 @@ class GLRender(QOpenGLWidget):
         self._present(W, H)
 
         self._frames += 1
-        now = time.perf_counter()
         if now - self._fps_t >= FPS_REFRESH_S:
             self._fps = self._frames / (now - self._fps_t)
             self._frames = 0

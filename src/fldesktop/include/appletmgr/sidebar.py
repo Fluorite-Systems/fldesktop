@@ -9,7 +9,10 @@ from fldesktop.include.widgets.animation import Animation
 
 class Sidebar(Surface):
     def __init__(self, comm):
-        super().__init__(comm, 5, layer="top", hover_materialize=True)
+        super().__init__(
+            comm, tint_color=(0, 0, 0), tint_alpha=1,
+            layer="top", hover_materialize=True
+        )
 
         self.comm = comm
         self.comm.subscribe("desktop_size_changed", self.update_geometry)

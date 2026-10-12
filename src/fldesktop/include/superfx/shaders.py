@@ -75,6 +75,7 @@ uniform float uShadowSpreadPx;
 uniform float uShadowAlpha;
 
 uniform vec3  uTint;
+uniform vec3  uTintColor;
 uniform float uTintAmount;
 
 uniform float uWaveStrength;
@@ -242,7 +243,9 @@ void main() {
             clamp(lensUV, vec2(0.001), vec2(0.999))).rgb;
     }
 
-    vec3 tinted = mix(blur * 0.92, uTint, uTintAmount);
+    // Per-window tint color multiplies the global tint (component-wise).
+    vec3 effective_tint = uTint * uTintColor;
+    vec3 tinted = mix(blur * 0.92, effective_tint, uTintAmount);
 
     vec2 globalPx = uvQt * uResolution;
     vec2 waveDir = vec2(cos(uWaveAngle), sin(uWaveAngle));
@@ -264,7 +267,6 @@ void main() {
 
     vec3 glass;
     if (uDrawSurface >= 0.5) {
-        // Premultiplied source-over of surface content onto glass.
         vec4 surf = texture(uSurface, surfUV);
         glass = surf.rgb + (tinted + glow) * (1.0 - surf.a);
     } else {
