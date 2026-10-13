@@ -5,6 +5,7 @@ from fldesktop.include.superfx.glrender import (
     PROP_ENABLE_GLOW,
     PROP_HOVER_MAT,
     PROP_LAYER,
+    PROP_LAYER_LOCKED,
     PROP_NEVER_MAT,
     PROP_TINT_SCALE,
     PROP_TINT_COLOR
@@ -14,7 +15,7 @@ from fldesktop.include.superfx.glrender import (
 class Surface(QWidget):
     def __init__(self, comm, tint_color=None, tint_alpha=1,
                  size=(400, 300), parent=None,
-                 z=1.0, glass=True, layer=None,
+                 z=1.0, glass=True, layer=None, layer_lock=False,
                  hover_materialize=False,
                  never_materialize=False,
                  auto_attach=True):
@@ -42,7 +43,8 @@ class Surface(QWidget):
 
         self._z = float(z)
         self._glass = bool(glass)
-        self._layer = layer if layer in (None, "bottom", "top") else None
+        self._layer = layer
+        self._layer_lock = bool(layer_lock)
         self._hover_materialize = bool(hover_materialize)
         self._never_materialize = bool(never_materialize)
 
@@ -55,6 +57,7 @@ class Surface(QWidget):
 
     def _apply_props(self):
         self.setProperty(PROP_LAYER, self._layer)
+        self.setProperty(PROP_LAYER_LOCKED, self._layer_lock)
         self.setProperty(PROP_HOVER_MAT, self._hover_materialize)
         self.setProperty(PROP_NEVER_MAT, self._never_materialize)
         if self.property(PROP_ENABLE_GLOW) is None:

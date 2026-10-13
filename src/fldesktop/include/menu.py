@@ -51,18 +51,21 @@ class EventFilter(QObject):
 
         QApplication.instance().removeEventFilter(self)
 
+
 class Menu(Surface): 
     def __init__(self, comm, widget: QWidget, anchor: QWidget, desktop):
-        super().__init__(comm, layer="top", hover_materialize=True, auto_attach=False)
+        super().__init__(comm, layer=5, hover_materialize=True, auto_attach=False)
         self.desktop = desktop
         self.anchor = anchor
         self.active = False
 
-        self.setFixedSize(widget.size())
+        self.widget = widget
+
+        self.sync_size()
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.addWidget(widget)
+        self.layout.addWidget(self.widget)
         self.setObjectName("menu")
 
         self.filter = EventFilter(self)
@@ -70,6 +73,9 @@ class Menu(Surface):
 
         self.lower()
         self.hide()
+
+    def sync_size(self):
+        self.setFixedSize(self.widget.size())
 
     def open(self):
         "Opens menu with some anim"

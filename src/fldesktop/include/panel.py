@@ -63,7 +63,7 @@ class Panel(Surface):
     def __init__(self, comm):
         super().__init__(
             comm,
-            layer="top",
+            layer=3, layer_lock=True,
             hover_materialize=True
         )
         self.comm = comm

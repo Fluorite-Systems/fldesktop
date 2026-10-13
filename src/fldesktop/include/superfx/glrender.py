@@ -14,14 +14,15 @@ from fldesktop.include.superfx.shaders import *
 
 
 PROP_LAYER = "compositor.layer"
+PROP_LAYER_LOCKED = "compositor.layer_locked"
+
 PROP_ENABLE_GLOW = "compositor.enable_glow"
 PROP_TINT_SCALE = "compositor.tint_amount_scale"
 PROP_TINT_COLOR = "compositor.tint_color"
 PROP_HOVER_MAT = "compositor.materialize_on_hover"
 PROP_NEVER_MAT = "compositor.never_materialize"
 
-_LAYER_RANK = {"bottom": 0, "top": 2}
-_LAYER_NORMAL = 1
+DEFAULT_LAYER = 1.0
 
 GL_CTX_VERSION = (4, 4)
 GL_SWAP_INTERVAL = 1
@@ -29,19 +30,15 @@ BLUR_LEVELS = 4
 SHOW_FPS = True
 FPS_REFRESH_S = 1.0
 FRAME_INTERVAL_MS = 16
-STYLE_PRIORITY = ("Oxygen", "Breeze", "Breeze-Dark")
 
 SAFETY_REFRESH_MS = 250.0
-
-DEMO_WINDOW_SIZE = (480, 400)
-DEMO_TITLE_H = 30
 
 
 @dataclass
 class GlassConfig:
     tint: tuple = (0.1, 0.1, 0.1)
     tint_amount: float = 0.4
-    blur_strength: float = 0.5
+    blur_strength: float = 0.1
 
     shadow_offset: tuple = (0.004, 0.004)
     shadow_spread: float = 0.014
@@ -78,10 +75,6 @@ def _prop(w, name):
         return None
 
 
-def _layer_rank(layer):
-    return _LAYER_RANK.get(layer, _LAYER_NORMAL)
-
-
 def _q_raise(w):
     QWidget.raise_(w)
 
@@ -108,15 +101,31 @@ def _paintable(w):
     return True
 
 
+def _coerce_layer(v):
+    if v is None:
+        return DEFAULT_LAYER
+    if isinstance(v, str):
+        if v == "bottom":
+            return 0.0
+        if v == "top":
+            return 2.0
+        return DEFAULT_LAYER
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return DEFAULT_LAYER
+
+
 class _Reg:
-    __slots__ = ("widget", "z", "glass", "layer",
+    __slots__ = ("widget", "z", "glass", "layer", "locked",
                  "tex", "img", "tex_wh", "dirty", "last_refresh")
 
-    def __init__(self, widget, z, glass, layer):
+    def __init__(self, widget, z, glass, layer, locked):
         self.widget = widget
         self.z = float(z)
         self.glass = bool(glass)
-        self.layer = layer
+        self.layer = float(layer)
+        self.locked = bool(locked)
         self.tex = None
         self.img = None
         self.tex_wh = None
@@ -211,16 +220,25 @@ class GLRender(QOpenGLWidget):
         except (RuntimeError, SystemError):
             pass
 
-    def register(self, widget, z=1.0, glass=True):
+    def register(self, widget, z=1.0, glass=True,
+                 layer=None, locked=None):
         for r in self._regs:
             if r.widget is widget:
                 return r
-        layer = _prop(widget, PROP_LAYER)
-        if layer not in (None, "bottom", "top"):
-            layer = None
-        r = _Reg(widget, z, glass, layer)
+
+        if layer is None:
+            layer = _coerce_layer(_prop(widget, PROP_LAYER))
+        else:
+            layer = _coerce_layer(layer)
+
+        if locked is None:
+            locked = bool(_prop(widget, PROP_LAYER_LOCKED))
+        else:
+            locked = bool(locked)
+
+        r = _Reg(widget, z, glass, layer, locked)
         self._regs.append(r)
-        self._regs.sort(key=lambda x: (_layer_rank(x.layer), x.z))
+        self._regs.sort(key=lambda x: (x.layer, x.z))
         self._reg_by_widget[widget] = r
         try:
             self.update()
@@ -256,15 +274,17 @@ class GLRender(QOpenGLWidget):
 
     def raise_surface(self, widget):
         r = self._reg_by_widget.get(widget)
-        if r is None or r.layer in ("bottom", "top"):
+        if r is None or r.locked:
             return
-        normal = [x for x in self._regs if x.layer is None and x is not r]
-        if normal:
-            top = max(x.z for x in normal)
-            if r.z >= top:
-                return
-            r.z = top + 1.0
-        self._regs.sort(key=lambda x: (_layer_rank(x.layer), x.z))
+        peers = [x for x in self._regs
+                 if x is not r and x.layer == r.layer]
+        if not peers:
+            return
+        top = max(x.z for x in peers)
+        if r.z >= top:
+            return
+        r.z = top + 1.0
+        self._regs.sort(key=lambda x: (x.layer, x.z))
         try:
             self.update()
         except (RuntimeError, SystemError):
@@ -272,13 +292,14 @@ class GLRender(QOpenGLWidget):
 
     def lower_surface(self, widget):
         r = self._reg_by_widget.get(widget)
-        if r is None or r.layer in ("bottom", "top"):
+        if r is None or r.locked:
             return
-        normal = [x for x in self._regs if x.layer is None and x is not r]
-        if not normal:
+        peers = [x for x in self._regs
+                 if x is not r and x.layer == r.layer]
+        if not peers:
             return
-        r.z = min(x.z for x in normal) - 1.0
-        self._regs.sort(key=lambda x: (_layer_rank(x.layer), x.z))
+        r.z = min(x.z for x in peers) - 1.0
+        self._regs.sort(key=lambda x: (x.layer, x.z))
         try:
             self.update()
         except (RuntimeError, SystemError):
@@ -788,7 +809,7 @@ class GLRender(QOpenGLWidget):
             ww, wh = w.width(), w.height()
             if ww <= 0 or wh <= 0:
                 continue
-            if r.layer == "bottom" and self._wallpaper_image is not None:
+            if r.layer == 0.0 and self._wallpaper_image is not None:
                 continue
             visible.append(r)
 
@@ -860,7 +881,7 @@ class Container(QWidget):
         self._materialized_by_hover = False
         self._restacking = False
 
-    def add_surface(self, w, z=None, glass=None):
+    def add_surface(self, w, z=None, glass=None, layer=None, locked=None):
         if not _alive(w):
             return None
 
@@ -886,7 +907,8 @@ class Container(QWidget):
 
         z = z if z is not None else getattr(w, "_z", 1.0)
         glass = glass if glass is not None else getattr(w, "_glass", True)
-        reg = self.gl.register(w, z=z, glass=glass)
+        reg = self.gl.register(w, z=z, glass=glass,
+                               layer=layer, locked=locked)
         self._restack()
         return reg
 
