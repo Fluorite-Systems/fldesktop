@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from PySide6.QtCore import QEvent, QPoint, QRect, QTimer, Qt
-from PySide6.QtGui import QImage, QSurfaceFormat
+from PySide6.QtGui import QImage, QOpenGLContext, QSurfaceFormat
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from PySide6.QtWidgets import QApplication, QWidget
 
@@ -15,7 +15,6 @@ from fldesktop.include.superfx.shaders import *
 
 PROP_LAYER = "compositor.layer"
 PROP_LAYER_LOCKED = "compositor.layer_locked"
-
 PROP_ENABLE_GLOW = "compositor.enable_glow"
 PROP_TINT_SCALE = "compositor.tint_amount_scale"
 PROP_TINT_COLOR = "compositor.tint_color"
@@ -33,12 +32,14 @@ FRAME_INTERVAL_MS = 16
 
 SAFETY_REFRESH_MS = 250.0
 
+MAX_TEX_DIM = 16384
+
 
 @dataclass
 class GlassConfig:
     tint: tuple = (0.1, 0.1, 0.1)
     tint_amount: float = 0.4
-    blur_strength: float = 0.1
+    blur_strength: float = 0.5
 
     shadow_offset: tuple = (0.004, 0.004)
     shadow_spread: float = 0.014
@@ -186,6 +187,10 @@ class GLRender(QOpenGLWidget):
         self._wallpaper_image = None
         self._wallpaper_tex = None
 
+        self._gl_ctx = None
+        self._shutting_down = False
+        self._max_tex_dim = MAX_TEX_DIM
+
         self._frames = 0
         self._fps_t = time.perf_counter()
         self._fps = 0.0
@@ -201,7 +206,7 @@ class GLRender(QOpenGLWidget):
             app.installEventFilter(self)
 
     def _on_tick(self):
-        if _app_closing():
+        if _app_closing() or self._shutting_down:
             try:
                 self._tick.stop()
             except (RuntimeError, SystemError):
@@ -212,9 +217,85 @@ class GLRender(QOpenGLWidget):
         except (RuntimeError, SystemError):
             pass
 
-    def set_wallpaper(self, image):
-        self._wallpaper_image = image
+    def _tex_ok(self, w, h):
+        return 0 < w <= self._max_tex_dim and 0 < h <= self._max_tex_dim
+
+    def _ensure_context(self):
+        try:
+            ctx = QOpenGLContext.currentContext()
+        except (RuntimeError, SystemError):
+            return False
+        if ctx is None:
+            return False
+        same = False
+        try:
+            same = (ctx == self._gl_ctx)
+        except Exception:
+            same = False
+        if not same:
+            self._forget_gl_resources()
+            self._rebuild_gl()
+            self._gl_ctx = ctx
+        return True
+
+    def _forget_gl_resources(self):
+        self._progs = {}
+        self._uni = {}
+        self._vao = 0
+        self._vbo = 0
+
+        self._scene_fbo = None
+        self._scene_tex = None
+        self._blur_src_fbo = None
+        self._blur_src_tex = None
+        self._scene_size = (0, 0)
+        self._blur_down_fbos = []
+        self._blur_down_texs = []
+        self._blur_down_sizes = []
+        self._blur_up_fbos = []
+        self._blur_up_texs = []
+        self._blur_up_sizes = []
+
+        self._win_fbo = None
+        self._win_tex = None
+        self._win_size = (0, 0)
+
         self._wallpaper_tex = None
+        for r in self._regs:
+            r.tex = None
+            r.tex_wh = None
+            r.dirty = True
+
+    def _rebuild_gl(self):
+        glDisable(GL_DEPTH_TEST)
+        glDisable(GL_BLEND)
+
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0)
+        glPixelStorei(GL_UNPACK_SKIP_ROWS, 0)
+        glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0)
+
+        try:
+            m = int(glGetInteger(GL_MAX_TEXTURE_SIZE))
+            if m > 0:
+                self._max_tex_dim = min(MAX_TEX_DIM, m)
+        except Exception:
+            pass
+
+        self._progs = {
+            "kawase_down": self._link(
+                VERT_SRC, FRAG_KAWASE_DOWN_SRC, "kawase_down"),
+            "kawase_up": self._link(
+                VERT_SRC, FRAG_KAWASE_UP_SRC, "kawase_up"),
+            "copy": self._link(VERT_SRC, FRAG_COPY_SRC, "copy"),
+            "window": self._link(VERT_SRC, FRAG_WINDOW_SRC, "window"),
+        }
+        self._uni = {k: self._collect(p) for k, p in self._progs.items()}
+        self._create_quad()
+
+    def set_wallpaper(self, image):
+        self._drop_wallpaper_tex()
+        self._wallpaper_image = image
         try:
             self.update()
         except (RuntimeError, SystemError):
@@ -255,15 +336,18 @@ class GLRender(QOpenGLWidget):
                 tex = r.tex
                 r.tex = None
                 r.img = None
+                r.tex_wh = None
 
                 if (tex is not None
                         and self.isValid()
-                        and not _app_closing()):
+                        and not _app_closing()
+                        and not self._shutting_down):
                     try:
                         self.makeCurrent()
+                        glActiveTexture(GL_TEXTURE0)
                         glDeleteTextures(1, [tex])
                         self.doneCurrent()
-                    except (RuntimeError, SystemError):
+                    except (RuntimeError, SystemError, GLError):
                         pass
                 try:
                     self.update()
@@ -326,7 +410,7 @@ class GLRender(QOpenGLWidget):
     def eventFilter(self, obj, ev):
         if not isinstance(obj, QWidget):
             return False
-        if _app_closing():
+        if _app_closing() or self._shutting_down:
             return False
         et = ev.type()
         if et in (QEvent.Type.UpdateRequest,
@@ -360,36 +444,85 @@ class GLRender(QOpenGLWidget):
     def initializeGL(self):
         print("GL:", glGetString(GL_VERSION).decode(),
               "|", glGetString(GL_RENDERER).decode())
-        glDisable(GL_DEPTH_TEST)
-        glDisable(GL_BLEND)
-
-        self._progs = {
-            "kawase_down": self._link(
-                VERT_SRC, FRAG_KAWASE_DOWN_SRC, "kawase_down"),
-            "kawase_up": self._link(
-                VERT_SRC, FRAG_KAWASE_UP_SRC, "kawase_up"),
-            "copy": self._link(VERT_SRC, FRAG_COPY_SRC, "copy"),
-            "window": self._link(VERT_SRC, FRAG_WINDOW_SRC, "window"),
-        }
-        self._uni = {k: self._collect(p) for k, p in self._progs.items()}
-        self._create_quad()
+        self._rebuild_gl()
+        try:
+            self._gl_ctx = QOpenGLContext.currentContext()
+        except (RuntimeError, SystemError):
+            self._gl_ctx = None
 
     def resizeGL(self, w, h):
-        if w > 0 and h > 0:
-            self._setup_fbos()
+        if w <= 0 or h <= 0:
+            return
+        if not self._ensure_context():
+            return
+        self._setup_fbos()
 
     def closeEvent(self, ev):
+        self._shutting_down = True
+
         try:
             self._tick.stop()
         except (RuntimeError, SystemError):
             pass
-        if not _app_closing():
-            app = QApplication.instance()
-            if app is not None:
+
+        app = QApplication.instance()
+        if app is not None:
+            try:
+                app.removeEventFilter(self)
+            except (RuntimeError, SystemError):
+                pass
+
+        try:
+            if self.isValid():
+                self.makeCurrent()
                 try:
-                    app.removeEventFilter(self)
-                except (RuntimeError, SystemError):
+                    self._destroy_fbos()
+                except Exception:
                     pass
+                try:
+                    self._drop_wallpaper_tex()
+                except Exception:
+                    pass
+                for r in self._regs:
+                    tex = r.tex
+                    r.tex = None
+                    r.img = None
+                    r.tex_wh = None
+                    if tex is not None:
+                        try:
+                            glDeleteTextures(1, [tex])
+                        except Exception:
+                            pass
+                for p in self._progs.values():
+                    try:
+                        glDeleteProgram(p)
+                    except Exception:
+                        pass
+                self._progs.clear()
+                self._uni.clear()
+                try:
+                    if self._vbo:
+                        glDeleteBuffers(1, [self._vbo])
+                    self._vbo = 0
+                except Exception:
+                    pass
+                try:
+                    if self._vao:
+                        glDeleteVertexArrays(1, [self._vao])
+                    self._vao = 0
+                except Exception:
+                    pass
+                self.doneCurrent()
+        except Exception:
+            pass
+
+        for r in self._regs:
+            r.widget = None
+        self._regs.clear()
+        self._reg_by_widget.clear()
+        self._materialized_widget = None
+        self._wallpaper_image = None
+
         super().closeEvent(ev)
 
     def _compile(self, src, kind):
@@ -447,14 +580,13 @@ class GLRender(QOpenGLWidget):
 
     def _create_quad(self):
         verts = np.array(
-            [-1,-1,0,0,  1,-1,1,0,  -1,1,0,1,  1,1,1,1],
+            [-1, -1, 0, 0, 1, -1, 1, 0, -1, 1, 0, 1, 1, 1, 1, 1],
             dtype=np.float32)
         self._vao = glGenVertexArrays(1)
         glBindVertexArray(self._vao)
         self._vbo = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, self._vbo)
-        glBufferData(GL_ARRAY_BUFFER, verts.nbytes, verts,
-                     GL_STATIC_DRAW)
+        glBufferData(GL_ARRAY_BUFFER, verts.nbytes, verts, GL_STATIC_DRAW)
         glEnableVertexAttribArray(0)
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 16,
                               ctypes.c_void_p(0))
@@ -464,23 +596,50 @@ class GLRender(QOpenGLWidget):
         glBindVertexArray(0)
 
     def _make_tex(self, w, h):
+        if not self._tex_ok(w, h):
+            return 0
+        glActiveTexture(GL_TEXTURE0)
         tex = glGenTextures(1)
+        if not tex:
+            return 0
         glBindTexture(GL_TEXTURE_2D, tex)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0,
-                     GL_RGBA, GL_UNSIGNED_BYTE, None)
+        try:
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0,
+                         GL_RGBA, GL_UNSIGNED_BYTE, None)
+        except GLError as e:
+            print(f"[GLRender] glTexImage2D failed ({w}x{h}): {e}")
+            try:
+                glDeleteTextures(1, [tex])
+            except Exception:
+                pass
+            return 0
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-        return tex
+        return int(tex)
 
     def _make_fbo(self, w, h):
         tex = self._make_tex(w, h)
+        if not tex:
+            return None, None
         fbo = glGenFramebuffers(1)
+        if not fbo:
+            glActiveTexture(GL_TEXTURE0)
+            glDeleteTextures(1, [tex])
+            return None, None
         glBindFramebuffer(GL_FRAMEBUFFER, fbo)
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                GL_TEXTURE_2D, tex, 0)
+        status = glCheckFramebufferStatus(GL_FRAMEBUFFER)
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        if status != GL_FRAMEBUFFER_COMPLETE:
+            print(f"[GLRender] FBO incomplete: status=0x{status:x} "
+                  f"size={w}x{h}")
+            glDeleteFramebuffers(1, [fbo])
+            glActiveTexture(GL_TEXTURE0)
+            glDeleteTextures(1, [tex])
+            return None, None
         return fbo, tex
 
     def _setup_fbos(self):
@@ -488,8 +647,19 @@ class GLRender(QOpenGLWidget):
         if w <= 0 or h <= 0 or self._scene_size == (w, h):
             return
         self._destroy_fbos()
-        self._scene_fbo, self._scene_tex = self._make_fbo(w, h)
-        self._blur_src_fbo, self._blur_src_tex = self._make_fbo(w, h)
+
+        scene_fbo, scene_tex = self._make_fbo(w, h)
+        blur_fbo, blur_tex = self._make_fbo(w, h)
+        self._scene_fbo = scene_fbo
+        self._scene_tex = scene_tex
+        self._blur_src_fbo = blur_fbo
+        self._blur_src_tex = blur_tex
+
+        if scene_fbo is None or blur_fbo is None:
+            print("[GLRender] scene FBO creation failed; will retry")
+            self._destroy_fbos()
+            return
+
         for i in range(BLUR_LEVELS):
             bw = max(1, w >> (i + 1))
             bh = max(1, h >> (i + 1))
@@ -505,14 +675,18 @@ class GLRender(QOpenGLWidget):
             self._blur_up_fbos.append(f)
             self._blur_up_texs.append(t)
             self._blur_up_sizes.append((bw, bh))
+
         self._scene_size = (w, h)
         for r in self._regs:
             r.tex_wh = None
             r.dirty = True
 
     def _destroy_fbos(self):
-        for f, t in ((self._scene_fbo, self._scene_tex),
-                     (self._blur_src_fbo, self._blur_src_tex)):
+        glActiveTexture(GL_TEXTURE0)
+
+        pairs = [(self._scene_fbo, self._scene_tex),
+                 (self._blur_src_fbo, self._blur_src_tex)]
+        for f, t in pairs:
             if f:
                 glDeleteFramebuffers(1, [f])
             if t:
@@ -528,6 +702,7 @@ class GLRender(QOpenGLWidget):
         self._blur_down_fbos.clear()
         self._blur_down_texs.clear()
         self._blur_down_sizes.clear()
+
         for f, t in zip(self._blur_up_fbos, self._blur_up_texs):
             if f:
                 glDeleteFramebuffers(1, [f])
@@ -546,30 +721,69 @@ class GLRender(QOpenGLWidget):
         self._win_size = (0, 0)
         self._scene_size = (0, 0)
 
+    def _drop_wallpaper_tex(self):
+        tex = self._wallpaper_tex
+        self._wallpaper_tex = None
+        if (tex is not None
+                and self.isValid()
+                and not _app_closing()
+                and not self._shutting_down):
+            try:
+                self.makeCurrent()
+                glActiveTexture(GL_TEXTURE0)
+                glDeleteTextures(1, [tex])
+                self.doneCurrent()
+            except (RuntimeError, SystemError, GLError):
+                pass
+
     def _ensure_win_fbo(self, w, h):
         if (self._win_fbo is not None
                 and self._win_size[0] >= w and self._win_size[1] >= h):
             return
         nw = max(w, self._win_size[0])
         nh = max(h, self._win_size[1])
+        if not self._tex_ok(nw, nh):
+            return
         if self._win_fbo is not None:
             glDeleteFramebuffers(1, [self._win_fbo])
             glDeleteTextures(1, [self._win_tex])
-        self._win_fbo, self._win_tex = self._make_fbo(nw, nh)
-        self._win_size = (nw, nh)
+            self._win_fbo = None
+            self._win_tex = None
+            self._win_size = (0, 0)
+        fbo, tex = self._make_fbo(nw, nh)
+        self._win_fbo = fbo
+        self._win_tex = tex
+        if fbo is None:
+            self._win_size = (0, 0)
+        else:
+            self._win_size = (nw, nh)
 
     def _upload(self, img):
         img = img.convertToFormat(
             QImage.Format.Format_RGBA8888_Premultiplied)
         w, h = img.width(), img.height()
+        if not self._tex_ok(w, h):
+            return 0
         row = img.bytesPerLine()
         arr = np.frombuffer(img.constBits(), dtype=np.uint8)
         arr = arr.reshape(h, row)[:, :w * 4]
         arr = arr.reshape(h, w, 4)[::-1].copy()
+
+        glActiveTexture(GL_TEXTURE0)
         tex = self._make_tex(w, h)
+        if not tex:
+            return 0
         glBindTexture(GL_TEXTURE_2D, tex)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0,
-                     GL_RGBA, GL_UNSIGNED_BYTE, arr.tobytes())
+        try:
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
+                            GL_RGBA, GL_UNSIGNED_BYTE, arr.tobytes())
+        except GLError as e:
+            print(f"[GLRender] wallpaper upload failed: {e}")
+            try:
+                glDeleteTextures(1, [tex])
+            except Exception:
+                pass
+            return 0
         return tex
 
     def _refresh_surface_tex(self, r):
@@ -577,13 +791,12 @@ class GLRender(QOpenGLWidget):
         if not _alive(w):
             return
         ww, wh = w.width(), w.height()
-        if ww <= 0 or wh <= 0:
+        if not self._tex_ok(ww, wh):
             return
 
         fmt = QImage.Format.Format_RGBA8888_Premultiplied
         if r.img is None or r.img.width() != ww or r.img.height() != wh:
             r.img = QImage(ww, wh, fmt)
-
         r.img.fill(0)
 
         try:
@@ -596,50 +809,115 @@ class GLRender(QOpenGLWidget):
         arr = arr.reshape(wh, row)[:, :ww * 4]
         arr = arr.reshape(wh, ww, 4)[::-1].copy()
 
-        if r.tex is None or r.tex_wh != (ww, wh):
-            if r.tex is not None:
-                glDeleteTextures(1, [r.tex])
+        if (r.tex is None
+                or r.tex_wh != (ww, wh)):
+            old = r.tex
+            r.tex = None
+            r.tex_wh = None
+            if old is not None:
+                try:
+                    glActiveTexture(GL_TEXTURE0)
+                    glDeleteTextures(1, [old])
+                except GLError:
+                    pass
             r.tex = self._make_tex(ww, wh)
+            if not r.tex:
+                return
             r.tex_wh = (ww, wh)
 
+        glActiveTexture(GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_2D, r.tex)
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ww, wh,
-                        GL_RGBA, GL_UNSIGNED_BYTE, arr.tobytes())
+        try:
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ww, wh,
+                            GL_RGBA, GL_UNSIGNED_BYTE, arr.tobytes())
+        except GLError as e:
+            print(f"[GLRender] surface upload failed ({ww}x{wh}): {e}; "
+                  "recreating texture")
+            old = r.tex
+            r.tex = None
+            r.tex_wh = None
+            if old is not None:
+                try:
+                    glDeleteTextures(1, [old])
+                except GLError:
+                    pass
+            r.tex = self._make_tex(ww, wh)
+            if not r.tex:
+                return
+            r.tex_wh = (ww, wh)
+            glBindTexture(GL_TEXTURE_2D, r.tex)
+            try:
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ww, wh,
+                                GL_RGBA, GL_UNSIGNED_BYTE, arr.tobytes())
+            except GLError:
+                pass
 
     def _draw_quad(self):
         glBindVertexArray(self._vao)
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4)
         glBindVertexArray(0)
 
-    def _kawase(self, prog, src, dst_fbo, dst_size, src_size):
+    def _kawase(self, prog, src, dst_fbo, dst_size, src_size, scale):
+        if not dst_fbo or not src:
+            return False
+        pid = self._progs.get(prog)
+        if not pid:
+            return False
         glBindFramebuffer(GL_FRAMEBUFFER, dst_fbo)
         glViewport(0, 0, *dst_size)
-        glUseProgram(self._progs[prog])
+        glUseProgram(pid)
+        glActiveTexture(GL_TEXTURE0)
         self._seti(prog, "uTexture", 0)
         self._set(prog, "uSrcTexelSize",
                   1.0 / max(1, src_size[0]),
                   1.0 / max(1, src_size[1]))
-        self._set(prog, "uBlurScale", float(self.config.blur_strength))
-        glActiveTexture(GL_TEXTURE0)
+        self._set(prog, "uBlurScale", scale)
         glBindTexture(GL_TEXTURE_2D, src)
         self._draw_quad()
+        return True
+
+    def _blur_levels(self):
+        s = float(self.config.blur_strength)
+        if s <= 0.0:
+            return 0
+        if s >= 1.0:
+            return BLUR_LEVELS
+        return max(1, int(round(s * BLUR_LEVELS)))
+
+    def _blur_scale(self):
+        s = float(self.config.blur_strength)
+        if s <= 0.0:
+            return 0.0
+        return max(1.0, s)
 
     def _blur_texture(self, src_tex):
+        if not src_tex:
+            return 0
+        scale = self._blur_scale()
+        levels = self._blur_levels()
+        if scale <= 0.0 or levels <= 0:
+            return src_tex
+
         W, H = self._scene_size
         cur = src_tex
         cur_size = (W, H)
-        for i in range(BLUR_LEVELS):
+
+        for i in range(levels):
             ds = self._blur_down_sizes[i]
             self._kawase("kawase_down", cur,
-                         self._blur_down_fbos[i], ds, cur_size)
+                         self._blur_down_fbos[i], ds, cur_size, scale)
             cur = self._blur_down_texs[i]
             cur_size = ds
-        for i in range(BLUR_LEVELS):
-            ds = self._blur_up_sizes[i]
+
+        base = BLUR_LEVELS - levels
+        for i in range(levels):
+            j = base + i
+            ds = self._blur_up_sizes[j]
             self._kawase("kawase_up", cur,
-                         self._blur_up_fbos[i], ds, cur_size)
-            cur = self._blur_up_texs[i]
+                         self._blur_up_fbos[j], ds, cur_size, scale)
+            cur = self._blur_up_texs[j]
             cur_size = ds
+
         return cur
 
     def _enable_glow(self, w):
@@ -667,25 +945,38 @@ class GLRender(QOpenGLWidget):
         return (1.0, 1.0, 1.0)
 
     def _draw_window(self, r, blurred_tex, W, H, pad_px, draw_surface):
+        pid = self._progs.get("window")
+        if not pid:
+            return
         x, y, ww, wh = r.geom
         w_pad = ww + 2 * pad_px
         h_pad = wh + 2 * pad_px
+        if not self._tex_ok(w_pad, h_pad):
+            return
         self._ensure_win_fbo(w_pad, h_pad)
+        if not self._win_fbo:
+            return
         glBindFramebuffer(GL_FRAMEBUFFER, self._win_fbo)
+        if glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE:
+            glBindFramebuffer(GL_FRAMEBUFFER, 0)
+            if self._win_fbo is not None:
+                glDeleteFramebuffers(1, [self._win_fbo])
+                glDeleteTextures(1, [self._win_tex])
+                self._win_fbo = None
+                self._win_tex = None
+                self._win_size = (0, 0)
+            return
         glViewport(0, 0, w_pad, h_pad)
-        glUseProgram(self._progs["window"])
+        glUseProgram(pid)
 
         glActiveTexture(GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_2D, self._scene_tex)
         self._seti("window", "uScene", 0)
         glActiveTexture(GL_TEXTURE1)
-        glBindTexture(GL_TEXTURE_2D, blurred_tex)
+        glBindTexture(GL_TEXTURE_2D, blurred_tex or 0)
         self._seti("window", "uBlurred", 1)
         glActiveTexture(GL_TEXTURE2)
-        if r.tex is not None:
-            glBindTexture(GL_TEXTURE_2D, r.tex)
-        else:
-            glBindTexture(GL_TEXTURE_2D, 0)
+        glBindTexture(GL_TEXTURE_2D, r.tex or 0)
         self._seti("window", "uSurface", 2)
 
         cfg = self.config
@@ -722,6 +1013,8 @@ class GLRender(QOpenGLWidget):
         self._draw_quad()
 
     def _blit_window(self, geom, W, H, pad_px, target_fbo):
+        if not target_fbo or not self._win_fbo:
+            return
         x, y, ww, wh = geom
         w_pad = ww + 2 * pad_px
         h_pad = wh + 2 * pad_px
@@ -752,19 +1045,22 @@ class GLRender(QOpenGLWidget):
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
     def _fill_both_with_wallpaper(self, W, H):
-        if self._wallpaper_image is not None and self._wallpaper_tex is None:
+        if self._wallpaper_image is not None and not self._wallpaper_tex:
             self._wallpaper_tex = self._upload(self._wallpaper_image)
 
+        pid = self._progs.get("copy")
         for fbo in (self._scene_fbo, self._blur_src_fbo):
+            if not fbo:
+                continue
             glBindFramebuffer(GL_FRAMEBUFFER, fbo)
             glViewport(0, 0, W, H)
             glDisable(GL_BLEND)
             glClearColor(0.02, 0.02, 0.03, 1.0)
             glClear(GL_COLOR_BUFFER_BIT)
-            if self._wallpaper_tex is not None:
-                glUseProgram(self._progs["copy"])
-                self._seti("copy", "uTexture", 0)
+            if self._wallpaper_tex and pid:
+                glUseProgram(pid)
                 glActiveTexture(GL_TEXTURE0)
+                self._seti("copy", "uTexture", 0)
                 glBindTexture(GL_TEXTURE_2D, self._wallpaper_tex)
                 self._draw_quad()
 
@@ -774,13 +1070,18 @@ class GLRender(QOpenGLWidget):
         glDisable(GL_BLEND)
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glClear(GL_COLOR_BUFFER_BIT)
-        glUseProgram(self._progs["copy"])
-        self._seti("copy", "uTexture", 0)
+        pid = self._progs.get("copy")
+        if not pid:
+            return
+        glUseProgram(pid)
         glActiveTexture(GL_TEXTURE0)
+        self._seti("copy", "uTexture", 0)
         glBindTexture(GL_TEXTURE_2D, self._scene_tex)
         self._draw_quad()
 
     def paintGL(self):
+        if not self._ensure_context():
+            return
         W, H = self.width(), self.height()
         if W <= 0 or H <= 0:
             return
@@ -807,7 +1108,7 @@ class GLRender(QOpenGLWidget):
             if not _paintable(w):
                 continue
             ww, wh = w.width(), w.height()
-            if ww <= 0 or wh <= 0:
+            if not self._tex_ok(ww, wh):
                 continue
             if r.layer == 0.0 and self._wallpaper_image is not None:
                 continue
@@ -880,6 +1181,17 @@ class Container(QWidget):
         self._materialized = None
         self._materialized_by_hover = False
         self._restacking = False
+
+        app = QApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self._on_about_to_quit)
+
+    def _on_about_to_quit(self):
+        try:
+            if _alive(self.gl):
+                self.gl.close()
+        except (RuntimeError, SystemError):
+            pass
 
     def add_surface(self, w, z=None, glass=None, layer=None, locked=None):
         if not _alive(w):
