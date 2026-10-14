@@ -3,7 +3,7 @@ from fldesktop.include import (communicator, desktop, dialogs, lifecycle, superf
                      configmgr, appserver, search, wm, loginmgr,
                      localemgr, notifications, iconmgr, QApp,
                      PostInit, fs3, uikit, appletmgr,
-                     panel, startupscreen, extsvinit)
+                     panel, startupscreen, extsvinit, background)
 from fldesktop.include.appserver.clientmgr import ClientManager
 from fldesktop.include.input import InputManager
 
@@ -84,6 +84,10 @@ SERVICES = {
         "importance": "critical",
         "depends": ["Desktop", "FS3"],
         "runlevel": 1
+    },
+    "Background": {
+        "object": background.Background,
+        "depends": ["Desktop", "SuperFX", "FS3"]
     },
     "QApplication": {
         "object": QApp,

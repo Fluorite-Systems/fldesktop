@@ -1,67 +1,7 @@
-from PySide6.QtWidgets import (QApplication, QWidget, QMenu,
-                               QLabel)
+from PySide6.QtWidgets import QApplication, QWidget, QMenu
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QPixmap
 
-from fldesktop.include.widgets.surface import Surface
 from fldesktop.include.widgets.fade_effect import FadeEffect
-
-import os
-
-
-class Background(Surface):
-    def __init__(self, desktop, comm) -> None:
-        super().__init__(
-            comm, glass=False,
-            never_materialize=True
-        )
-
-        self.lbl = QLabel(self)
-        self.lbl.show()
-
-        self.comm = comm
-
-        self.comm.subscribe("reload_config", self.reload)
-
-        self.load_bg()
-
-        self.lower()
-
-    def load_bg(self) -> None:
-        "Load background"
-
-        btype = self.comm.request("cfgmgr", "get", "background-type")
-        color = self.comm.request("cfgmgr", "get", "background-color")
-        wp = self.comm.request("cfgmgr", "get", "wallpaper")
-
-        if os.path.exists(wp) and btype == "wallpaper":
-            self.pic = QPixmap(wp)
-        else:
-            self.pic = QPixmap(10, 10)
-            self.pic.fill(QColor(color))
-
-
-    def reload(self) -> None:
-        "Reload background"
-
-        self.load_bg()
-        self.refresh()
-
-    def refresh(self) -> None:
-        "Resize background"
-
-        parent = self.comm.request("desktop", "get_instance")
-
-        self.setFixedSize(parent.size())
-        self.lbl.setFixedSize(self.size())
-
-        self.lbl.setPixmap(self.pic.scaled(parent.size(), 
-                            Qt.AspectRatioMode.KeepAspectRatioByExpanding, 
-                            Qt.TransformationMode.SmoothTransformation)
-        )
-        self.lower()
-
-        self.comm.request("surfacemgr", "refresh")
 
 
 class Desktop(QWidget):
@@ -73,8 +13,6 @@ class Desktop(QWidget):
                 "get_instance": self.get_instance
             }
         )
-        
-        self.bg = Background(self, self.comm)
 
         # Context menu when right-clicked at the background
         self.menu = QMenu()
@@ -91,10 +29,10 @@ class Desktop(QWidget):
             lambda: self.comm.request("pkgmgr", "run_app", "com.example.texted")
         )
 
-        self.bg.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.bg.customContextMenuRequested.connect(
-            lambda p: self.menu.exec(self.bg.mapToGlobal(p))
-        )
+        #self.bg.setContextMenuPolicy(Qt.CustomContextMenu)
+        #self.bg.customContextMenuRequested.connect(
+        #    lambda p: self.menu.exec(self.bg.mapToGlobal(p))
+        #)
 
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setFixedSize(QApplication.primaryScreen().availableSize())
@@ -118,4 +56,3 @@ class Desktop(QWidget):
 
         self.comm.request("lockscreen", "refresh_size")
         self.comm.emit("desktop_size_changed")
-        self.bg.refresh()
