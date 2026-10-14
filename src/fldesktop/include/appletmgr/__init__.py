@@ -2,6 +2,8 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout, QPushButton
 
 from fldesktop.include.uikit.applet import Applet
 from fldesktop.include.appletmgr.sidebar import Sidebar
+from fldesktop.include.appletmgr.std_applets import APPLETS
+
 
 class AppletManager:
     def __init__(self, comm):
@@ -10,8 +12,8 @@ class AppletManager:
             "appletmgr", {
                 "add_applet": self.add_applet,
                 "del_applet": self.del_applet,
-                "enable_sidebar": self.enable_sidebar,
-                "disable_sidebar": self.disable_sidebar,
+                "show_sidebar": self.show_sidebar,
+                "hide_sidebar": self.hide_sidebar,
                 "toggle_sidebar": self.toggle_sidebar,
                 "is_sidebar_visible": self.is_sidebar_visible,
                 "get_tray": self.get_tray,
@@ -30,9 +32,16 @@ class AppletManager:
         self.sb_toggle.setFlat(True)
         self.sb_toggle.clicked.connect(self.toggle_sidebar)
 
-        self.sbv = True
+        self.show_sidebar()
 
         self.applets = []
+
+        self.load_std_applets()
+
+    def load_std_applets(self):
+
+        for applet in APPLETS:
+            self.applets.append(applet(self.comm))
 
     def add_applet(self, applet: Applet):
 
@@ -48,23 +57,24 @@ class AppletManager:
         self.sidebar.del_applet(applet)
         self.applets.remove(applet)
 
-    def enable_sidebar(self):
+    def show_sidebar(self):
 
         self.sidebar.show()
         self.tray.hide()
+        self.sbv = True
 
-    def disable_sidebar(self):
+    def hide_sidebar(self):
 
         self.sidebar.hide()
         self.tray.show()
+        self.sbv = False
 
     def toggle_sidebar(self):
 
         if not self.sbv:
-            self.enable_sidebar()
+            self.show_sidebar()
         else:
-            self.disable_sidebar()
-        self.sbv = not self.sbv
+            self.hide_sidebar()
 
     def is_sidebar_visible(self):
 

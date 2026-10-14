@@ -1,8 +1,6 @@
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy
 from PySide6.QtCore import Qt, QSize
 
-from fldesktop.include.quickcontrols import (QuickControls, calendar,
-                                             kbindicator)
 from fldesktop.include.widgets.surface import Surface
 
 
@@ -101,15 +99,6 @@ class Panel(Surface):
 
         self.sb_toggle = self.comm.request("appletmgr", "get_sb_toggle")
         self.layout.addWidget(self.sb_toggle)
-
-        self.ki = kbindicator.KeyboardIndicator(self.comm)
-        self.layout.addWidget(self.ki.btn)
-
-        self.cal = calendar.Calendar(self.comm)
-        self.layout.addWidget(self.cal.btn)
-
-        self.qc = QuickControls(self.comm)
-        self.layout.addWidget(self.qc.btn)
 
         self.setObjectName("panel")
 

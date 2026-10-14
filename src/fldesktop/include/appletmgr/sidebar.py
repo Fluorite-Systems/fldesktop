@@ -18,6 +18,7 @@ class Sidebar(Surface):
         self.comm.subscribe("desktop_size_changed", self.update_geometry)
 
         self.mlayout = QVBoxLayout(self)
+        self.mlayout.setContentsMargins(0, 0, 0, 0)
 
         self.scroller = QScrollArea()
         self.scroller.setVerticalScrollBarPolicy(

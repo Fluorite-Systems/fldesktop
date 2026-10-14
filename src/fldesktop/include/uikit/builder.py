@@ -17,7 +17,7 @@ class Builder:
 
     def create_applet(self, node_id: str, node_attrs: dict):
 
-        self.objects[node_id] = Applet(self.cm.comm)
+        self.objects[node_id] = Applet(self.cm.comm, node_id, node_attrs)
 
     def create_widget(self, node_id: int, node_attrs: dict):
 
