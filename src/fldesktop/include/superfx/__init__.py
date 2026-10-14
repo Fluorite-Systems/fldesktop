@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QWidget
+from PySide6.QtGui import QColor
 
 from fldesktop.include.superfx import glrender
 
@@ -9,6 +10,7 @@ class SuperFX:
         self.desktop = None
         self.container = None
         self.backend = None
+        self.config = glrender.GlassConfig()
 
         self.comm.register("superfx", {
             "add_surface":    self.add_surface,
@@ -22,13 +24,15 @@ class SuperFX:
         })
 
         self.comm.subscribe("desktop_size_changed", self.update_size)
+        self.comm.subscribe("reload_config", self.reconfigure)
         self.create_backend()
+
+        self.reconfigure()
 
     def create_backend(self):
         self.desktop = self.comm.request("desktop", "get_instance")
 
-        self.container = glrender.Container(
-            self.desktop, glrender.GlassConfig())
+        self.container = glrender.Container(self.desktop, self.config)
         self.backend = self.container.gl
 
         self.container.show()
@@ -41,6 +45,20 @@ class SuperFX:
         h = self.desktop.height()
         self.container.setGeometry(0, 0, w, h)
         self.backend.setGeometry(0, 0, w, h)
+
+    def reconfigure(self):
+
+        col = self.comm.request("cfgmgr", "get", "glass-tint-color")
+        alpha = self.comm.request("cfgmgr", "get", "glass-tint-alpha")
+        bs = self.comm.request("cfgmgr", "get", "glass-blur-strength")
+
+        print(col, alpha, bs)
+
+        self.config.tint = tuple(
+            round(c / 255, 3) for c in QColor(col).toTuple()[:3]
+        )
+        self.config.tint_amount = round(alpha / 255, 3)
+        self.config.blur_strength = bs
 
     def add_surface(self, *args, **kwargs):
         return self.container.add_surface(*args, **kwargs)

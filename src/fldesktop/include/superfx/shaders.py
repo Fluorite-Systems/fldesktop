@@ -1,20 +1,21 @@
 VERT_SRC = """
 #version 440 core
-layout(location=0) in vec2 aPos;
-layout(location=1) in vec2 aTex;
+layout(location = 0) in vec2 aPos;
+layout(location = 1) in vec2 aTexCoord;
 out vec2 vTexCoord;
 void main() {
     gl_Position = vec4(aPos, 0.0, 1.0);
-    vTexCoord = aTex;
+    vTexCoord = aTexCoord;
 }
 """
+
 
 FRAG_KAWASE_DOWN_SRC = """
 #version 440 core
 in vec2 vTexCoord;
 out vec4 fragColor;
 uniform sampler2D uTexture;
-uniform vec2 uSrcTexelSize;
+uniform vec2  uSrcTexelSize;
 uniform float uBlurScale;
 void main() {
     vec2 hp = uSrcTexelSize * uBlurScale;
@@ -27,12 +28,13 @@ void main() {
 }
 """
 
+
 FRAG_KAWASE_UP_SRC = """
 #version 440 core
 in vec2 vTexCoord;
 out vec4 fragColor;
 uniform sampler2D uTexture;
-uniform vec2 uSrcTexelSize;
+uniform vec2  uSrcTexelSize;
 uniform float uBlurScale;
 void main() {
     vec2 hp = uSrcTexelSize * uBlurScale;
@@ -48,13 +50,17 @@ void main() {
 }
 """
 
+
 FRAG_COPY_SRC = """
 #version 440 core
 in vec2 vTexCoord;
 out vec4 fragColor;
 uniform sampler2D uTexture;
-void main() { fragColor = texture(uTexture, vTexCoord); }
+void main() {
+    fragColor = texture(uTexture, vTexCoord);
+}
 """
+
 
 FRAG_WINDOW_SRC = """
 #version 440 core
@@ -77,6 +83,7 @@ uniform float uShadowAlpha;
 uniform vec3  uTint;
 uniform vec3  uTintColor;
 uniform float uTintAmount;
+uniform float uOpacity;
 
 uniform float uWaveStrength;
 uniform float uWaveScale;
@@ -106,14 +113,19 @@ vec3 sample_side(int side, float offset) {
     for (int i = 0; i < 3; i++) {
         float t = 0.2 + float(i) * 0.3;
         vec2 q;
-        if (side == 0) q = vec2(uRectMin.x + t * uRectSize.x,
-                                uRectMin.y - offset);
-        else if (side == 1) q = vec2(uRectMin.x + t * uRectSize.x,
-                                     uRectMin.y + uRectSize.y + offset);
-        else if (side == 2) q = vec2(uRectMin.x - offset,
-                                     uRectMin.y + t * uRectSize.y);
-        else q = vec2(uRectMin.x + uRectSize.x + offset,
-                      uRectMin.y + t * uRectSize.y);
+        if (side == 0) {
+            q = vec2(uRectMin.x + t * uRectSize.x,
+                     uRectMin.y - offset);
+        } else if (side == 1) {
+            q = vec2(uRectMin.x + t * uRectSize.x,
+                     uRectMin.y + uRectSize.y + offset);
+        } else if (side == 2) {
+            q = vec2(uRectMin.x - offset,
+                     uRectMin.y + t * uRectSize.y);
+        } else {
+            q = vec2(uRectMin.x + uRectSize.x + offset,
+                     uRectMin.y + t * uRectSize.y);
+        }
         vec2 g = clamp(vec2(q.x, 1.0 - q.y),
                        vec2(0.001), vec2(0.999));
         acc += texture(uBlurred, g).rgb;
@@ -124,56 +136,131 @@ vec3 sample_side(int side, float offset) {
 vec3 edge_glow(vec2 localUV) {
     vec3 glow = vec3(0.0);
     if (uEnableGlow < 0.5) return glow;
+
+    float rimUV = min(min(localUV.x, 1.0 - localUV.x),
+                      min(localUV.y, 1.0 - localUV.y));
+    vec2 cornerUV = min(localUV, 1.0 - localUV);
+    float cornerDist = length(cornerUV);
+
+    if (rimUV > 0.06 && cornerDist > 0.30) {
+        return glow;
+    }
+
     vec3 L_t = sample_side(0, uEdgeOffset);
     vec3 L_b = sample_side(1, uEdgeOffset);
     vec3 L_l = sample_side(2, uEdgeOffset);
     vec3 L_r = sample_side(3, uEdgeOffset);
-    float lum_t = max(0.0, dot(L_t, vec3(0.299,0.587,0.114)) - 0.15);
-    float lum_b = max(0.0, dot(L_b, vec3(0.299,0.587,0.114)) - 0.15);
-    float lum_l = max(0.0, dot(L_l, vec3(0.299,0.587,0.114)) - 0.15);
-    float lum_r = max(0.0, dot(L_r, vec3(0.299,0.587,0.114)) - 0.15);
+
+    float lum_t = max(0.0, dot(L_t, vec3(0.299, 0.587, 0.114)) - 0.15);
+    float lum_b = max(0.0, dot(L_b, vec3(0.299, 0.587, 0.114)) - 0.15);
+    float lum_l = max(0.0, dot(L_l, vec3(0.299, 0.587, 0.114)) - 0.15);
+    float lum_r = max(0.0, dot(L_r, vec3(0.299, 0.587, 0.114)) - 0.15);
+
     lum_t = pow(lum_t * uEdgeSensitivity, 1.4);
     lum_b = pow(lum_b * uEdgeSensitivity, 1.4);
     lum_l = pow(lum_l * uEdgeSensitivity, 1.4);
     lum_r = pow(lum_r * uEdgeSensitivity, 1.4);
+
     vec3 c_t = L_t / (lum_t + 0.5);
     vec3 c_b = L_b / (lum_b + 0.5);
     vec3 c_l = L_l / (lum_l + 0.5);
     vec3 c_r = L_r / (lum_r + 0.5);
-    float rimUV = min(min(localUV.x, 1.0 - localUV.x),
-                      min(localUV.y, 1.0 - localUV.y));
+
     float pxPerUV = min(uRectSize.x, uRectSize.y) * uResolution.x;
     float rimPx = rimUV * pxPerUV;
+
     float rimCore = 1.0 - smoothstep(0.0, 1.5, rimPx);
     float rimSoft = 1.0 - smoothstep(0.0, 5.0, rimPx);
     rimCore = pow(rimCore, 1.2);
+
     float w_t = 1.0 - smoothstep(0.0, 0.35, localUV.y);
     float w_b = smoothstep(0.65, 1.0, localUV.y);
     float w_l = 1.0 - smoothstep(0.0, 0.35, localUV.x);
     float w_r = smoothstep(0.65, 1.0, localUV.x);
-    vec3 rimColor = c_t * (lum_t * w_t) + c_b * (lum_b * w_b)
-                  + c_l * (lum_l * w_l) + c_r * (lum_r * w_r);
-    vec3 rimGlow = rimColor
-                 * (rimCore + rimSoft * 0.15) * uRimStrength;
+
+    vec3 rimColor = c_t * (lum_t * w_t)
+                  + c_b * (lum_b * w_b)
+                  + c_l * (lum_l * w_l)
+                  + c_r * (lum_r * w_r);
+
+    float rim_amount = (rimCore + rimSoft * 0.10) * uRimStrength * 0.35;
+
     float cs = 0.13;
     vec2 cUL = localUV;
     vec2 cUR = vec2(1.0 - localUV.x, localUV.y);
     vec2 cLL = vec2(localUV.x, 1.0 - localUV.y);
     vec2 cLR = vec2(1.0 - localUV.x, 1.0 - localUV.y);
-    float gUL = exp(-pow(length(cUL)/cs, 2.0));
-    float gUR = exp(-pow(length(cUR)/cs, 2.0));
-    float gLL = exp(-pow(length(cLL)/cs, 2.0));
-    float gLR = exp(-pow(length(cLR)/cs, 2.0));
-    float sUL = max(lum_t, lum_l), sUR = max(lum_t, lum_r);
-    float sLL = max(lum_b, lum_l), sLR = max(lum_b, lum_r);
+
+    float gUL = exp(-pow(length(cUL) / cs, 2.0));
+    float gUR = exp(-pow(length(cUR) / cs, 2.0));
+    float gLL = exp(-pow(length(cLL) / cs, 2.0));
+    float gLR = exp(-pow(length(cLR) / cs, 2.0));
+
+    float sUL = max(lum_t, lum_l);
+    float sUR = max(lum_t, lum_r);
+    float sLL = max(lum_b, lum_l);
+    float sLR = max(lum_b, lum_r);
+
     vec3 ccUL = (lum_t >= lum_l) ? c_t : c_l;
     vec3 ccUR = (lum_t >= lum_r) ? c_t : c_r;
     vec3 ccLL = (lum_b >= lum_l) ? c_b : c_l;
     vec3 ccLR = (lum_b >= lum_r) ? c_b : c_r;
-    vec3 sparkle = (ccUL * (gUL*sUL) + ccUR * (gUR*sUR)
-                  + ccLL * (gLL*sLL) + ccLR * (gLR*sLR))
-                 * uSparkleStrength;
-    return rimGlow + sparkle;
+
+    vec3 sparkle = (ccUL * (gUL * sUL)
+                  + ccUR * (gUR * sUR)
+                  + ccLL * (gLL * sLL)
+                  + ccLR * (gLR * sLR)) * uSparkleStrength * 0.5;
+
+    vec3 eff = uTint * uTintColor;
+    float eff_len = length(eff);
+    vec3 eff_dir = eff / max(eff_len, 1e-4);
+    float eff_lum = dot(eff, vec3(0.299, 0.587, 0.114));
+
+    float tint_amt = clamp(uTintAmount * 2.5, 0.0, 1.0);
+    float hue_boost = mix(1.0, 1.10, clamp(uTintAmount, 0.0, 1.0));
+    float depth_boost = mix(1.0, 0.85 + 0.3 * eff_lum, uTintAmount);
+
+    vec3 rim_tinted = eff_dir * (length(rimColor) * hue_boost * depth_boost);
+    vec3 spark_tinted = eff_dir * (length(sparkle) * hue_boost * depth_boost);
+
+    vec3 rimFinal = mix(rimColor, rim_tinted, tint_amt) * rim_amount;
+    vec3 sparkleFinal = mix(sparkle, spark_tinted, tint_amt);
+
+    glow = rimFinal + sparkleFinal;
+    return glow;
+}
+
+vec3 glass_tint(vec2 sceneUV, vec2 fromCenter, float r_lens) {
+    vec2 halfPx = uRectSize * 0.5 * uResolution;
+
+    float lensProfile = r_lens * r_lens;
+    vec2 lensDir = fromCenter / max(r_lens, 1e-4);
+    vec2 lensOffset = -lensDir * lensProfile * uLens;
+    vec2 lensUV = sceneUV + vec2(lensOffset.x, -lensOffset.y);
+
+    vec2 fromCenterPx = fromCenter * halfPx;
+    vec2 chromaDir = normalize(fromCenterPx + vec2(1e-5));
+    float refPx = min(uResolution.x, uResolution.y);
+    float edgeFactor = smoothstep(0.4, 1.0, r_lens);
+    vec2 chromaOff = chromaDir * (uChroma * refPx) / uResolution
+                   * edgeFactor;
+
+    vec3 blur;
+    if (uChroma > 0.0001) {
+        float r = texture(uBlurred,
+            clamp(lensUV + chromaOff, vec2(0.001), vec2(0.999))).r;
+        vec3 g  = texture(uBlurred,
+            clamp(lensUV, vec2(0.001), vec2(0.999))).rgb;
+        float b = texture(uBlurred,
+            clamp(lensUV - chromaOff, vec2(0.001), vec2(0.999))).b;
+        blur = vec3(r, g.g, b);
+    } else {
+        blur = texture(uBlurred,
+            clamp(lensUV, vec2(0.001), vec2(0.999))).rgb;
+    }
+
+    vec3 effective_tint = uTint * uTintColor;
+    return mix(blur * 0.92, effective_tint, uTintAmount);
 }
 
 void main() {
@@ -204,75 +291,47 @@ void main() {
     float shadowVisible = shadow * uShadowAlpha * (1.0 - windowMask);
 
     vec2 sceneUV = vec2(uvQt.x, 1.0 - uvQt.y);
-    vec3 shadowedScene = texture(uScene, sceneUV).rgb
-                       * (1.0 - shadowVisible);
+    vec3 sceneRaw = texture(uScene, sceneUV).rgb;
+    vec3 shadowedScene = sceneRaw * (1.0 - shadowVisible);
 
     vec2 surfUV = vec2(localUV.x, 1.0 - localUV.y);
 
+    vec3 result;
+
     if (uGlass < 0.5) {
-        // Premultiplied source-over.
         vec4 surf = texture(uSurface, surfUV);
         vec3 combined = surf.rgb + shadowedScene * (1.0 - surf.a);
-        fragColor = vec4(mix(shadowedScene, combined, windowMask), 1.0);
-        return;
-    }
-
-    float lensProfile = r_lens * r_lens;
-    vec2 lensDir = fromCenter / max(r_lens, 1e-4);
-    vec2 lensOffset = -lensDir * lensProfile * uLens;
-    vec2 lensUV = sceneUV + vec2(lensOffset.x, -lensOffset.y);
-
-    vec2 fromCenterPx = fromCenter * halfPx;
-    vec2 chromaDir = normalize(fromCenterPx + vec2(1e-5));
-    float refPx = min(uResolution.x, uResolution.y);
-    float edgeFactor = smoothstep(0.4, 1.0, r_lens);
-    vec2 chromaOff = chromaDir * (uChroma * refPx) / uResolution
-                   * edgeFactor;
-
-    vec3 blur;
-    if (uChroma > 0.0001) {
-        float r = texture(uBlurred,
-            clamp(lensUV + chromaOff, vec2(0.001), vec2(0.999))).r;
-        vec3 g  = texture(uBlurred,
-            clamp(lensUV, vec2(0.001), vec2(0.999))).rgb;
-        float b = texture(uBlurred,
-            clamp(lensUV - chromaOff, vec2(0.001), vec2(0.999))).b;
-        blur = vec3(r, g.g, b);
+        result = mix(shadowedScene, combined, windowMask);
     } else {
-        blur = texture(uBlurred,
-            clamp(lensUV, vec2(0.001), vec2(0.999))).rgb;
+        vec3 tinted = glass_tint(sceneUV, fromCenter, r_lens);
+
+        vec2 globalPx = uvQt * uResolution;
+        vec2 waveDir = vec2(cos(uWaveAngle), sin(uWaveAngle));
+        float waveT = dot(globalPx, waveDir);
+        float ph = uTime * 0.3;
+        float waveFreq = uWaveScale * 6.2831853 / 400.0;
+        float wave = (sin(waveT * waveFreq * 1.0 + ph)
+                    + sin(waveT * waveFreq * 1.3 + 1.0 + ph * 1.3)
+                    + sin(waveT * waveFreq * 1.7 + 2.0 + ph * 0.7)) / 3.0;
+        wave = smoothstep(0.20, 0.80, wave * 0.5 + 0.5);
+        tinted *= 1.0 + wave * uWaveStrength;
+
+        if (uNoise > 0.0001) {
+            vec2 pp = floor(globalPx);
+            tinted += (hash21(pp) - 0.5) * uNoise;
+        }
+
+        vec3 glow = edge_glow(localUV);
+
+        if (uDrawSurface >= 0.5) {
+            vec4 surf = texture(uSurface, surfUV);
+            vec3 glass = surf.rgb + (tinted + glow) * (1.0 - surf.a);
+            result = mix(shadowedScene, glass, windowMask);
+        } else {
+            result = mix(shadowedScene, tinted + glow, windowMask);
+        }
     }
 
-    // Per-window tint color multiplies the global tint (component-wise).
-    vec3 effective_tint = uTint * uTintColor;
-    vec3 tinted = mix(blur * 0.92, effective_tint, uTintAmount);
-
-    vec2 globalPx = uvQt * uResolution;
-    vec2 waveDir = vec2(cos(uWaveAngle), sin(uWaveAngle));
-    float waveT = dot(globalPx, waveDir);
-    float ph = uTime * 0.2;
-    float waveFreq = uWaveScale * 6.2831853 / 400.0;
-    float wave = (sin(waveT * waveFreq * 1.0 + ph)
-                + sin(waveT * waveFreq * 1.3 + 1.0 + ph * 1.3)
-                + sin(waveT * waveFreq * 1.7 + 2.0 + ph * 0.7)) / 3.0;
-    wave = smoothstep(0.20, 0.80, wave * 0.5 + 0.5);
-    tinted *= 1.0 + wave * uWaveStrength;
-
-    if (uNoise > 0.0001) {
-        vec2 pp = floor(uvQt * uResolution);
-        tinted += (hash21(pp) - 0.5) * uNoise;
-    }
-
-    vec3 glow = edge_glow(localUV);
-
-    vec3 glass;
-    if (uDrawSurface >= 0.5) {
-        vec4 surf = texture(uSurface, surfUV);
-        glass = surf.rgb + (tinted + glow) * (1.0 - surf.a);
-    } else {
-        glass = tinted + glow;
-    }
-
-    fragColor = vec4(mix(shadowedScene, glass, windowMask), 1.0);
+    fragColor = vec4(mix(sceneRaw, result, uOpacity), 1.0);
 }
 """

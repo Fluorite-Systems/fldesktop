@@ -9,7 +9,9 @@ from fldesktop.include.widgets.surface import Surface
 class Animation(Surface):
     def __init__(self, comm, parent: QWidget, pixmap: QPixmap,
                  type: str, params: dict, on_finished):
-        super().__init__(comm, never_materialize=True, layer="top")
+        super().__init__(comm, never_materialize=True, layer=3)
+
+        self.setProperty("compositor.content_static", True)
 
         self.setAttribute(Qt.WA_DeleteOnClose)
 

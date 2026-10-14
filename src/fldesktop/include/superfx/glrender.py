@@ -20,6 +20,8 @@ PROP_TINT_SCALE = "compositor.tint_amount_scale"
 PROP_TINT_COLOR = "compositor.tint_color"
 PROP_HOVER_MAT = "compositor.materialize_on_hover"
 PROP_NEVER_MAT = "compositor.never_materialize"
+PROP_OPACITY = "compositor.opacity"
+PROP_CONTENT_STATIC = "compositor.content_static"
 
 DEFAULT_LAYER = 1.0
 
@@ -30,16 +32,14 @@ SHOW_FPS = True
 FPS_REFRESH_S = 1.0
 FRAME_INTERVAL_MS = 16
 
-SAFETY_REFRESH_MS = 250.0
-
 MAX_TEX_DIM = 16384
 
 
 @dataclass
 class GlassConfig:
     tint: tuple = (0.1, 0.1, 0.1)
-    tint_amount: float = 0.4
-    blur_strength: float = 0.5
+    tint_amount: float = 0.5
+    blur_strength: float = 0.35
 
     shadow_offset: tuple = (0.004, 0.004)
     shadow_spread: float = 0.014
@@ -119,7 +119,8 @@ def _coerce_layer(v):
 
 class _Reg:
     __slots__ = ("widget", "z", "glass", "layer", "locked",
-                 "tex", "img", "tex_wh", "dirty", "last_refresh")
+                 "tex", "img", "tex_wh", "dirty",
+                 "_dont_show_applied")
 
     def __init__(self, widget, z, glass, layer, locked):
         self.widget = widget
@@ -131,7 +132,7 @@ class _Reg:
         self.img = None
         self.tex_wh = None
         self.dirty = True
-        self.last_refresh = 0.0
+        self._dont_show_applied = False
 
     @property
     def geom(self):
@@ -227,7 +228,6 @@ class GLRender(QOpenGLWidget):
             return False
         if ctx is None:
             return False
-        same = False
         try:
             same = (ctx == self._gl_ctx)
         except Exception:
@@ -321,6 +321,7 @@ class GLRender(QOpenGLWidget):
         self._regs.append(r)
         self._regs.sort(key=lambda x: (x.layer, x.z))
         self._reg_by_widget[widget] = r
+        self._apply_dont_show(r, True)
         try:
             self.update()
         except (RuntimeError, SystemError):
@@ -355,6 +356,19 @@ class GLRender(QOpenGLWidget):
                     pass
                 return True
         return False
+
+    def _apply_dont_show(self, r, on):
+        w = r.widget
+        if not _alive(w):
+            return
+        if r._dont_show_applied == bool(on):
+            return
+        try:
+            w.setAttribute(
+                Qt.WidgetAttribute.WA_DontShowOnScreen, bool(on))
+            r._dont_show_applied = bool(on)
+        except (RuntimeError, SystemError):
+            pass
 
     def raise_surface(self, widget):
         r = self._reg_by_widget.get(widget)
@@ -413,21 +427,26 @@ class GLRender(QOpenGLWidget):
         if _app_closing() or self._shutting_down:
             return False
         et = ev.type()
-        if et in (QEvent.Type.UpdateRequest,
-                  QEvent.Type.Move,
-                  QEvent.Type.Resize,
-                  QEvent.Type.Show):
-            r = self._reg_of(obj)
-            if r is not None:
-                if et in (QEvent.Type.UpdateRequest,
-                          QEvent.Type.Resize,
-                          QEvent.Type.Show):
-                    r.dirty = True
-                try:
-                    self.update()
-                except (RuntimeError, SystemError):
-                    pass
+
+        if et == QEvent.Type.Move:
             return False
+
+        if et not in (QEvent.Type.UpdateRequest,
+                      QEvent.Type.Resize,
+                      QEvent.Type.Show):
+            return False
+
+        r = self._reg_by_widget.get(obj)
+        if r is None:
+            r = self._reg_of(obj)
+        if r is None:
+            return False
+
+        if _prop(r.widget, PROP_CONTENT_STATIC) is True:
+            if r.tex is not None and et != QEvent.Type.Show:
+                return False
+
+        r.dirty = True
         return False
 
     def _reg_of(self, w):
@@ -634,8 +653,6 @@ class GLRender(QOpenGLWidget):
         status = glCheckFramebufferStatus(GL_FRAMEBUFFER)
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
         if status != GL_FRAMEBUFFER_COMPLETE:
-            print(f"[GLRender] FBO incomplete: status=0x{status:x} "
-                  f"size={w}x{h}")
             glDeleteFramebuffers(1, [fbo])
             glActiveTexture(GL_TEXTURE0)
             glDeleteTextures(1, [tex])
@@ -656,7 +673,6 @@ class GLRender(QOpenGLWidget):
         self._blur_src_tex = blur_tex
 
         if scene_fbo is None or blur_fbo is None:
-            print("[GLRender] scene FBO creation failed; will retry")
             self._destroy_fbos()
             return
 
@@ -809,8 +825,7 @@ class GLRender(QOpenGLWidget):
         arr = arr.reshape(wh, row)[:, :ww * 4]
         arr = arr.reshape(wh, ww, 4)[::-1].copy()
 
-        if (r.tex is None
-                or r.tex_wh != (ww, wh)):
+        if r.tex is None or r.tex_wh != (ww, wh):
             old = r.tex
             r.tex = None
             r.tex_wh = None
@@ -830,9 +845,7 @@ class GLRender(QOpenGLWidget):
         try:
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ww, wh,
                             GL_RGBA, GL_UNSIGNED_BYTE, arr.tobytes())
-        except GLError as e:
-            print(f"[GLRender] surface upload failed ({ww}x{wh}): {e}; "
-                  "recreating texture")
+        except GLError:
             old = r.tex
             r.tex = None
             r.tex_wh = None
@@ -944,6 +957,15 @@ class GLRender(QOpenGLWidget):
             pass
         return (1.0, 1.0, 1.0)
 
+    def _opacity(self, w):
+        v = _prop(w, PROP_OPACITY)
+        if v is None:
+            return 1.0
+        try:
+            return max(0.0, min(1.0, float(v)))
+        except (TypeError, ValueError):
+            return 1.0
+
     def _draw_window(self, r, blurred_tex, W, H, pad_px, draw_surface):
         pid = self._progs.get("window")
         if not pid:
@@ -957,15 +979,6 @@ class GLRender(QOpenGLWidget):
         if not self._win_fbo:
             return
         glBindFramebuffer(GL_FRAMEBUFFER, self._win_fbo)
-        if glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE:
-            glBindFramebuffer(GL_FRAMEBUFFER, 0)
-            if self._win_fbo is not None:
-                glDeleteFramebuffers(1, [self._win_fbo])
-                glDeleteTextures(1, [self._win_tex])
-                self._win_fbo = None
-                self._win_tex = None
-                self._win_size = (0, 0)
-            return
         glViewport(0, 0, w_pad, h_pad)
         glUseProgram(pid)
 
@@ -994,6 +1007,7 @@ class GLRender(QOpenGLWidget):
         self._set("window", "uTintColor", *self._tint_color(r.widget))
         self._set("window", "uTintAmount",
                   cfg.tint_amount * self._tint_scale(r.widget))
+        self._set("window", "uOpacity", self._opacity(r.widget))
         self._set("window", "uEnableGlow",
                   1.0 if self._enable_glow(r.widget) else 0.0)
         self._set("window", "uWaveStrength", cfg.wave_strength)
@@ -1118,29 +1132,21 @@ class GLRender(QOpenGLWidget):
             is_mat = (r.widget is self._materialized_widget)
             ww = r.widget.width()
             wh = r.widget.height()
-
-            stale_size = (r.tex is None) or (r.tex_wh != (ww, wh))
-            overdue = (now - r.last_refresh) * 1000.0 >= SAFETY_REFRESH_MS
-
-            if stale_size or r.dirty or overdue:
+            if r.tex is None or r.tex_wh != (ww, wh) or r.dirty:
                 self._refresh_surface_tex(r)
                 r.dirty = False
-                r.last_refresh = now
 
             source_blur = blurred_wallpaper if is_mat else blurred
 
             if not is_mat:
-                self._draw_window(r, source_blur, W, H, pad_px,
-                                  draw_surface=True)
+                self._draw_window(r, source_blur, W, H, pad_px, True)
                 self._blit_window(r.geom, W, H, pad_px, self._scene_fbo)
                 self._blit_window(r.geom, W, H, pad_px, self._blur_src_fbo)
             else:
-                self._draw_window(r, source_blur, W, H, pad_px,
-                                  draw_surface=False)
+                self._draw_window(r, source_blur, W, H, pad_px, False)
                 self._blit_window(r.geom, W, H, pad_px, self._scene_fbo)
 
-                self._draw_window(r, source_blur, W, H, pad_px,
-                                  draw_surface=True)
+                self._draw_window(r, source_blur, W, H, pad_px, True)
                 self._blit_window(r.geom, W, H, pad_px, self._blur_src_fbo)
 
             blurred = self._blur_texture(self._blur_src_tex)
@@ -1281,6 +1287,10 @@ class Container(QWidget):
         self._materialized = w
         self._materialized_by_hover = bool(by_hover)
 
+        reg = self.gl._reg_by_widget.get(w)
+        if reg is not None:
+            self.gl._apply_dont_show(reg, False)
+
         self.gl.raise_surface(w)
 
         try:
@@ -1322,6 +1332,9 @@ class Container(QWidget):
                     Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
             except (RuntimeError, SystemError):
                 pass
+            reg = self.gl._reg_by_widget.get(w)
+            if reg is not None:
+                self.gl._apply_dont_show(reg, True)
             try:
                 self.gl.force_refresh(w)
             except (RuntimeError, SystemError):
