@@ -45,7 +45,7 @@ class GlassConfig:
     shadow_spread: float = 0.014
     shadow_alpha: float = 0.55
 
-    wave_strength: float = 0.15
+    wave_strength: float = 0.3
     wave_scale: float = 2.0
     wave_angle: float = -0.5
 
