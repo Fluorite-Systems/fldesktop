@@ -174,6 +174,11 @@ class Animation(Surface):
                 aps.setStartValue(params["size"])
                 aps.setEndValue(params["size"])
 
+            case "planim":
+                app.setStartValue(QPoint(0, 0))
+                app.setEndValue(QPoint(0, 0))
+                aps.setStartValue(self.pixmap.size())
+                aps.setEndValue(params["size"])
 
         ag.start()
 

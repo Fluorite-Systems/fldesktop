@@ -62,12 +62,14 @@ class AppletManager:
         self.sidebar.show()
         self.tray.hide()
         self.sbv = True
+        self.comm.emit("sidebar_state_changed")
 
     def hide_sidebar(self):
 
         self.sidebar.hide()
         self.tray.show()
         self.sbv = False
+        self.comm.emit("sidebar_state_changed")
 
     def toggle_sidebar(self):
 

@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy
 from PySide6.QtCore import Qt, QSize
 
 from fldesktop.include.widgets.surface import Surface
+from fldesktop.include.widgets.animation import Animation
 
 
 HL_DS_ST = """
@@ -61,7 +62,7 @@ class Panel(Surface):
     def __init__(self, comm):
         super().__init__(
             comm,
-            layer=3, layer_lock=True,
+            layer=2, layer_lock=True,
             hover_materialize=True
         )
         self.comm = comm
@@ -70,6 +71,8 @@ class Panel(Surface):
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
         self.set_glow_enabled(False)
+
+        self.setFixedHeight(26)
 
         self.comm.register("panel", {
             "raise": self.raise_,
@@ -81,6 +84,7 @@ class Panel(Surface):
             "return_qc_btn": self.return_qc_btn
         })
         self.comm.subscribe("desktop_size_changed", self.refresh_geometry)
+        self.comm.subscribe("sidebar_state_changed", self.handle_sidebar)
 
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -113,6 +117,23 @@ class Panel(Surface):
         reserved = self.comm.request("appletmgr", "is_sidebar_visible") * 175
 
         self.setGeometry(0, 0, dsize.width() - reserved, 26)
+
+    def handle_sidebar(self):
+
+        def phase2(self):
+            self.refresh_geometry()
+            self.show()
+
+        dsize = self.comm.request("desktop", "get_instance").width()
+        reserved = self.comm.request("appletmgr", "is_sidebar_visible") * 175
+
+        self.hide()
+
+        Animation(
+            self.comm, ..., self.grab(), "planim",
+            {"size": QSize(dsize - reserved, 26)},
+            lambda s=self: phase2(s)
+        )
 
     def add_btn(self, id, icon, text, on_click):
 

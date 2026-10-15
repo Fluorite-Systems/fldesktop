@@ -11,7 +11,7 @@ class Sidebar(Surface):
     def __init__(self, comm):
         super().__init__(
             comm, tint_color=(0, 0, 0), tint_alpha=1,
-            layer=2, layer_lock=True, hover_materialize=True
+            layer=3, layer_lock=True, hover_materialize=True
         )
 
         self.comm = comm
@@ -68,7 +68,6 @@ class Sidebar(Surface):
         def phase2(self):
             super().show()
             self.comm.request("panel", "raise")
-            self.comm.emit("desktop_size_changed") # dirty haccck
         
         for i in self.applets:
             #l = QLabel("applet idk")
@@ -88,8 +87,6 @@ class Sidebar(Surface):
         
 
     def hide(self):
-        def phase2(self):
-            self.comm.emit("desktop_size_changed")
 
         for i in self.applets:
             i.widget.setParent(None)
@@ -100,6 +97,6 @@ class Sidebar(Surface):
 
         Animation(
             self.comm, self.parent(), self.grab(), "sbclose",
-            {"pos": self.pos(), "size": self.size()}, lambda s=self: phase2(s)
+            {"pos": self.pos(), "size": self.size()}, lambda: ...
         )
         super().hide()
