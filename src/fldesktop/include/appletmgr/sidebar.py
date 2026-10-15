@@ -81,7 +81,8 @@ class Sidebar(Surface):
 
         Animation(
             self.comm, self.parent(), self.grab(), "sbopen",
-            {"pos": self.pos(), "size": self.size()},
+            {"pos": self.pos(), "size": self.size(),
+             "tint_color": (0, 0, 0), "tint_alpha": 1},
             lambda s=self: phase2(s)
         )
         
@@ -97,6 +98,7 @@ class Sidebar(Surface):
 
         Animation(
             self.comm, self.parent(), self.grab(), "sbclose",
-            {"pos": self.pos(), "size": self.size()}, lambda: ...
+            {"pos": self.pos(), "size": self.size(),
+             "tint_color": (0, 0, 0), "tint_alpha": 1}, lambda: ...
         )
         super().hide()

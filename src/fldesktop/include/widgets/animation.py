@@ -9,7 +9,13 @@ from fldesktop.include.widgets.surface import Surface
 class Animation(Surface):
     def __init__(self, comm, parent: QWidget, pixmap: QPixmap,
                  type: str, params: dict, on_finished):
-        super().__init__(comm, never_materialize=True, layer=3)
+        super().__init__(
+            comm, never_materialize=True, layer=3,
+            tint_color=params["tint_color"] \
+                if "tint_color" in params else None,
+            tint_alpha=params["tint_alpha"] \
+                if "tint_alpha" in params else None
+        )
 
         self.setProperty("compositor.content_static", True)
 
@@ -22,6 +28,10 @@ class Animation(Surface):
 
         if not comm.request("lockscreen", "is_visible"):
             comm.request("panel", "raise")
+
+        if "glow_enabled" in params:
+            if not params["glow_enabled"]:
+                self.set_glow_enabled(False)
 
         self.animate(type, params, on_finished)
 

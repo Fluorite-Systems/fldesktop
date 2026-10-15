@@ -131,7 +131,7 @@ class Panel(Surface):
 
         Animation(
             self.comm, ..., self.grab(), "planim",
-            {"size": QSize(dsize - reserved, 26)},
+            {"size": QSize(dsize - reserved, 26), "glow_enabled": False},
             lambda s=self: phase2(s)
         )
 
