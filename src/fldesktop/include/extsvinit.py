@@ -31,7 +31,7 @@ SERVICES = {
             "export LIBSEAT_BACKEND=builtin && "
             "exec weston --shell=desktop-shell.so --socket=wayland-0"
         ),
-        "wait": "while [ ! -S /run/user/0/wayland-0 ]; do sleep 0.05; done",
+        "wait": "while [ ! -S /run/user/0/wayland-0 ]; do sleep 0.05; done; sleep 5",
         "user": 0,
     },
     "dbus": {
