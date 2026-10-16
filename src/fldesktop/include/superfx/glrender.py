@@ -25,12 +25,13 @@ PROP_CONTENT_STATIC = "compositor.content_static"
 
 DEFAULT_LAYER = 1.0
 
-GL_CTX_VERSION = (4, 4)
+GL_CTX_VERSION = (3, 3)
 GL_SWAP_INTERVAL = 1
 BLUR_LEVELS = 4
 SHOW_FPS = True
 FPS_REFRESH_S = 1.0
 FRAME_INTERVAL_MS = 16
+SAFETY_INTERVAL_MS = 500
 
 MAX_TEX_DIM = 16384
 
@@ -38,14 +39,14 @@ MAX_TEX_DIM = 16384
 @dataclass
 class GlassConfig:
     tint: tuple = (0.1, 0.1, 0.1)
-    tint_amount: float = 0.5
-    blur_strength: float = 0.35
+    tint_amount: float = 0.4
+    blur_strength: float = 0.3
 
     shadow_offset: tuple = (0.004, 0.004)
     shadow_spread: float = 0.014
     shadow_alpha: float = 0.55
 
-    wave_strength: float = 0.3
+    wave_strength: float = 0.30
     wave_scale: float = 2.0
     wave_angle: float = -0.5
 
@@ -196,27 +197,60 @@ class GLRender(QOpenGLWidget):
         self._fps_t = time.perf_counter()
         self._fps = 0.0
 
-        self._tick = QTimer(self)
-        self._tick.setTimerType(Qt.TimerType.PreciseTimer)
-        self._tick.setInterval(FRAME_INTERVAL_MS)
-        self._tick.timeout.connect(self._on_tick)
-        self._tick.start()
+        self._update_pending = False
+
+        self.frameSwapped.connect(self._on_frame_swapped)
+
+        self._safety = QTimer(self)
+        self._safety.setTimerType(Qt.TimerType.VeryCoarseTimer)
+        self._safety.setInterval(SAFETY_INTERVAL_MS)
+        self._safety.timeout.connect(self._on_safety_tick)
+        self._safety.start()
 
         app = QApplication.instance()
         if app is not None:
             app.installEventFilter(self)
 
-    def _on_tick(self):
-        if _app_closing() or self._shutting_down:
-            try:
-                self._tick.stop()
-            except (RuntimeError, SystemError):
-                pass
+    def _request_frame(self):
+        if self._update_pending:
             return
+        self._update_pending = True
         try:
             self.update()
         except (RuntimeError, SystemError):
-            pass
+            self._update_pending = False
+
+    def _tick_surfaces(self):
+        for r in list(self._regs):
+            w = r.widget
+            if not _alive(w):
+                continue
+            fn = getattr(w, "invoke_update", None)
+            if not callable(fn):
+                continue
+            try:
+                if fn():
+                    r.dirty = True
+            except Exception:
+                pass
+
+    def _on_frame_swapped(self):
+        if _app_closing() or self._shutting_down:
+            return
+        self._update_pending = False
+        self._tick_surfaces()
+        self._request_frame()
+
+    def _on_safety_tick(self):
+        if _app_closing() or self._shutting_down:
+            try:
+                self._safety.stop()
+            except (RuntimeError, SystemError):
+                pass
+            return
+        self._update_pending = False
+        self._tick_surfaces()
+        self._request_frame()
 
     def _tex_ok(self, w, h):
         return 0 < w <= self._max_tex_dim and 0 < h <= self._max_tex_dim
@@ -296,10 +330,7 @@ class GLRender(QOpenGLWidget):
     def set_wallpaper(self, image):
         self._drop_wallpaper_tex()
         self._wallpaper_image = image
-        try:
-            self.update()
-        except (RuntimeError, SystemError):
-            pass
+        self._request_frame()
 
     def register(self, widget, z=1.0, glass=True,
                  layer=None, locked=None):
@@ -322,10 +353,7 @@ class GLRender(QOpenGLWidget):
         self._regs.sort(key=lambda x: (x.layer, x.z))
         self._reg_by_widget[widget] = r
         self._apply_dont_show(r, True)
-        try:
-            self.update()
-        except (RuntimeError, SystemError):
-            pass
+        self._request_frame()
         return r
 
     def unregister(self, widget):
@@ -350,10 +378,7 @@ class GLRender(QOpenGLWidget):
                         self.doneCurrent()
                     except (RuntimeError, SystemError, GLError):
                         pass
-                try:
-                    self.update()
-                except (RuntimeError, SystemError):
-                    pass
+                self._request_frame()
                 return True
         return False
 
@@ -383,10 +408,7 @@ class GLRender(QOpenGLWidget):
             return
         r.z = top + 1.0
         self._regs.sort(key=lambda x: (x.layer, x.z))
-        try:
-            self.update()
-        except (RuntimeError, SystemError):
-            pass
+        self._request_frame()
 
     def lower_surface(self, widget):
         r = self._reg_by_widget.get(widget)
@@ -398,10 +420,7 @@ class GLRender(QOpenGLWidget):
             return
         r.z = min(x.z for x in peers) - 1.0
         self._regs.sort(key=lambda x: (x.layer, x.z))
-        try:
-            self.update()
-        except (RuntimeError, SystemError):
-            pass
+        self._request_frame()
 
     def invalidate(self, widget=None):
         if widget is None:
@@ -411,10 +430,7 @@ class GLRender(QOpenGLWidget):
             r = self._reg_by_widget.get(widget)
             if r is not None:
                 r.dirty = True
-        try:
-            self.update()
-        except (RuntimeError, SystemError):
-            pass
+        self._request_frame()
 
     def force_refresh(self, widget):
         r = self._reg_by_widget.get(widget)
@@ -480,7 +496,7 @@ class GLRender(QOpenGLWidget):
         self._shutting_down = True
 
         try:
-            self._tick.stop()
+            self._safety.stop()
         except (RuntimeError, SystemError):
             pass
 
@@ -558,6 +574,8 @@ class GLRender(QOpenGLWidget):
         p = glCreateProgram()
         glAttachShader(p, v)
         glAttachShader(p, f)
+        glBindAttribLocation(p, 0, b"aPos")
+        glBindAttribLocation(p, 1, b"aTexCoord")
         glLinkProgram(p)
         if not glGetProgramiv(p, GL_LINK_STATUS):
             raise RuntimeError(
@@ -614,6 +632,10 @@ class GLRender(QOpenGLWidget):
                               ctypes.c_void_p(8))
         glBindVertexArray(0)
 
+    # ----------------------------------------------------------------
+    # Textures / FBOs
+    # ----------------------------------------------------------------
+
     def _make_tex(self, w, h):
         if not self._tex_ok(w, h):
             return 0
@@ -625,8 +647,7 @@ class GLRender(QOpenGLWidget):
         try:
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0,
                          GL_RGBA, GL_UNSIGNED_BYTE, None)
-        except GLError as e:
-            print(f"[GLRender] glTexImage2D failed ({w}x{h}): {e}")
+        except GLError:
             try:
                 glDeleteTextures(1, [tex])
             except Exception:
@@ -774,12 +795,17 @@ class GLRender(QOpenGLWidget):
         else:
             self._win_size = (nw, nh)
 
+    # ----------------------------------------------------------------
+    # Upload
+    # ----------------------------------------------------------------
+
     def _upload(self, img):
         img = img.convertToFormat(
             QImage.Format.Format_RGBA8888_Premultiplied)
         w, h = img.width(), img.height()
         if not self._tex_ok(w, h):
             return 0
+
         row = img.bytesPerLine()
         arr = np.frombuffer(img.constBits(), dtype=np.uint8)
         arr = arr.reshape(h, row)[:, :w * 4]
@@ -790,11 +816,12 @@ class GLRender(QOpenGLWidget):
         if not tex:
             return 0
         glBindTexture(GL_TEXTURE_2D, tex)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0)
         try:
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
                             GL_RGBA, GL_UNSIGNED_BYTE, arr.tobytes())
-        except GLError as e:
-            print(f"[GLRender] wallpaper upload failed: {e}")
+        except GLError:
             try:
                 glDeleteTextures(1, [tex])
             except Exception:
@@ -820,11 +847,6 @@ class GLRender(QOpenGLWidget):
         except (RuntimeError, SystemError):
             return
 
-        row = r.img.bytesPerLine()
-        arr = np.frombuffer(r.img.constBits(), dtype=np.uint8)
-        arr = arr.reshape(wh, row)[:, :ww * 4]
-        arr = arr.reshape(wh, ww, 4)[::-1].copy()
-
         if r.tex is None or r.tex_wh != (ww, wh):
             old = r.tex
             r.tex = None
@@ -840,11 +862,16 @@ class GLRender(QOpenGLWidget):
                 return
             r.tex_wh = (ww, wh)
 
+        row_bytes = r.img.bytesPerLine()
+        bits = r.img.constBits()
+
         glActiveTexture(GL_TEXTURE0)
         glBindTexture(GL_TEXTURE_2D, r.tex)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, row_bytes // 4)
         try:
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ww, wh,
-                            GL_RGBA, GL_UNSIGNED_BYTE, arr.tobytes())
+                            GL_RGBA, GL_UNSIGNED_BYTE, bits)
         except GLError:
             old = r.tex
             r.tex = None
@@ -856,14 +883,17 @@ class GLRender(QOpenGLWidget):
                     pass
             r.tex = self._make_tex(ww, wh)
             if not r.tex:
+                glPixelStorei(GL_UNPACK_ROW_LENGTH, 0)
                 return
             r.tex_wh = (ww, wh)
             glBindTexture(GL_TEXTURE_2D, r.tex)
             try:
                 glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ww, wh,
-                                GL_RGBA, GL_UNSIGNED_BYTE, arr.tobytes())
+                                GL_RGBA, GL_UNSIGNED_BYTE, bits)
             except GLError:
                 pass
+        finally:
+            glPixelStorei(GL_UNPACK_ROW_LENGTH, 0)
 
     def _draw_quad(self):
         glBindVertexArray(self._vao)
@@ -1128,11 +1158,17 @@ class GLRender(QOpenGLWidget):
                 continue
             visible.append(r)
 
-        for r in visible:
-            is_mat = (r.widget is self._materialized_widget)
+        n_visible = len(visible)
+        materialized = self._materialized_widget
+
+        for idx, r in enumerate(visible):
+            is_mat = (r.widget is materialized)
+            is_last = (idx == n_visible - 1)
             ww = r.widget.width()
             wh = r.widget.height()
-            if r.tex is None or r.tex_wh != (ww, wh) or r.dirty:
+
+            if not is_mat and (r.tex is None
+                    or r.tex_wh != (ww, wh) or r.dirty):
                 self._refresh_surface_tex(r)
                 r.dirty = False
 
@@ -1141,17 +1177,23 @@ class GLRender(QOpenGLWidget):
             if not is_mat:
                 self._draw_window(r, source_blur, W, H, pad_px, True)
                 self._blit_window(r.geom, W, H, pad_px, self._scene_fbo)
-                self._blit_window(r.geom, W, H, pad_px, self._blur_src_fbo)
+                if not is_last:
+                    self._blit_window(r.geom, W, H, pad_px,
+                                      self._blur_src_fbo)
             else:
                 self._draw_window(r, source_blur, W, H, pad_px, False)
                 self._blit_window(r.geom, W, H, pad_px, self._scene_fbo)
+                if not is_last:
+                    self._draw_window(r, source_blur, W, H, pad_px, True)
+                    self._blit_window(r.geom, W, H, pad_px,
+                                      self._blur_src_fbo)
 
-                self._draw_window(r, source_blur, W, H, pad_px, True)
-                self._blit_window(r.geom, W, H, pad_px, self._blur_src_fbo)
-
-            blurred = self._blur_texture(self._blur_src_tex)
+            if not is_last:
+                blurred = self._blur_texture(self._blur_src_tex)
 
         self._present(W, H)
+
+        self._update_pending = False
 
         self._frames += 1
         if now - self._fps_t >= FPS_REFRESH_S:
@@ -1314,10 +1356,7 @@ class Container(QWidget):
             except (RuntimeError, SystemError):
                 pass
 
-        try:
-            self.gl.update()
-        except (RuntimeError, SystemError):
-            pass
+        self.gl._request_frame()
 
     def dematerialize(self):
         if self._materialized is None:
@@ -1340,10 +1379,7 @@ class Container(QWidget):
             except (RuntimeError, SystemError):
                 pass
         self._restack()
-        try:
-            self.gl.update()
-        except (RuntimeError, SystemError):
-            pass
+        self.gl._request_frame()
 
     def _clear_focus(self):
         fw = QApplication.focusWidget()
@@ -1429,10 +1465,7 @@ class Container(QWidget):
             return
         if target is self._materialized:
             self._restack()
-            try:
-                self.gl.update()
-            except (RuntimeError, SystemError):
-                pass
+            self.gl._request_frame()
             return
         self.materialize(target, by_hover=False)
 

@@ -1,7 +1,7 @@
 VERT_SRC = """
-#version 440 core
-layout(location = 0) in vec2 aPos;
-layout(location = 1) in vec2 aTexCoord;
+#version 330 core
+in vec2 aPos;
+in vec2 aTexCoord;
 out vec2 vTexCoord;
 void main() {
     gl_Position = vec4(aPos, 0.0, 1.0);
@@ -11,7 +11,7 @@ void main() {
 
 
 FRAG_KAWASE_DOWN_SRC = """
-#version 440 core
+#version 330 core
 in vec2 vTexCoord;
 out vec4 fragColor;
 uniform sampler2D uTexture;
@@ -30,7 +30,7 @@ void main() {
 
 
 FRAG_KAWASE_UP_SRC = """
-#version 440 core
+#version 330 core
 in vec2 vTexCoord;
 out vec4 fragColor;
 uniform sampler2D uTexture;
@@ -52,7 +52,7 @@ void main() {
 
 
 FRAG_COPY_SRC = """
-#version 440 core
+#version 330 core
 in vec2 vTexCoord;
 out vec4 fragColor;
 uniform sampler2D uTexture;
@@ -63,7 +63,7 @@ void main() {
 
 
 FRAG_WINDOW_SRC = """
-#version 440 core
+#version 330 core
 in vec2 vTexCoord;
 out vec4 fragColor;
 
@@ -294,7 +294,7 @@ void main() {
     vec3 sceneRaw = texture(uScene, sceneUV).rgb;
     vec3 shadowedScene = sceneRaw * (1.0 - shadowVisible);
 
-    vec2 surfUV = vec2(localUV.x, 1.0 - localUV.y);
+    vec2 surfUV = vec2(localUV.x, localUV.y);
 
     vec3 result;
 
