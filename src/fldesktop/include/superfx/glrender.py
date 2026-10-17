@@ -632,10 +632,6 @@ class GLRender(QOpenGLWidget):
                               ctypes.c_void_p(8))
         glBindVertexArray(0)
 
-    # ----------------------------------------------------------------
-    # Textures / FBOs
-    # ----------------------------------------------------------------
-
     def _make_tex(self, w, h):
         if not self._tex_ok(w, h):
             return 0
@@ -794,10 +790,6 @@ class GLRender(QOpenGLWidget):
             self._win_size = (0, 0)
         else:
             self._win_size = (nw, nh)
-
-    # ----------------------------------------------------------------
-    # Upload
-    # ----------------------------------------------------------------
 
     def _upload(self, img):
         img = img.convertToFormat(
