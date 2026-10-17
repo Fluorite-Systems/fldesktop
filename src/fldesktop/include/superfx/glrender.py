@@ -404,7 +404,7 @@ class GLRender(QOpenGLWidget):
         if not peers:
             return
         top = max(x.z for x in peers)
-        if r.z >= top:
+        if r.z > top:
             return
         r.z = top + 1.0
         self._regs.sort(key=lambda x: (x.layer, x.z))
