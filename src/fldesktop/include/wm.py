@@ -202,9 +202,11 @@ class Window(Surface):
         )
 
     def animate_maximize(self) -> None:
+
+        sbv = self.comm.request("appletmgr", "is_sidebar_visible")
         
         pos = QPoint(0, 26)
-        size = QSize(self.parent().size().width(),
+        size = QSize(self.parent().size().width() - sbv * 175,
                      self.parent().size().height() - 26)
         self.hide()
         self.resize(size)
