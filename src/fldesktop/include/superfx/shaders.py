@@ -263,6 +263,26 @@ vec3 glass_tint(vec2 sceneUV, vec2 fromCenter, float r_lens) {
     return mix(blur * 0.92, effective_tint, uTintAmount);
 }
 
+vec3 glass_waves(vec3 tinted, vec2 uvQt) {
+    vec2 globalPx = uvQt * uResolution;
+    vec2 waveDir = vec2(cos(uWaveAngle), sin(uWaveAngle));
+    float waveT = dot(globalPx, waveDir);
+    float ph = uTime * 0.3;
+    float waveFreq = uWaveScale * 6.2831853 / 400.0;
+    float wave = (sin(waveT * waveFreq * 1.0 + ph)
+                + sin(waveT * waveFreq * 1.3 + 1.0 + ph * 1.3)
+                + sin(waveT * waveFreq * 1.7 + 2.0 + ph * 0.7)) / 3.0;
+    wave = smoothstep(0.20, 0.80, wave * 0.5 + 0.5);
+    tinted *= 1.0 + wave * uWaveStrength;
+
+    if (uNoise > 0.0001) {
+        vec2 pp = floor(globalPx);
+        tinted += (hash21(pp) - 0.5) * uNoise;
+    }
+
+    return tinted;
+}
+
 void main() {
     vec2 uvQt = (uRectMin - uPadUV)
               + vec2(vTexCoord.x, 1.0 - vTexCoord.y)
@@ -294,7 +314,7 @@ void main() {
     vec3 sceneRaw = texture(uScene, sceneUV).rgb;
     vec3 shadowedScene = sceneRaw * (1.0 - shadowVisible);
 
-    vec2 surfUV = vec2(localUV.x, localUV.y);
+    vec2 surfUV = localUV;
 
     vec3 result;
 
@@ -303,32 +323,26 @@ void main() {
         vec3 combined = surf.rgb + shadowedScene * (1.0 - surf.a);
         result = mix(shadowedScene, combined, windowMask);
     } else {
-        vec3 tinted = glass_tint(sceneUV, fromCenter, r_lens);
+        vec4 surf = texture(uSurface, surfUV);
 
-        vec2 globalPx = uvQt * uResolution;
-        vec2 waveDir = vec2(cos(uWaveAngle), sin(uWaveAngle));
-        float waveT = dot(globalPx, waveDir);
-        float ph = uTime * 0.3;
-        float waveFreq = uWaveScale * 6.2831853 / 400.0;
-        float wave = (sin(waveT * waveFreq * 1.0 + ph)
-                    + sin(waveT * waveFreq * 1.3 + 1.0 + ph * 1.3)
-                    + sin(waveT * waveFreq * 1.7 + 2.0 + ph * 0.7)) / 3.0;
-        wave = smoothstep(0.20, 0.80, wave * 0.5 + 0.5);
-        tinted *= 1.0 + wave * uWaveStrength;
+        float drawn = step(0.5, uDrawSurface);
+        float opaque_pixels = drawn * step(0.996, surf.a);
 
-        if (uNoise > 0.0001) {
-            vec2 pp = floor(globalPx);
-            tinted += (hash21(pp) - 0.5) * uNoise;
-        }
-
-        vec3 glow = edge_glow(localUV);
-
-        if (uDrawSurface >= 0.5) {
-            vec4 surf = texture(uSurface, surfUV);
-            vec3 glass = surf.rgb + (tinted + glow) * (1.0 - surf.a);
-            result = mix(shadowedScene, glass, windowMask);
+        if (opaque_pixels > 0.5) {
+            result = mix(shadowedScene, surf.rgb, windowMask);
         } else {
-            result = mix(shadowedScene, tinted + glow, windowMask);
+            vec3 tinted = glass_tint(sceneUV, fromCenter, r_lens);
+            tinted = glass_waves(tinted, uvQt);
+
+            vec3 glow = edge_glow(localUV);
+
+            if (drawn > 0.5) {
+                vec3 glass = surf.rgb
+                           + (tinted + glow) * (1.0 - surf.a);
+                result = mix(shadowedScene, glass, windowMask);
+            } else {
+                result = mix(shadowedScene, tinted + glow, windowMask);
+            }
         }
     }
 
