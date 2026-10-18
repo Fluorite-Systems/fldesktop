@@ -148,6 +148,10 @@ class Widget(UI):
             elif hasattr(self, "qwidget"):
                 parent.qlayout.addWidget(self.qwidget)
                 logging.debug(f"Added {self}'s widget to {parent}'s layout")
+        if hasattr(parent, "qwidget"):
+            if hasattr(self, "qlayout"):
+                parent.qwidget.setLayout(self.qlayout)
+                logging.debug(f"Added {parent}'s layout is now {self}")
 
         self.parent = parent
 
