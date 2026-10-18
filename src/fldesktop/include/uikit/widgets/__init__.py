@@ -1,8 +1,11 @@
-from fldesktop.include.uikit.widgets import textedit
 from fldesktop.include.uikit.widgets import (
-    vlayout
+    root, base, vlayout, hlayout, flayout, container, stretch,
+    button, checkbox, radiobutton, slider,
+    entry, textedit, label,
+    icon, imageview,
+    tabs, canvas, overlay, decoration,
+    terminal, accelgraphicsview
 )
-from fldesktop.include.uikit.widgets import accelgraphicsview, base, button, canvas, checkbox, container, entry, flayout, hlayout, icon, imageview, label, listview, overlay, radiobutton, root, slider, stretch, tabs, terminal
 
 
 widgets = {
@@ -27,6 +30,7 @@ widgets = {
     "terminal": terminal.Terminal,
     "textedit": textedit.TextEdit,
     "canvas": canvas.Canvas,
+    "decoration": decoration.Decoration,
     "accelgraphicsview": accelgraphicsview.AccelGraphicsView,
     "overlay": overlay.Overlay
 }
