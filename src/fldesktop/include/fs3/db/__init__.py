@@ -140,7 +140,7 @@ class Database:
 
         while not self.stop.is_set():
             ts = self.queue.get()
-            if "tr_id" in self.replies:
+            if "tr_id" in ts:
                 self.replies[ts["tr_id"]] = self.run_transaction(**ts)
 
 
