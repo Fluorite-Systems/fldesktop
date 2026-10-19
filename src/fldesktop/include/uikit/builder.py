@@ -11,13 +11,14 @@ class Builder:
     def __init__(self, cm):
 
         self.cm = cm
+        self.comm = self.cm.comm
 
         self.objects = {}
         self.translations = {}
 
     def create_applet(self, node_id: str, node_attrs: dict):
 
-        self.objects[node_id] = Applet(self.cm.comm, node_id, node_attrs)
+        self.objects[node_id] = Applet(self.comm, node_id, node_attrs)
 
     def create_widget(self, node_id: int, node_attrs: dict):
 
@@ -29,13 +30,13 @@ class Builder:
 
         wname = node_id#f"{wtype}_{node_id}"
 
-        widget = widgets[wtype](self.cm.comm, wname, node_attrs)
+        widget = widgets[wtype](self.comm, wname, node_attrs)
 
         self.objects[wname] = widget
 
     def create_window(self, node_id: str, node_attrs: dict):
 
-        self.objects[node_id] = Window(self.cm.comm, node_attrs)
+        self.objects[node_id] = Window(self.comm, node_attrs)
 
     def process_relation(self, node_id: int, node_attrs: dict):
 
