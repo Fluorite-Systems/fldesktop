@@ -63,7 +63,7 @@ class Database:
 
         self.update_index(id)
 
-        self.callback.emit("modified", {"id": int, "attrs": attrs})
+        self.callback.emit("modified", {"id": id, "attrs": attrs})
 
     def get_node(self, id: int) -> dict | None:
 
@@ -119,6 +119,12 @@ class Database:
                             return
                         self.replies[kwargs["tr_id"]] = \
                             self.delete_node(kwargs["id"])
+
+                    case "set_attrs":
+                        if "id" not in kwargs or "attrs" not in kwargs:
+                            return
+                        self.replies[kwargs["tr_id"]] = \
+                            self.set_attrs(kwargs["id"], kwargs["attrs"])
 
                     case _:
                         return
