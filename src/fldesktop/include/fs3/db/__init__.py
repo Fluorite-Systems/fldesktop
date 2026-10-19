@@ -109,7 +109,7 @@ class Database:
 
         with self.lock:
             try:
-                if "method" not in kwargs or "tr_id" not in kwargs:
+                if "method" not in kwargs:
                     return
 
                 match kwargs["method"]:
@@ -140,7 +140,8 @@ class Database:
 
         while not self.stop.is_set():
             ts = self.queue.get()
-            self.replies[ts["tr_id"]] = self.run_transaction(**ts)
+            if "tr_id" in self.replies:
+                self.replies[ts["tr_id"]] = self.run_transaction(**ts)
 
 
 class DatabaseManager(QObject):
