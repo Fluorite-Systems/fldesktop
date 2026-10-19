@@ -4,6 +4,7 @@ from fldesktop.include.fs3.db.storagemgr import StorageManager
 from fldesktop.include.fs3.db.gc import GarbageCollector
 from pathlib import Path
 import threading
+import msgpack
 import uuid
 import base64
 import logging
@@ -79,7 +80,9 @@ class Database:
     def query_by_attr_value(self, attr: str, value) -> list | None:
 
         with self.lock:
-            if (attr, value) in self.index:
+            name = (attr, msgpack.packb(
+                    value, use_bin_type=True, strict_types=False))
+            if name in self.index:
                 return self.index[(attr, value)]
 
     def update_index(self, id: int) -> None:
@@ -89,6 +92,8 @@ class Database:
 
         for attr, val in self.db[id].attrs.items():
             name = (attr, val)
+            name = (attr, msgpack.packb(
+                val, use_bin_type=True, strict_types=False))
             if name in self.index:
                 self.index[name].append(id)
             else:
@@ -111,20 +116,17 @@ class Database:
                     case "create_node":
                         if "attrs" not in kwargs:
                             return
-                        self.replies[kwargs["tr_id"]] = \
-                            self.create_node(kwargs["attrs"])
+                        return self.create_node(kwargs["attrs"])
 
                     case "delete_node":
                         if "id" not in kwargs:
                             return
-                        self.replies[kwargs["tr_id"]] = \
-                            self.delete_node(kwargs["id"])
+                        return self.delete_node(kwargs["id"])
 
                     case "set_attrs":
                         if "id" not in kwargs or "attrs" not in kwargs:
                             return
-                        self.replies[kwargs["tr_id"]] = \
-                            self.set_attrs(kwargs["id"], kwargs["attrs"])
+                        return self.set_attrs(kwargs["id"], kwargs["attrs"])
 
                     case _:
                         return
@@ -138,7 +140,7 @@ class Database:
 
         while not self.stop.is_set():
             ts = self.queue.get()
-            self.run_transaction(**ts)
+            self.replies[ts["tr_id"]] = self.run_transaction(**ts)
 
 
 class DatabaseManager(QObject):
