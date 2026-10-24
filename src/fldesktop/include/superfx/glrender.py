@@ -121,7 +121,7 @@ def _coerce_layer(v):
 class _Reg:
     __slots__ = ("widget", "z", "glass", "layer", "locked",
                  "tex", "img", "tex_wh", "dirty",
-                 "_dont_show_applied")
+                 "_dont_show_applied", "_rendering")
 
     def __init__(self, widget, z, glass, layer, locked):
         self.widget = widget
@@ -134,6 +134,7 @@ class _Reg:
         self.tex_wh = None
         self.dirty = True
         self._dont_show_applied = False
+        self._rendering = False
 
     @property
     def geom(self):
@@ -198,6 +199,7 @@ class GLRender(QOpenGLWidget):
         self._fps = 0.0
 
         self._update_pending = False
+        self._needs_continuous = False
 
         self.frameSwapped.connect(self._on_frame_swapped)
 
@@ -214,14 +216,22 @@ class GLRender(QOpenGLWidget):
     def _request_frame(self):
         if self._update_pending:
             return
+        if _app_closing() or self._shutting_down:
+            return
         self._update_pending = True
         try:
             self.update()
         except (RuntimeError, SystemError):
             self._update_pending = False
 
+    def _mark_dirty(self, r):
+        if r is None:
+            return
+        r.dirty = True
+        self._request_frame()
+
     def _tick_surfaces(self):
-        for r in list(self._regs):
+        for r in self._regs:
             w = r.widget
             if not _alive(w):
                 continue
@@ -229,7 +239,7 @@ class GLRender(QOpenGLWidget):
             if not callable(fn):
                 continue
             try:
-                if fn():
+                if fn() and _paintable(w):
                     r.dirty = True
             except Exception:
                 pass
@@ -239,7 +249,11 @@ class GLRender(QOpenGLWidget):
             return
         self._update_pending = False
         self._tick_surfaces()
-        self._request_frame()
+        still_dirty = any(
+            r.dirty for r in self._regs
+            if _alive(r.widget) and _paintable(r.widget))
+        if self._needs_continuous or still_dirty:
+            self._request_frame()
 
     def _on_safety_tick(self):
         if _app_closing() or self._shutting_down:
@@ -248,9 +262,12 @@ class GLRender(QOpenGLWidget):
             except (RuntimeError, SystemError):
                 pass
             return
-        self._update_pending = False
         self._tick_surfaces()
-        self._request_frame()
+        still_dirty = any(
+            r.dirty for r in self._regs
+            if _alive(r.widget) and _paintable(r.widget))
+        if still_dirty:
+            self._request_frame()
 
     def _tex_ok(self, w, h):
         return 0 < w <= self._max_tex_dim and 0 < h <= self._max_tex_dim
@@ -271,6 +288,51 @@ class GLRender(QOpenGLWidget):
             self._rebuild_gl()
             self._gl_ctx = ctx
         return True
+
+    def _install_update_hook(self, w):
+        if getattr(w, "_compositor_hooked", False):
+            return
+        try:
+            original = w.update
+        except (RuntimeError, SystemError):
+            return
+
+        owner = self
+
+        def _hook(*args, __w=w, __o=original, **kwargs):
+            try:
+                r = owner._reg_by_widget.get(__w)
+            except (RuntimeError, SystemError):
+                r = None
+            if r is not None and not r._rendering:
+                r.dirty = True
+                owner._request_frame()
+            return __o(*args, **kwargs)
+
+        try:
+            w.update = _hook
+            w._compositor_hooked = True
+        except (RuntimeError, SystemError):
+            return
+
+        try:
+            for child in w.findChildren(QWidget):
+                self._install_update_hook(child)
+        except (RuntimeError, SystemError):
+            pass
+
+    def _uninstall_update_hook(self, w):
+        if getattr(w, "_compositor_hooked", False):
+            try:
+                del w.update
+                del w._compositor_hooked
+            except (AttributeError, TypeError):
+                pass
+        try:
+            for child in w.findChildren(QWidget):
+                self._uninstall_update_hook(child)
+        except (RuntimeError, SystemError):
+            pass
 
     def _forget_gl_resources(self):
         self._progs = {}
@@ -353,6 +415,7 @@ class GLRender(QOpenGLWidget):
         self._regs.sort(key=lambda x: (x.layer, x.z))
         self._reg_by_widget[widget] = r
         self._apply_dont_show(r, True)
+        self._install_update_hook(widget)
         self._request_frame()
         return r
 
@@ -361,6 +424,7 @@ class GLRender(QOpenGLWidget):
             if r.widget is widget:
                 self._regs.remove(r)
                 self._reg_by_widget.pop(widget, None)
+                self._uninstall_update_hook(widget)
 
                 tex = r.tex
                 r.tex = None
@@ -436,6 +500,7 @@ class GLRender(QOpenGLWidget):
         r = self._reg_by_widget.get(widget)
         if r is not None:
             r.dirty = True
+            self._request_frame()
 
     def eventFilter(self, obj, ev):
         if not isinstance(obj, QWidget):
@@ -449,7 +514,8 @@ class GLRender(QOpenGLWidget):
 
         if et not in (QEvent.Type.UpdateRequest,
                       QEvent.Type.Resize,
-                      QEvent.Type.Show):
+                      QEvent.Type.Show,
+                      QEvent.Type.Paint):
             return False
 
         r = self._reg_by_widget.get(obj)
@@ -458,11 +524,18 @@ class GLRender(QOpenGLWidget):
         if r is None:
             return False
 
+        if r._rendering:
+            return False
+
+        if et == QEvent.Type.Paint:
+            self._mark_dirty(r)
+            return False
+
         if _prop(r.widget, PROP_CONTENT_STATIC) is True:
             if r.tex is not None and et != QEvent.Type.Show:
                 return False
 
-        r.dirty = True
+        self._mark_dirty(r)
         return False
 
     def _reg_of(self, w):
@@ -506,6 +579,10 @@ class GLRender(QOpenGLWidget):
                 app.removeEventFilter(self)
             except (RuntimeError, SystemError):
                 pass
+
+        for r in self._regs:
+            if _alive(r.widget):
+                self._uninstall_update_hook(r.widget)
 
         try:
             if self.isValid():
@@ -834,10 +911,14 @@ class GLRender(QOpenGLWidget):
             r.img = QImage(ww, wh, fmt)
         r.img.fill(0)
 
+        r.dirty = False
+        r._rendering = True
         try:
             w.render(r.img)
         except (RuntimeError, SystemError):
             return
+        finally:
+            r._rendering = False
 
         if r.tex is None or r.tex_wh != (ww, wh):
             old = r.tex
@@ -1115,25 +1196,7 @@ class GLRender(QOpenGLWidget):
         glBindTexture(GL_TEXTURE_2D, self._scene_tex)
         self._draw_quad()
 
-    def paintGL(self):
-        if not self._ensure_context():
-            return
-        W, H = self.width(), self.height()
-        if W <= 0 or H <= 0:
-            return
-        if self._scene_size != (W, H):
-            self._setup_fbos()
-        if self._scene_fbo is None or self._blur_src_fbo is None:
-            return
-
-        self._fill_both_with_wallpaper(W, H)
-
-        blurred_wallpaper = self._blur_texture(self._blur_src_tex)
-        blurred = blurred_wallpaper
-
-        pad_px = int(min(W, H) * self.config.shadow_spread * 5.0) + 16
-        now = time.perf_counter()
-
+    def _collect_visible(self):
         visible = []
         for r in self._regs:
             w = r.widget
@@ -1149,9 +1212,44 @@ class GLRender(QOpenGLWidget):
             if r.layer == 0.0 and self._wallpaper_image is not None:
                 continue
             visible.append(r)
+        return visible
 
+    def _compute_glass_above(self, visible):
+        n = len(visible)
+        out = [False] * n
+        any_glass = False
+        for i in range(n - 1, -1, -1):
+            out[i] = any_glass
+            if visible[i].glass:
+                any_glass = True
+        return out
+
+    def paintGL(self):
+        if not self._ensure_context():
+            return
+        W, H = self.width(), self.height()
+        if W <= 0 or H <= 0:
+            return
+        if self._scene_size != (W, H):
+            self._setup_fbos()
+        if self._scene_fbo is None or self._blur_src_fbo is None:
+            return
+
+        self._fill_both_with_wallpaper(W, H)
+
+        pad_px = int(min(W, H) * self.config.shadow_spread * 5.0) + 16
+        now = time.perf_counter()
+
+        visible = self._collect_visible()
         n_visible = len(visible)
         materialized = self._materialized_widget
+
+        any_glass = any(r.glass for r in visible)
+        glass_above = self._compute_glass_above(visible)
+
+        blurred_wallpaper = (self._blur_texture(self._blur_src_tex)
+                            if any_glass else 0)
+        blurred = blurred_wallpaper
 
         for idx, r in enumerate(visible):
             is_mat = (r.widget is materialized)
@@ -1162,30 +1260,33 @@ class GLRender(QOpenGLWidget):
             if not is_mat and (r.tex is None
                     or r.tex_wh != (ww, wh) or r.dirty):
                 self._refresh_surface_tex(r)
-                r.dirty = False
 
             source_blur = blurred_wallpaper if is_mat else blurred
 
             if not is_mat:
                 self._draw_window(r, source_blur, W, H, pad_px, True)
                 self._blit_window(r.geom, W, H, pad_px, self._scene_fbo)
-                if not is_last:
+                if glass_above[idx]:
                     self._blit_window(r.geom, W, H, pad_px,
                                       self._blur_src_fbo)
             else:
                 self._draw_window(r, source_blur, W, H, pad_px, False)
                 self._blit_window(r.geom, W, H, pad_px, self._scene_fbo)
-                if not is_last:
+                if glass_above[idx]:
                     self._draw_window(r, source_blur, W, H, pad_px, True)
                     self._blit_window(r.geom, W, H, pad_px,
                                       self._blur_src_fbo)
 
-            if not is_last:
+            if not is_last and glass_above[idx]:
                 blurred = self._blur_texture(self._blur_src_tex)
 
         self._present(W, H)
 
         self._update_pending = False
+
+        wave_anim = (self.config.wave_strength > 0.001
+                     or self.config.noise > 0.001)
+        self._needs_continuous = any_glass and wave_anim
 
         self._frames += 1
         if now - self._fps_t >= FPS_REFRESH_S:
