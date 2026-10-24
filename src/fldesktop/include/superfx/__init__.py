@@ -13,14 +13,15 @@ class SuperFX:
         self.config = glrender.GlassConfig()
 
         self.comm.register("superfx", {
-            "add_surface":    self.add_surface,
+            "add_surface": self.add_surface,
             "remove_surface": self.remove_surface,
-            "raise_surface":  self.raise_surface,
-            "lower_surface":  self.lower_surface,
-            "set_wallpaper":  self.set_wallpaper,
-            "invalidate":     self.invalidate,
-            "get_container":  lambda: self.container,
-            "get_backend":    lambda: self.backend,
+            "raise_surface": self.raise_surface,
+            "lower_surface": self.lower_surface,
+            "set_wallpaper": self.set_wallpaper,
+            "invalidate": self.invalidate,
+            "force_dematerialize": self.force_dematerialize,
+            "get_container": lambda: self.container,
+            "get_backend": lambda: self.backend,
         })
 
         self.comm.subscribe("desktop_size_changed", self.update_size)
@@ -77,3 +78,6 @@ class SuperFX:
 
     def invalidate(self, *args, **kwargs):
         return self.backend.invalidate(*args, **kwargs)
+
+    def force_dematerialize(self):
+        return self.container.dematerialize()

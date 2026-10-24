@@ -2,6 +2,8 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
 from PySide6.QtGui import QPainter, QColor, QBrush, QRadialGradient, QPixmap, QFont
 from PySide6.QtCore import Qt, QTimer, QPointF
 
+from fldesktop.include.widgets.surface import Surface
+
 import subprocess
 import math
 import os
@@ -67,9 +69,9 @@ class ProgressBar(QWidget):
         return super().hideEvent(event)
 
 
-class StartupScreen(QWidget):
+class StartupScreen(Surface):
     def __init__(self, comm):
-        super().__init__(comm.request("desktop", "get_instance"))
+        super().__init__(comm, glass=False, auto_attach=False, layer=995)
 
         self.comm = comm
         self.comm.subscribe("desktop_size_changed", self.refresh_geometry)
@@ -105,16 +107,16 @@ class StartupScreen(QWidget):
         return QPixmap()
 
     def refresh_geometry(self):
-        self.resize(self.parent().size())
+        self.setFixedSize(self.comm.request("desktop", "get_instance").size())
 
     def showEvent(self, event):
         QTimer.singleShot(1000, lambda: self.comm.emit("startupscreen_shown"))
         return super().showEvent(event)
 
 
-class ShutdownScreen(QWidget):
+class ShutdownScreen(Surface):
     def __init__(self, comm):
-        super().__init__(comm.request("desktop", "get_instance"))
+        super().__init__(comm, glass=False, auto_attach=False, layer=995)
 
         self.comm = comm
         self.comm.subscribe("desktop_size_changed", self.refresh_geometry)
@@ -139,7 +141,7 @@ class ShutdownScreen(QWidget):
         self.layout.addWidget(self.pb)
 
     def refresh_geometry(self):
-        self.setFixedSize(self.parent().size())
+        self.setFixedSize(self.comm.request("desktop", "get_instance").size())
 
     def set_reboot(self, reboot: bool):
         if reboot:

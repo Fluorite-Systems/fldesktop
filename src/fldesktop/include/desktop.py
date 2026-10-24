@@ -41,7 +41,7 @@ class Desktop(QWidget):
         self.setMinimumSize(800, 600)
 
         # Fade effect on startup and shutdown
-        self.fade_effect = FadeEffect(self.comm, self)
+        self.fade_effect = FadeEffect(self.comm)
 
         self.show()
     
