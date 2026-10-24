@@ -83,7 +83,7 @@ class Database:
             name = (attr, msgpack.packb(
                     value, use_bin_type=True, strict_types=False))
             if name in self.index:
-                return self.index[(attr, value)]
+                return self.index[name]
 
     def update_index(self, id: int) -> None:
 
