@@ -41,7 +41,7 @@ REQ_TYPES = {
         "id": str,
         "mode": str
     },
-    "call_method": {
+    "request": {
         "id": str,
         "method": str,
         "args": dict
@@ -94,10 +94,12 @@ class ClientManager(QObject):
                 "fs3", data["cmd"], **args
             )
 
-        elif data["cmd"] == "call_method":
+        elif data["cmd"] == "request":
             reply = self.builder.call_method(
                 data["id"], data["method"], data["args"]
             )
+        else:
+            callback({"status": "invalid_command"})
 
         if reply is not None:
             callback({"status": "ok", "reply": reply})

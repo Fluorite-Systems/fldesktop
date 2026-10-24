@@ -87,7 +87,7 @@ class Builder:
         self.objects[id].delete()
         self.objects.pop(id)
 
-    def call_method(self, id, method, kwargs):
+    def request(self, id, method, kwargs):
 
         if id in self.objects:
             if method in self.objects[id].callables:
