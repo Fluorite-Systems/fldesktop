@@ -79,9 +79,7 @@ class Panel(Surface):
             "add_btn": self.add_btn,
             "rm_btn": self.rm_btn,
             "highlight_btn": self.highlight_btn,
-            "set_btn_text": self.set_btn_text,
-            "get_qc_btn": self.get_qc_btn,
-            "return_qc_btn": self.return_qc_btn
+            "set_btn_text": self.set_btn_text
         })
         self.comm.subscribe("desktop_size_changed", self.refresh_geometry)
         self.comm.subscribe("sidebar_state_changed", self.handle_sidebar)
@@ -164,13 +162,3 @@ class Panel(Surface):
             w = self.taskbar_layout.itemAt(i).widget()
             if w.id == id:
                 w.set_title(text)
-
-    def get_qc_btn(self) -> QPushButton:
-
-        self.layout.removeWidget(self.qc.btn)
-        return self.qc.btn
-
-    def return_qc_btn(self) -> None:
-
-        self.qc.btn.setParent(None)
-        self.layout.addWidget(self.qc.btn)

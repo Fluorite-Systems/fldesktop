@@ -97,20 +97,17 @@ class UnlockBackendManager:
 
 class LockScreen(Surface):
     def __init__(self, comm) -> None:
-
-        parent = comm.request("desktop", "get_instance")
-        
-        super().__init__(comm, parent, 5)
-
-        self.parent = parent
+        super().__init__(
+            comm, hover_materialize=True,
+            layer=700, auto_attach=False
+        )
 
         self.comm = comm
         self.comm.register("lockscreen", {
             "show": self.show_,
             "refresh_size": self.refresh_size,
             "is_visible": self.is_visible,
-            "raise": self.raise_,
-            "raise_qc_btn": self.raise_qc_btn
+            "raise": self.raise_
         })
 
         self.comm.subscribe("qc_btn_size_changed", self.refresh_size)
@@ -169,41 +166,29 @@ class LockScreen(Surface):
     def show_(self) -> None:
         "Show"
 
+        self.comm.request("superfx", "force_dematerialize")
+
         atype = self.comm.request("cfgmgr", "get", "auth-type")
         if atype == "passwordless" and self.first_show:
             self.first_show = False
             return
 
-        self.bkmgr.setup()
-        self.qc_btn = self.comm.request("panel", "get_qc_btn")
-        self.qc_btn.setParent(self.parent)
-        self.qc_btn.show()          
+        self.bkmgr.setup()       
         self.raise_()
         self.show()
         self.refresh_size()
-        self.qc_btn.raise_()
 
     def hide_(self) -> None:
         "Hide lockscreen after unlock"
  
         self.hide()
-        self.comm.request("panel", "return_qc_btn")
-        self.qc_btn = None
     
     def refresh_size(self) -> None:
         "Refreshes size"
 
-        self.setFixedSize(self.parent.size())
+        self.setFixedSize(self.comm.request("desktop", "get_instance").size())
         self.move(0, 0)
-
-        if self.qc_btn:
-            self.qc_btn.move(self.width() - self.qc_btn.width(), 0)
 
     def is_visible(self) -> bool:
 
         return self.isVisible()
-
-    def raise_qc_btn(self) -> None:
-
-        if self.qc_btn:
-            self.qc_btn.raise_()
