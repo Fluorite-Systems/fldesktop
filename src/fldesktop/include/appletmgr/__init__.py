@@ -32,11 +32,11 @@ class AppletManager:
         self.sb_toggle.setFlat(True)
         self.sb_toggle.clicked.connect(self.toggle_sidebar)
 
+        self.show_sidebar(True)
+
         self.applets = []
 
         self.load_std_applets()
-
-        self.show_sidebar(True)
 
     def load_std_applets(self):
 
@@ -53,6 +53,11 @@ class AppletManager:
 
         if applet not in self.applets:
             return
+
+        i = self.tray_l.indexOf(applet.button)
+        b = self.tray_l.itemAt(i).widget()
+        b.close()
+        b.deleteLater()
 
         self.sidebar.del_applet(applet)
         self.applets.remove(applet)

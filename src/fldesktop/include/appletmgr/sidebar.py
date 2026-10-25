@@ -53,31 +53,20 @@ class Sidebar(Surface):
     def add_applet(self, applet: Applet):
 
         self.applets.append(applet)
-        if self.isVisible():
-            self.applets_layout.addWidget(applet.widget)
+        self.reattach_applets()
 
     def del_applet(self, applet: Applet):
 
-        if self.isVisible():
-            index = self.applets_layout.indexOf(applet) + 1
-            if index < self.applets_layout.count():
-                self.applets_layout.itemAt(index).widget().close()
         self.applets.remove(applet)
+        applet.close()
+        self.reattach_applets()
 
     def show(self, disable_anim: bool = False):
         def phase2(self):
             super().show()
             self.comm.request("panel", "raise")
         
-        for i in self.applets:
-            #l = QLabel("applet idk")
-            #self.applets_layout.addWidget(l)
-            self.applets_layout.addWidget(i.widget)
-            if i is not self.applets[-1]:
-                line = QFrame()
-                line.setFrameShape(QFrame.Shape.HLine)
-                #line.setFrameShadow(QFrame.Shadow.Sunken)
-                self.applets_layout.addWidget(line)
+        self.attach_applets()
 
         if disable_anim:
             phase2(self)
@@ -88,10 +77,32 @@ class Sidebar(Surface):
             {"pos": self.pos(), "size": self.size(),
              "tint_color": (0, 0, 0), "tint_alpha": 1},
             lambda s=self: phase2(s)
-        )
-        
+        )        
 
     def hide(self):
+
+        self.detach_applets()
+
+        Animation(
+            self.comm, self.parent(), self.grab(), "sbclose",
+            {"pos": self.pos(), "size": self.size(),
+             "tint_color": (0, 0, 0), "tint_alpha": 1}, lambda: ...
+        )
+        super().hide()
+
+    def attach_applets(self):
+
+        for i in self.applets:
+            #l = QLabel("applet idk")
+            #self.applets_layout.addWidget(l)
+            self.applets_layout.addWidget(i.widget)
+            if i is not self.applets[-1]:
+                line = QFrame()
+                line.setFrameShape(QFrame.Shape.HLine)
+                #line.setFrameShadow(QFrame.Shadow.Sunken)
+                self.applets_layout.addWidget(line)
+
+    def detach_applets(self):
 
         for i in self.applets:
             i.widget.setParent(None)
@@ -100,9 +111,7 @@ class Sidebar(Surface):
             w.close()
             w.deleteLater()
 
-        Animation(
-            self.comm, self.parent(), self.grab(), "sbclose",
-            {"pos": self.pos(), "size": self.size(),
-             "tint_color": (0, 0, 0), "tint_alpha": 1}, lambda: ...
-        )
-        super().hide()
+    def reattach_applets(self):
+
+        self.detach_applets()
+        self.attach_applets()
