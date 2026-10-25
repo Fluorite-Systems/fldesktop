@@ -44,8 +44,6 @@ class Builder:
             f"Processing relation with id {node_id}, attrs {node_attrs}"
         )
 
-        logging.debug(f"{self.objects}, {self.objects}")
-
         if "Attr.Relation.From" in node_attrs:
             rfrom = node_attrs["Attr.Relation.From"]
             if rfrom not in self.objects:

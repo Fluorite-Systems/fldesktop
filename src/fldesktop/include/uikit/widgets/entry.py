@@ -9,7 +9,7 @@ class Entry(Widget):
 
         super().__init__(
             comm, name, attrs,
-            {"text": ""}
+            {"text": ""} 
         )
 
         self.type = "entry"

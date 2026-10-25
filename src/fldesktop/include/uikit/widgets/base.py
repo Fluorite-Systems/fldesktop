@@ -141,6 +141,12 @@ class Widget(UI):
 
         logging.debug(f"Reparenting {self} to {parent}")
 
+        self.parent = parent
+
+        if hasattr(parent, "add_child"):
+            if parent.add_child(self): # Schould return True on success
+                return
+
         if hasattr(parent, "qlayout"):
             if hasattr(self, "qlayout"):
                 parent.qlayout.addLayout(self.qlayout)
@@ -148,13 +154,10 @@ class Widget(UI):
             elif hasattr(self, "qwidget"):
                 parent.qlayout.addWidget(self.qwidget)
                 logging.debug(f"Added {self}'s widget to {parent}'s layout")
-        if hasattr(parent, "qwidget"):
+
+        elif hasattr(parent, "qwidget"):
             if hasattr(self, "qlayout"):
                 parent.qwidget.setLayout(self.qlayout)
                 logging.debug(f"Added {parent}'s layout is now {self}")
 
-        self.parent = parent
-
-    def set_index(self, index: int):
-
-        ...
+        

@@ -8,14 +8,14 @@ class TextEdit(Widget):
         self.qwidget = QTextEdit()
 
         super().__init__(
-            comm, name, attrs,
-            {"text": ""}
+            comm, name, attrs
         )
         
         self.type = "textedit"        
 
         self.callables = {
             "get_text": self.get_text,
+            "set_text": self.set_text,
             "enable": lambda _: self.qwidget.setEnabled(True),
             "disable": lambda _: self.qwidget.setEnabled(False)
         }
@@ -26,10 +26,8 @@ class TextEdit(Widget):
 
         self._setup()
 
-    def apply_attrs(self):
-        super().apply_attrs()
-
-        self.qwidget.setText(self.attrs["text"])
+    def set_text(self, text: str):
+        self.qwidget.setText(str(text))
 
     def get_text(self) -> str:
         return self.qwidget.toPlainText()

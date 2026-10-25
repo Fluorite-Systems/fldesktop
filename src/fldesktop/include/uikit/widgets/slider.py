@@ -11,10 +11,9 @@ class Slider(Widget):
         super().__init__(
             comm, name, attrs,
             {
-                "value": 0,
-                "min_value": 0,
-                "max_value": 99,
-                "orientation": "hor"
+                "Attr.UI.Widget.Slider.MinValue": 0,
+                "Attr.UI.Widget.Slider.MaxValue": 99,
+                "Attr.UI.Widget.Slider.Orientation": "hor"
             }
         )
 
@@ -33,12 +32,13 @@ class Slider(Widget):
         super().apply_attrs()
 
         self.qwidget.setOrientation(
-            Qt.Orientation.Vertical if self.attrs["orientation"] == "ver"\
+            Qt.Orientation.Vertical if \
+                self.attrs["Attr.UI.Widget.Slider.Orientation"] == "ver" \
             else Qt.Orientation.Horizontal
         )
 
-        self.qwidget.setMaximum(self.attrs["max_value"])
-        self.qwidget.setMinimum(self.attrs["min_value"])
+        self.qwidget.setMaximum(self.attrs["Attr.UI.Widget.Slider.MaxValue"])
+        self.qwidget.setMinimum(self.attrs["Attr.UI.Widget.Slider.MinValue"])
         
     def vc_handler(self, value: int):
 

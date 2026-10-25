@@ -9,7 +9,7 @@ class CheckBox(Widget):
 
         super().__init__(
             comm, name, attrs,
-            {"text": ""}
+            {"Attr.UI.Widget.CheckBox.Text": ""}
         )
 
         self.type = "checkbox"
@@ -24,5 +24,7 @@ class CheckBox(Widget):
     def apply_attrs(self):
         super().apply_attrs()
 
-        if self.attrs["text"]:
-            self.qwidget.setText(self.tr(str(self.attrs["text"])))
+        if self.attrs["Attr.UI.Widget.CheckBox.Text"]:
+            self.qwidget.setText(
+                self.tr(str(self.attrs["Attr.UI.Widget.CheckBox.Text"]))
+            )
