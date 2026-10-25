@@ -32,11 +32,11 @@ class AppletManager:
         self.sb_toggle.setFlat(True)
         self.sb_toggle.clicked.connect(self.toggle_sidebar)
 
-        self.show_sidebar()
-
         self.applets = []
 
         self.load_std_applets()
+
+        self.show_sidebar(True)
 
     def load_std_applets(self):
 
@@ -57,11 +57,11 @@ class AppletManager:
         self.sidebar.del_applet(applet)
         self.applets.remove(applet)
 
-    def show_sidebar(self):
+    def show_sidebar(self, disable_anim: bool = False):
 
         self.sbv = True
         self.comm.emit("sidebar_state_changed")
-        self.sidebar.show()
+        self.sidebar.show(disable_anim)
         self.tray.hide()
 
     def hide_sidebar(self):

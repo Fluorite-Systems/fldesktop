@@ -64,7 +64,7 @@ class Sidebar(Surface):
                 self.applets_layout.itemAt(index).widget().close()
         self.applets.remove(applet)
 
-    def show(self):
+    def show(self, disable_anim: bool = False):
         def phase2(self):
             super().show()
             self.comm.request("panel", "raise")
@@ -78,6 +78,10 @@ class Sidebar(Surface):
                 line.setFrameShape(QFrame.Shape.HLine)
                 #line.setFrameShadow(QFrame.Shadow.Sunken)
                 self.applets_layout.addWidget(line)
+
+        if disable_anim:
+            phase2(self)
+            return
 
         Animation(
             self.comm, self.parent(), self.grab(), "sbopen",
