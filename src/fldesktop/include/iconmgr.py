@@ -207,9 +207,9 @@ class Parser:
         painter.end()
 
         effect = QGraphicsDropShadowEffect(
-            blurRadius=30,
+            blurRadius=50,
             offset=QPoint(1, 1),
-            color=QColor(50, 50, 50, 200)
+            color=QColor(20, 20, 20, 230)
         )
 
         label = QLabel()
