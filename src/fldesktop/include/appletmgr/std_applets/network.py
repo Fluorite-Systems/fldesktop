@@ -1,4 +1,5 @@
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel
+from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLabel,
+                               QSizePolicy)
 from PySide6.QtCore import QTimer, QByteArray
 from PySide6.QtDBus import (QDBusConnection, QDBusInterface, QDBusMessage,
                             QDBusArgument, QDBusObjectPath, QDBusVariant)
@@ -260,8 +261,19 @@ class NetworkWidget(QWidget):
         self.text_layout = QVBoxLayout()
 
         self.status_icon = QLabel()
+        self.status_icon.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+        )
+
         self.status = QLabel(wordWrap=True)
+        fnt = self.status.font()
+        fnt.setWeight(fnt.Weight.Bold)
+        self.status.setFont(fnt)
+
         self.details = QLabel(wordWrap=True)
+        fnt = self.details.font()
+        fnt.setItalic(True)
+        self.details.setFont(fnt)
 
         self.layout.addWidget(self.status_icon)
         self.layout.addLayout(self.text_layout)
@@ -269,7 +281,7 @@ class NetworkWidget(QWidget):
         self.text_layout.addWidget(self.status)
         self.text_layout.addWidget(self.details)
         self.text_layout.addStretch()
-        self.layout.addStretch()
+        #self.layout.addStretch()
 
         self.refresh()
 
