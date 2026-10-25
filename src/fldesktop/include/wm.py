@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout,
-                               QLabel, QToolButton) 
+                               QLabel, QToolButton, QGraphicsDropShadowEffect) 
 from PySide6.QtCore import Qt, QPoint, QSize, Signal
 from PySide6.QtGui import QIcon
 
@@ -56,7 +56,14 @@ class Window(Surface):
 
         # Title widgets
         self.icon = QLabel(pixmap = icon.pixmap(QSize(24, 24)))
+
         self.title = QLabel(self.name)
+        title_sh = QGraphicsDropShadowEffect(self.title)
+        title_sh.setOffset(1, 1)
+        title_sh.setColor(Qt.GlobalColor.black)
+        title_sh.setBlurRadius(10)
+        self.title.setGraphicsEffect(title_sh)
+
         self.iconify_btn = QToolButton(
             icon=self.comm.request("iconmgr", "get", "window-minimize")
         )
