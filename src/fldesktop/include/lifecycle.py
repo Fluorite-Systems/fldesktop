@@ -41,8 +41,7 @@ class LifeCycle:
         os.chmod(os.environ["XDG_RUNTIME_DIR"], 0o700)
         os.chown(os.environ["XDG_RUNTIME_DIR"], 0, 0)
 
-        os.environ["QT_QPA_PLATFORM"] = "xcb" # "wayland"
-        os.environ["PYOPENGL_PLATFORM"] = "glx"
+        os.environ["QT_QPA_PLATFORM"] = "wayland"
         os.environ["WAYLAND_DISPLAY"] = "wayland-0"
 
         self.comm.request("extsvinit", "run_service", "weston")
