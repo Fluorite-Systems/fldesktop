@@ -30,11 +30,13 @@ SERVICES = {
     },
     "weston": {
         "exec": (
+            "mkdir -p /tmp/.X11-unix && "
+            "chmod 1777 /tmp/.X11-unix && "
             "export XDG_RUNTIME_DIR=/run/user/0 && "
             "export XDG_SEAT=seat0 && "
             "export SEATD_VTBOUND=0 && "
             "export LIBSEAT_BACKEND=builtin && "
-            "exec weston --shell=desktop-shell.so --backend=drm --socket=wayland-0"
+            "exec weston --shell=desktop-shell.so --backend=drm --socket=wayland-0 --xwayland"
         ),
         "wait": "while [ ! -S /run/user/0/wayland-0 ]; do sleep 0.05; done",
         "user": 0,

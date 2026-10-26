@@ -2,6 +2,7 @@ import logging
 import os
 import time
 import glob
+import subprocess
 
 
 class LifeCycle:
@@ -41,8 +42,7 @@ class LifeCycle:
         os.chmod(os.environ["XDG_RUNTIME_DIR"], 0o700)
         os.chown(os.environ["XDG_RUNTIME_DIR"], 0, 0)
 
-        os.environ["QT_QPA_PLATFORM"] = "wayland"
-        os.environ["WAYLAND_DISPLAY"] = "wayland-0"
+        self.configure_rendering()
 
         self.comm.request("extsvinit", "run_service", "weston")
 
@@ -70,6 +70,36 @@ class LifeCycle:
                 break
 
             time.sleep(0.1)
+
+    def configure_rendering():
+
+        egl_ok = False
+        
+        try:
+            result = subprocess.run(
+                ["eglinfo", "-B"], 
+                capture_output=True, text=True, timeout=3
+            )
+            if result.returncode == 0:
+                output = result.stdout.lower()
+                egl_ok = not (
+                    "llvmpipe" in output
+                    or "softpipe" in output
+                    or "virgl" in output
+                )
+        except Exception as e:
+            logging.warning(f"Failed to check eglinfo: {e}")
+
+        if egl_ok:
+            logging.info("Using Wayland/EGL")
+            os.environ["QT_QPA_PLATFORM"] = "wayland"
+            os.environ["PYOPENGL_PLATFORM"] = "egl"
+            os.environ["WAYLAND_DISPLAY"] = "wayland-0"
+        else:
+            logging.info("Using XCB/GLX")
+            os.environ["QT_QPA_PLATFORM"] = "xcb"
+            os.environ["PYOPENGL_PLATFORM"] = "glx"
+            os.environ["DISPLAY"] = ":0"
 
     def start_services(self):
 
