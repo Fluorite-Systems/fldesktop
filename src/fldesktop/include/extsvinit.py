@@ -36,7 +36,7 @@ SERVICES = {
             "export LIBSEAT_BACKEND=builtin && "
             "exec weston --shell=desktop-shell.so --backend=drm --socket=wayland-0"
         ),
-        "wait": "while [ ! -S /run/user/0/wayland-0 ]; do sleep 0.05; done && sleep 1",
+        "wait": "while [ ! -S /run/user/0/wayland-0 ]; do sleep 0.05; done",
         "user": 0,
     },
     "bluetooth": {
@@ -114,7 +114,7 @@ class Service:
                 self.proc = subprocess.Popen(
                     self._wrap(self.exec),
                     shell=True,
-                    start_new_session=True,
+                    preexec_fn=os.setpgrp,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                 )
@@ -129,7 +129,7 @@ class Service:
 
             log_thread = threading.Thread(
                 target=self._log_stream,
-                args=(self.proc.stdout, logging.INFO),
+                args=(self.proc.stdout, logging.WARNING),
                 daemon=True,
             )
             log_thread.start()
@@ -187,9 +187,20 @@ class Service:
                     return
                 continue
 
+            if self.proc is None or self.proc.poll() is not None:
+                continue
+
             if r.returncode == 0:
-                self.is_ready = True
-                return
+                for _ in range(10):
+                    if self.shutdown.is_set():
+                        return
+                    if self.proc is None or self.proc.poll() is not None:
+                        break
+                    time.sleep(0.1)
+                if self.proc is not None and self.proc.poll() is None:
+                    self.is_ready = True
+                    return
+                continue
 
             out = r.stdout.decode(errors="replace").rstrip()
             logging.warning(
