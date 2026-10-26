@@ -23,6 +23,11 @@ SERVICES = {
         "wait": "while [ ! -S /run/udev/control ]; do sleep 0.05; done",
         "user": 0
     },
+    "dbus": {
+        "exec": "mkdir -p /var/run/dbus /var/lib/dbus && dbus-uuidgen --ensure 2>/dev/null; exec dbus-daemon --system --nofork",
+        "wait": "while [ ! -S /run/dbus/system_bus_socket ]; do sleep 0.05; done",
+        "user": 0
+    },
     "weston": {
         "exec": (
             "export XDG_RUNTIME_DIR=/run/user/0 && "
@@ -31,13 +36,8 @@ SERVICES = {
             "export LIBSEAT_BACKEND=builtin && "
             "exec weston --shell=desktop-shell.so --backend=drm --socket=wayland-0"
         ),
-        "wait": "while [ ! -S /run/user/0/wayland-0 ]; do sleep 0.05; done",
+        "wait": "while [ ! -S /run/user/0/wayland-0 ]; do sleep 0.05; done && sleep 1",
         "user": 0,
-    },
-    "dbus": {
-        "exec": "mkdir -p /var/run/dbus /var/lib/dbus && dbus-uuidgen --ensure 2>/dev/null; exec dbus-daemon --system --nofork",
-        "wait": "while [ ! -S /run/dbus/system_bus_socket ]; do sleep 0.05; done",
-        "user": 0
     },
     "bluetooth": {
         "exec": "exec /usr/lib/bluetooth/bluetoothd --nodetach",
@@ -109,9 +109,7 @@ class Service:
                 logging.log(level, f"[{self.name}] {text}")
 
     def supervise(self):
-
         while not self.shutdown.is_set():
-
             try:
                 self.proc = subprocess.Popen(
                     self._wrap(self.exec),
@@ -127,6 +125,7 @@ class Service:
                 continue
 
             self.is_running = True
+            self.is_ready = False
 
             log_thread = threading.Thread(
                 target=self._log_stream,
@@ -165,12 +164,16 @@ class Service:
                     pass
 
     def wait_ready(self):
-
         if not self.wait:
             self.is_ready = True
             return
 
         while not self.shutdown.is_set():
+            if self.proc is None or self.proc.poll() is not None:
+                if self.shutdown.wait(0.1):
+                    return
+                continue
+
             try:
                 r = subprocess.run(
                     self._wrap(self.wait),
@@ -192,12 +195,13 @@ class Service:
             logging.warning(
                 f"[{self.name}] wait failed rc={r.returncode} {out!r}, retrying"
             )
-            if self.shutdown.wait(1):
+            if self.shutdown.wait(0.1):
                 return
 
     def start(self, blocking: bool = True):
-
         if self.thread.is_alive():
+            if blocking and not self.is_ready:
+                self.wait_ready()
             return
 
         logging.debug(f"Starting external service {self.name}...")
@@ -210,7 +214,6 @@ class Service:
             self.wait_ready()
 
     def stop(self):
-
         if not self.thread.is_alive():
             return
 
@@ -229,12 +232,9 @@ class Service:
 
 class InitWorker:
     def __init__(self):
-
         self.services = {}
-
         self.queue = queue.Queue()
         self.stop = threading.Event()
-
         self.load_services()
 
     def load_services(self):
@@ -248,14 +248,11 @@ class InitWorker:
         return True
 
     def full_init(self):
-
-        logging.debug("Starting external services...")
-
+        logging.debug("Starting external services sequentially...")
         for sv in self.services.values():
-            sv.start(blocking=False)
+            sv.start(blocking=True)
 
     def run_service(self, name):
-
         svc = self.services.get(name)
         if svc is None:
             logging.warning(f"Unknown service: {name}")
@@ -263,16 +260,12 @@ class InitWorker:
         svc.start(blocking=True)
 
     def shutdown(self):
-
         logging.debug("Stopping external services...")
-
         for sv in self.services.values():
             sv.stop()
-
         self.stop.set()
 
     def run_cmd(self, type: str, args: dict, result: dict):
-
         try:
             match type:
                 case "full_init":
@@ -290,7 +283,6 @@ class InitWorker:
             result["event"].set()
 
     def mainloop(self):
-
         while not self.stop.is_set():
             try:
                 cmd = self.queue.get(timeout=0.5)
@@ -301,7 +293,6 @@ class InitWorker:
 
 class ExtSvInit:
     def __init__(self, comm):
-
         self.comm = comm
         self.comm.register(
             "extsvinit", {
@@ -311,10 +302,8 @@ class ExtSvInit:
                 "is_running": self.is_running
             }
         )
-
         self.worker = InitWorker()
         self.worker_thread = threading.Thread(target=self.worker.mainloop)
-
         self.worker_thread.start()
 
     def _submit(self, type: str, args: dict) -> bool:
