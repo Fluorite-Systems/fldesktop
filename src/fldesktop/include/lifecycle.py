@@ -71,7 +71,7 @@ class LifeCycle:
 
             time.sleep(0.1)
 
-    def configure_rendering():
+    def configure_rendering(self):
 
         egl_ok = False
         
