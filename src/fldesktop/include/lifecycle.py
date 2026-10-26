@@ -56,19 +56,17 @@ class LifeCycle:
         while True:
 
             cards = glob.glob("/dev/dri/card*")
-            renders = glob.glob("/dev/dri/renderD*")
             events = glob.glob("/dev/input/event*")
 
             logging.debug(
                 (
                     f"Waiting for udev. "
                     f"Cards: {bool(cards)}, "
-                    f"renders: {bool(renders)}, "
-                    f"events: {bool(renders)}"
+                    f"events: {bool(events)}"
                 )
             )
 
-            if bool(cards) and bool(renders) and bool(events):
+            if bool(cards) and bool(events):
                 break
 
             time.sleep(0.1)
