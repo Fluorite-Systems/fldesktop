@@ -42,6 +42,7 @@ class LifeCycle:
         os.chown(os.environ["XDG_RUNTIME_DIR"], 0, 0)
 
         os.environ["QT_QPA_PLATFORM"] = "wayland"
+        os.environ["WAYLAND_DISPLAY"] = "wayland-0"
 
         self.comm.request("extsvinit", "run_service", "weston")
 
