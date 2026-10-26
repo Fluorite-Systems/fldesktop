@@ -1,693 +1,574 @@
-from PySide6.QtWidgets import (QWidget, QGraphicsScene, QGraphicsPixmapItem,
-                               QGraphicsBlurEffect)
-from PySide6.QtGui import (QPixmap, QPainter, QColor, QPen, QImage,
-                           QRadialGradient)
-from PySide6.QtCore import (Qt, QRect, QObject, QPoint, QTimer,
-                            QRandomGenerator, QRect, QPointF)
+import time
+from pathlib import Path
 
-from fldesktop.include.widgets.shadow import Shadow
+from PySide6.QtCore import QEvent, QRectF, Qt, QTimer
+from PySide6.QtGui import QColor, QImage, QPainter
+from PySide6.QtWidgets import QApplication, QWidget
 
-from dataclasses import dataclass
-import numpy as np
-
-
-@dataclass(frozen=True)
-class BrightestSpot:
-    coords: tuple[int, int]
-    max_brightness: float
-    relative_brightness: float
-    color: QColor
-    is_pronounced: bool
-    confidence: float
+from fldesktop.include.superfx.container import (
+    GlassConfig, PROP_LAYER, PROP_LAYER_LOCKED, PROP_CONTENT_STATIC,
+    PROP_TINT_SCALE, PROP_TINT_COLOR, PROP_OPACITY,
+    _alive, _prop, _app_closing, _paintable, _coerce_layer,
+)
+from fldesktop.include.superfx.glrender import (
+    _Reg,
+    SHOW_FPS,
+    FPS_REFRESH_S,
+    SAFETY_INTERVAL_MS,
+)
 
 
-CC_STAT_LEFT = 0
-CC_STAT_TOP = 1
-CC_STAT_WIDTH = 2
-CC_STAT_HEIGHT = 3
-CC_STAT_AREA = 4
+SHADOW_T, SHADOW_R, SHADOW_B, SHADOW_L = 25, 31, 33, 26
 
 
-def _connected_components_with_stats(binary_image: np.ndarray):
-
-    h, w = binary_image.shape
-    binary = binary_image > 0
-
-    labels = np.zeros((h, w), dtype=np.int32)
-
-    parent = [0]
-
-    def find(x):
-        root = x
-        while parent[root] != root:
-            root = parent[root]
-        while parent[x] != root:
-            parent[x], x = root, parent[x]
-        return root
-
-    def union(a, b):
-        ra, rb = find(a), find(b)
-        if ra != rb:
-            if ra < rb:
-                parent[rb] = ra
-            else:
-                parent[ra] = rb
-
-    for y in range(h):
-        row = binary[y]
-        for x in range(w):
-            if not row[x]:
-                continue
-            neighbors = []
-            for dy in (-1, 0, 1):
-                ny = y + dy
-                if ny < 0 or ny >= h:
-                    continue
-                for dx in (-1, 0, 1):
-                    if dy == 0 and dx == 0:
-                        continue
-                    nx = x + dx
-                    if nx < 0 or nx >= w:
-                        continue
-                    lbl = labels[ny, nx]
-                    if lbl > 0:
-                        neighbors.append(lbl)
-            if not neighbors:
-                parent.append(len(parent))
-                labels[y, x] = len(parent) - 1
-            else:
-                m = min(neighbors)
-                labels[y, x] = m
-                for n in neighbors:
-                    union(m, n)
-
-    if len(parent) > 1:
-        roots = np.array([find(i) for i in range(len(parent))], dtype=np.int32)
-        unique_roots = np.unique(roots[1:])
-        remap = np.zeros(len(parent), dtype=np.int32)
-        for new_id, r in enumerate(unique_roots, start=1):
-            remap[r] = new_id
-        labels = remap[roots[labels]]
-
-    num_labels = int(labels.max()) + 1
-
-    stats = np.zeros((num_labels, 5), dtype=np.int32)
-    centroids = np.zeros((num_labels, 2), dtype=np.float64)
-
-    for lbl in range(1, num_labels):
-        ys, xs = np.where(labels == lbl)
-        if len(xs) == 0:
-            continue
-        left = int(xs.min())
-        top = int(ys.min())
-        width = int(xs.max()) - left + 1
-        height = int(ys.max()) - top + 1
-        area = int(len(xs))
-        stats[lbl] = [left, top, width, height, area]
-        centroids[lbl, 0] = float(xs.mean())
-        centroids[lbl, 1] = float(ys.mean())
-
-    return num_labels, labels, stats, centroids
-
-
-class RayCast:
-
-    def __init__(self):
-        self.rays = []
-        self.step_size = 2
-
-        angles = np.radians(np.arange(0, 360, 1))
-        self._cos_a = np.cos(angles)
-        self._sin_a = np.sin(angles)
-
-        self._dx = np.where(np.abs(self._cos_a) > 1e-6, self._cos_a, 1e-6)
-        self._dy = np.where(np.abs(self._sin_a) > 1e-6, self._sin_a, 1e-6)
-
-        self._dx_m = self._dx[:, np.newaxis]
-        self._dy_m = self._dy[:, np.newaxis]
-
-    def raycast(self, pos: tuple, surfaces):
-
-        valid_surfaces = [s for s in surfaces if getattr(s, "need_raycast", True)]
-
-        if valid_surfaces:
-            max_depth = max(valid_surfaces[0].window().width(), valid_surfaces[0].window().height())
-        elif surfaces:
-            max_depth = max(surfaces[0].window().width(), surfaces[0].window().height())
-        else:
-            max_depth = 1000.0
-
-        if not valid_surfaces:
-            cx = pos[0] + max_depth * self._cos_a
-            cy = pos[1] + max_depth * self._sin_a
-            return list(zip(cx.astype(int).tolist(), cy.astype(int).tolist(), [max_depth] * 360))
-
-        rects = np.empty((len(valid_surfaces), 4), dtype=np.float32)
-        for i, s in enumerate(valid_surfaces):
-            gtl = s.mapToGlobal(s.rect().topLeft())
-            x, y = gtl.x(), gtl.y()
-            rects[i] = (x, x + s.width(), y, y + s.height())
-
-        x, y = pos[0], pos[1]
-
-        t_x1 = (rects[:, 0] - x) / self._dx_m
-        t_x2 = (rects[:, 1] - x) / self._dx_m
-        t_y1 = (rects[:, 2] - y) / self._dy_m
-        t_y2 = (rects[:, 3] - y) / self._dy_m
-
-        t_near = np.maximum(np.minimum(t_x1, t_x2), np.minimum(t_y1, t_y2))
-        t_far = np.minimum(np.maximum(t_x1, t_x2), np.maximum(t_y1, t_y2))
-
-        valid_hits = (t_near < t_far) & (t_far > 0) & (t_near < max_depth)
-
-        t_near = np.where(valid_hits, t_near, max_depth)
-
-        closest_t = np.min(t_near, axis=1)
-
-        cx = x + closest_t * self._cos_a
-        cy = y + closest_t * self._sin_a
-
-        return list(zip(cx.astype(int).tolist(), cy.astype(int).tolist(), closest_t.tolist()))
-
-
-class Surface(QWidget):
-    def __init__(self, comm, parent: QWidget=None,
-                 tint: int=1, shadow: bool = True):
+class SimpleRender(QWidget):
+    def __init__(self, parent, config=None):
         super().__init__(parent)
+        if config is None:
+            config = GlassConfig()
+        self.config = config
 
-        self.comm = comm
-        self._background = None
-        self._cached = None
-        self._cached_pos = None
-        self._cached_size = None
-        self._tint_mul = 1.0 + max(0.0, min(tint, 10.0)) / 10
-        self._enable_shadow = shadow
+        self.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setAttribute(
+            Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setAttribute(
+            Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setAttribute(
+            Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
 
-        self._update_theming()
+        self._regs = []
+        self._reg_by_widget = {}
 
-        self.ray_hits = []
-        self.need_raycast = True
+        self._wallpaper_image = None
+        self._shadow_image = None
 
-        self.shadow = Shadow(parent)
-        
-        # Optimizations
-        self.setAttribute(Qt.WA_DeleteOnClose, True)
-        self.setAttribute(Qt.WA_OpaquePaintEvent, True)
-        self._redraw_timer = QTimer(interval=250, singleShot=True)
-        self._redraw_timer.timeout.connect(self.update)
+        self._shutting_down = False
+        self._update_pending = False
 
-        self.comm.subscribe("sfmgr_bg_updated", self._load_background)
-        self.comm.subscribe("reload_config", self._update_theming)
-        self.comm.request("surfacemgr", "reg_surface", self)
+        self._frames = 0
+        self._fps_t = time.perf_counter()
+        self._fps = 0.0
 
-        self._load_background()
+        self._safety = QTimer(self)
+        self._safety.setTimerType(Qt.TimerType.VeryCoarseTimer)
+        self._safety.setInterval(SAFETY_INTERVAL_MS)
+        self._safety.timeout.connect(self._on_safety_tick)
+        self._safety.start()
 
-    def _load_background(self):
-        "Request background from surfacemgr"
+        app = QApplication.instance()
+        if app is not None:
+            app.installEventFilter(self)
 
-        self._background = self.comm.request("surfacemgr", "get_pixmap")
-        self._brightest_spot = self.comm.request("surfacemgr", "get_brightest_spot")
-        self._invalidate_cache()
-        self.update()
+    def _request_frame(self):
+        if self._update_pending:
+            return
+        if _app_closing() or self._shutting_down:
+            return
+        self._update_pending = True
+        try:
+            self.update()
+        except (RuntimeError, SystemError):
+            self._update_pending = False
 
-    def _update_theming(self):
-        "Load theming configuration"
+    def _mark_dirty(self, r):
+        if r is None:
+            return
+        r.dirty = True
+        self._request_frame()
 
-        self.color = self.comm.request("cfgmgr", "get", "glass-tint-color")
-        self.alpha = min(
-            self.comm.request("cfgmgr", "get", "glass-tint-alpha") \
-                * self._tint_mul, 255
-        )
+    def _tick_surfaces(self):
+        animating = False
+        for r in self._regs:
+            w = r.widget
+            if not _alive(w):
+                continue
+            fn = getattr(w, "invoke_update", None)
+            if not callable(fn):
+                continue
+            try:
+                if fn() and _paintable(w):
+                    r.dirty = True
+                    animating = True
+            except Exception:
+                pass
+        return animating
 
-    def _invalidate_cache(self):
-        "Invalidate cached contents"
-        
-        self._cached = None
-        self._cached_pos = None
-        self._cached_size = None
-    
-    def _get_cropped(self) -> QPixmap:
-        "Get cropped pixmap from background"
+    def _on_safety_tick(self):
+        if _app_closing() or self._shutting_down:
+            try:
+                self._safety.stop()
+            except (RuntimeError, SystemError):
+                pass
+            return
+        if self._update_pending:
+            return
+        self._tick_surfaces()
+        if any(r.dirty for r in self._regs
+               if _alive(r.widget) and _paintable(r.widget)):
+            self._request_frame()
 
-        if not self._background:
-            return QPixmap(self.size())
-        
-        pos_in_window = self.mapToGlobal(QPoint(0, 0))
-        
-        # Check cache
-        if (self._cached is not None and 
-            self._cached_pos == pos_in_window and
-            self._cached_size == self.size()):
-            return self._cached
-        
-        blurred = QPixmap(self.size())
-        blurred.fill(Qt.GlobalColor.black)
-        
-        widget_rect = QRect(pos_in_window, self.size())
-        background_rect = self._background.rect()
-        
-        intersection = widget_rect.intersected(background_rect)
-        
-        if not intersection.isEmpty():
-            src_x = intersection.x()
-            src_y = intersection.y()
-            src_width = intersection.width()
-            src_height = intersection.height()
-            
-            dst_x = max(0, -pos_in_window.x())
-            dst_y = max(0, -pos_in_window.y())
-            
-            cropped_from_bg = self._background.copy(
-                src_x, src_y, src_width, src_height
-            )
+    def _install_update_hook(self, w):
+        if getattr(w, "_compositor_hooked", False):
+            return
+        try:
+            original = w.update
+        except (RuntimeError, SystemError):
+            return
 
-            # Tint blurred background for some beauty
-            tint = QColor(self.color)
-            tint.setAlpha(self.alpha)
+        owner = self
 
-            painter = QPainter(blurred)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
-            painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, False)
+        def _hook(*args, __w=w, __o=original, **kwargs):
+            try:
+                r = owner._reg_by_widget.get(__w)
+            except (RuntimeError, SystemError):
+                r = None
+            if r is not None and not r._rendering:
+                r.dirty = True
+                owner._request_frame()
+            return __o(*args, **kwargs)
 
-            painter.drawPixmap(dst_x, dst_y, cropped_from_bg)
+        try:
+            w.update = _hook
+            w._compositor_hooked = True
+        except (RuntimeError, SystemError):
+            return
 
-            # Draw raycasted flares
+        try:
+            for child in w.findChildren(QWidget):
+                self._install_update_hook(child)
+        except (RuntimeError, SystemError):
+            pass
 
-            RADIUS = 125
-            SIZE = RADIUS * 2
-            PAD = 30.0
+    def _uninstall_update_hook(self, w):
+        if getattr(w, "_compositor_hooked", False):
+            try:
+                del w.update
+                del w._compositor_hooked
+            except (AttributeError, TypeError):
+                pass
+        try:
+            for child in w.findChildren(QWidget):
+                self._uninstall_update_hook(child)
+        except (RuntimeError, SystemError):
+            pass
 
-            base_color = QColor(self._brightest_spot.color)
+    def set_wallpaper(self, image):
+        self._wallpaper_image = image
+        self._request_frame()
 
-            offset = self.mapToGlobal(QPoint(0, 0))
-            ox, oy = offset.x(), offset.y()
+    def register(self, widget, z=1.0, glass=True,
+                 layer=None, locked=None):
+        for r in self._regs:
+            if r.widget is widget:
+                return r
 
-            w_width = float(self.width())
-            w_height = float(self.height())
-            max_depth = float(max(self.window().width(), self.window().height()))
+        if layer is None:
+            layer = _coerce_layer(_prop(widget, PROP_LAYER))
+        else:
+            layer = _coerce_layer(layer)
 
-            painter.setRenderHint(QPainter.Antialiasing)
-            painter.setCompositionMode(QPainter.CompositionMode_Screen)
-            painter.setOpacity(1.0) 
+        if locked is None:
+            locked = bool(_prop(widget, PROP_LAYER_LOCKED))
+        else:
+            locked = bool(locked)
 
-            painter.setClipRect(0, 0, int(w_width), int(w_height))
+        r = _Reg(widget, z, glass, layer, locked)
+        self._regs.append(r)
+        self._regs.sort(key=lambda x: (x.layer, x.z))
+        self._reg_by_widget[widget] = r
+        self._apply_dont_show(r, True)
+        self._install_update_hook(widget)
+        self._request_frame()
+        return r
 
-            last_drawn_x = -9999.0
-            last_drawn_y = -9999.0
-            MIN_SPACING_SQ = 12.0 ** 2  
+    def unregister(self, widget):
+        for r in self._regs:
+            if r.widget is widget:
+                self._regs.remove(r)
+                self._reg_by_widget.pop(widget, None)
+                self._uninstall_update_hook(widget)
+                r.img = None
+                self._request_frame()
+                return True
+        return False
 
-            for hit in self.comm.request("surfacemgr", "get_hits"):
-                x = hit[0] - ox
-                y = hit[1] - oy
+    def raise_surface(self, widget):
+        r = self._reg_by_widget.get(widget)
+        if r is None or r.locked:
+            return
+        peers = [x for x in self._regs
+                 if x is not r and x.layer == r.layer]
+        if not peers:
+            return
+        top = max(x.z for x in peers)
+        if r.z > top:
+            return
+        r.z = top + 1.0
+        self._regs.sort(key=lambda x: (x.layer, x.z))
+        self._request_frame()
 
-                if not (-PAD <= x <= w_width + PAD and -PAD <= y <= w_height + PAD):
-                    continue
+    def lower_surface(self, widget):
+        r = self._reg_by_widget.get(widget)
+        if r is None or r.locked:
+            return
+        peers = [x for x in self._regs
+                 if x is not r and x.layer == r.layer]
+        if not peers:
+            return
+        r.z = min(x.z for x in peers) - 1.0
+        self._regs.sort(key=lambda x: (x.layer, x.z))
+        self._request_frame()
 
-                dist_sq = (x - last_drawn_x) ** 2 + (y - last_drawn_y) ** 2
+    def invalidate(self, widget=None):
+        if widget is None:
+            for r in self._regs:
+                r.dirty = True
+        else:
+            r = self._reg_by_widget.get(widget)
+            if r is not None:
+                r.dirty = True
+        self._request_frame()
 
-                if dist_sq >= MIN_SPACING_SQ or last_drawn_x == -9999.0:
-                    length = hit[2]
-                    
-                    factor = max(0.0, min(1.0, 1.0 - (length / max_depth)))
-                    current_alpha = int(25 * factor)
-                    
-                    if current_alpha > 0:
-                        center_pt = QPointF(x, y)
-                        grad = QRadialGradient(center_pt, float(RADIUS))
-                        
-                        color_center = QColor(base_color)
-                        color_center.setAlpha(current_alpha)
-                        
-                        grad.setColorAt(0.0, color_center)
-                        grad.setColorAt(1.0, Qt.transparent)
-                        
-                        painter.fillRect(QRect(x - RADIUS, y - RADIUS, SIZE, SIZE), grad)
-                    
-                    last_drawn_x = x
-                    last_drawn_y = y
+    def force_refresh(self, widget):
+        r = self._reg_by_widget.get(widget)
+        if r is not None:
+            r.dirty = True
+            self._request_frame()
 
-            painter.setOpacity(1.0)
+    def eventFilter(self, obj, ev):
+        if not isinstance(obj, QWidget):
+            return False
+        if _app_closing() or self._shutting_down:
+            return False
+        et = ev.type()
 
-            painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
-            painter.fillRect(blurred.rect(), tint)
-            painter.end()
+        if et == QEvent.Type.Move:
+            return False
 
-        # Cache it
-        self._cached = blurred
-        self._cached_pos = pos_in_window
-        self._cached_size = self.size()
-        
-        return self._cached
-    
-    def paintEvent(self, event):
+        if et not in (QEvent.Type.UpdateRequest,
+                      QEvent.Type.Resize,
+                      QEvent.Type.Show,
+                      QEvent.Type.Hide,
+                      QEvent.Type.Paint):
+            return False
+
+        r = self._reg_by_widget.get(obj)
+        if r is None:
+            r = self._reg_of(obj)
+        if r is None:
+            return False
+
+        if r._rendering:
+            return False
+
+        if et == QEvent.Type.Paint:
+            self._mark_dirty(r)
+            return False
+
+        if _prop(r.widget, PROP_CONTENT_STATIC) is True:
+            if r.img is not None and et != QEvent.Type.Show:
+                return False
+
+        self._mark_dirty(r)
+        return False
+
+    def _reg_of(self, w):
+        while w is not None:
+            r = self._reg_by_widget.get(w)
+            if r is not None:
+                return r
+            try:
+                w = w.parentWidget()
+            except (RuntimeError, SystemError):
+                return None
+        return None
+
+    def initializeGL(self):
+        pass
+
+    def resizeGL(self, w, h):
+        pass
+
+    def closeEvent(self, ev):
+        self._shutting_down = True
+
+        try:
+            self._safety.stop()
+        except (RuntimeError, SystemError):
+            pass
+
+        app = QApplication.instance()
+        if app is not None:
+            try:
+                app.removeEventFilter(self)
+            except (RuntimeError, SystemError):
+                pass
+
+        for r in self._regs:
+            if _alive(r.widget):
+                self._uninstall_update_hook(r.widget)
+
+        for r in self._regs:
+            r.widget = None
+            r.img = None
+        self._regs.clear()
+        self._reg_by_widget.clear()
+        self._wallpaper_image = None
+        self._shadow_image = None
+
+        super().closeEvent(ev)
+
+    def _apply_dont_show(self, r, on):
+        w = r.widget
+        if not _alive(w):
+            return
+        if r._dont_show_applied == bool(on):
+            return
+        try:
+            w.setAttribute(
+                Qt.WidgetAttribute.WA_DontShowOnScreen, bool(on))
+            r._dont_show_applied = bool(on)
+        except (RuntimeError, SystemError):
+            pass
+
+    def _refresh_surface_img(self, r):
+        w = r.widget
+        if not _alive(w):
+            return
+        ww, wh = w.width(), w.height()
+        if ww <= 0 or wh <= 0:
+            return
+
+        fmt = QImage.Format.Format_RGBA8888_Premultiplied
+        if (r.img is None
+                or r.img.width() != ww
+                or r.img.height() != wh):
+            r.img = QImage(ww, wh, fmt)
+        r.img.fill(0)
+
+        r._rendering = True
+        try:
+            w.render(r.img)
+            r.dirty = False
+        except (RuntimeError, SystemError):
+            pass
+        finally:
+            r._rendering = False
+
+    def _collect_visible(self):
+        visible = []
+        for r in self._regs:
+            w = r.widget
+            if not _alive(w):
+                continue
+            if not w.isVisible():
+                continue
+            if not _paintable(w):
+                continue
+            if w.width() <= 0 or w.height() <= 0:
+                continue
+            if r.layer == 0.0 and self._wallpaper_image is not None:
+                continue
+            visible.append(r)
+        return visible
+
+    def _tint_scale(self, w):
+        v = _prop(w, PROP_TINT_SCALE)
+        if v is None:
+            return 1.0
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return 1.0
+
+    def _tint_color(self, w):
+        v = _prop(w, PROP_TINT_COLOR)
+        if v is None:
+            return (1.0, 1.0, 1.0)
+        try:
+            if len(v) == 3:
+                return (float(v[0]), float(v[1]), float(v[2]))
+        except (TypeError, ValueError, IndexError):
+            pass
+        return (1.0, 1.0, 1.0)
+
+    def _opacity(self, w):
+        v = _prop(w, PROP_OPACITY)
+        if v is None:
+            return 1.0
+        try:
+            return max(0.0, min(1.0, float(v)))
+        except (TypeError, ValueError):
+            return 1.0
+
+    def _ensure_shadow_image(self):
+        if self._shadow_image is not None:
+            return self._shadow_image
+        path = (Path(__file__).resolve().parent.parent
+                / "assets" / "shadow.png")
+        if not path.exists():
+            self._shadow_image = QImage()
+            return self._shadow_image
+        self._shadow_image = QImage(str(path))
+        return self._shadow_image
+
+    def _draw_shadow(self, painter, x, y, ww, wh, opacity):
+        img = self._ensure_shadow_image()
+        if img.isNull():
+            return
+
+        alpha = float(self.config.shadow_alpha) * opacity
+        if alpha <= 0.0:
+            return
+
+        t, r, b, l = SHADOW_T, SHADOW_R, SHADOW_B, SHADOW_L
+        iw, ih = img.width(), img.height()
+        if iw <= l + r or ih <= t + b:
+            return
+
+        dx = x - l
+        dy = y - t
+        dw = ww + l + r
+        dh = wh + t + b
+        sw = iw - l - r
+        sh = ih - t - b
+        mw = dw - l - r
+        mh = dh - t - b
+
+        painter.save()
+        painter.setOpacity(alpha)
+
+        painter.drawImage(QRectF(dx, dy, l, t),
+                          img, QRectF(0, 0, l, t))
+        painter.drawImage(QRectF(dx + dw - r, dy, r, t),
+                          img, QRectF(iw - r, 0, r, t))
+        painter.drawImage(QRectF(dx, dy + dh - b, l, b),
+                          img, QRectF(0, ih - b, l, b))
+        painter.drawImage(QRectF(dx + dw - r, dy + dh - b, r, b),
+                          img, QRectF(iw - r, ih - b, r, b))
+
+        painter.drawImage(QRectF(dx + l, dy, mw, t),
+                          img, QRectF(l, 0, sw, t))
+        painter.drawImage(QRectF(dx + l, dy + dh - b, mw, b),
+                          img, QRectF(l, ih - b, sw, b))
+        painter.drawImage(QRectF(dx, dy + t, l, mh),
+                          img, QRectF(0, t, l, sh))
+        painter.drawImage(QRectF(dx + dw - r, dy + t, r, mh),
+                          img, QRectF(iw - r, t, r, sh))
+
+        painter.drawImage(QRectF(dx + l, dy + t, mw, mh),
+                          img, QRectF(l, t, sw, sh))
+
+        painter.restore()
+
+    def paintEvent(self, ev):
+        if self._shutting_down or _app_closing():
+            return
+
+        self._update_pending = False
+
+        animating = self._tick_surfaces()
+
+        try:
+            self._paint()
+        except Exception:
+            pass
+
+        still_dirty = any(
+            r.dirty for r in self._regs
+            if _alive(r.widget) and _paintable(r.widget))
+
+        if animating or still_dirty:
+            self._request_frame()
+
+    def _paint(self):
+        W, H = self.width(), self.height()
+        if W <= 0 or H <= 0:
+            return
 
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
-        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, False)
-        cropped = self._get_cropped()
-        
-        if not cropped.isNull():
-            painter.drawPixmap(0, 0, cropped)
-        else:
-            # Fallback
-            painter.fillRect(self.rect(), Qt.GlobalColor.black)
-
-    def set_raycast_enabled(self, enable: bool):
-
-        self.need_raycast = enable
-        self.comm.request("surfacemgr", "raycast")
-
-    def update(self):
-        self._invalidate_cache()
-        super().update()
-
-    def raise_(self):
-        if self._enable_shadow:
-            self.shadow.raise_()
-        super().raise_()
-
-    def lower(self):
-        if self._enable_shadow:
-            self.shadow.lower()
-        super().lower()
-    
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        if self._enable_shadow:
-            self.shadow.resize(event.size())
-        self.comm.request("surfacemgr", "raycast")
-    
-    def moveEvent(self, event):
-        super().moveEvent(event)
-        if self._enable_shadow:
-            self.shadow.move(event.pos())
-        self.comm.request("surfacemgr", "raycast")
-    
-    def showEvent(self, event):
-        super().showEvent(event)
-        self.update()
-        if self._enable_shadow:
-            self.shadow.show()
-            self.shadow.raise_()
-        self.raise_()
-        self.comm.request("surfacemgr", "raycast")
-        self.need_raycast = True
-
-    def hideEvent(self, event):
-        super().hideEvent(event)
-        if self._enable_shadow:
-            self.shadow.hide()
-        self.comm.request("surfacemgr", "raycast")
-        self.need_raycast = False
-
-    def closeEvent(self, event):
-        self.comm.unsubscribe(self._load_background)
-        self.comm.unsubscribe(self._update_theming)
-        self.comm.request("surfacemgr", "unreg_surface", self)
-        super().closeEvent(event)
-
-
-class SurfaceManager(QObject):
-    def __init__(self, comm):
-        super().__init__()
-
-        self.comm = comm
-
-        self.comm.register(
-            "surfacemgr", {
-                "refresh": self.refresh,
-                "get_pixmap": self.get_pixmap,
-                "get_brightest_spot": self.get_brightest_spot,
-                "get_hits": self.get_hits,
-                "reg_surface": self.reg_surface,
-                "unreg_surface": self.unreg_surface,
-                "raycast": self.do_raycast
-            }
-        )
-
-        self.brightest_spot = BrightestSpot((0, 0), 0, 0, QColor(), False, 0)
-
-        self.blur_radius = 80
-
-        self.pixmap = QPixmap()
-
-        self.surfaces = []
-        self.hits = []
-        self.raycast_enabled = True
-        self.rc = RayCast()
-
-        self.refresh()
-
-    def refresh(self):
-        "Update blurred background"
-
-        desktop = self.comm.request("desktop", "get_instance")
-
-        if desktop:
-            pixmap = desktop.bg.grab()
-        else:
-            pixmap = QPixmap()
-            pixmap.fill(Qt.GlobalColor.darkCyan)
-
-        if pixmap.isNull():
-            return QPixmap()
-
-        # Find the brightest spot
-
-        self.brightest_spot = self.find_brightest_spot(pixmap)
-        
-        # Draw some lines
-
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rng = QRandomGenerator()
-    
-        height = pixmap.height()
-        width_total = pixmap.width()
-        
-        x = -height
-        
-        while x < width_total + height:
-            width = rng.bounded(10, 50)
-            alpha = rng.bounded(0, 120)
-            
-            if alpha >= 20:
-                pen = QPen(QColor(0, 0, 0, alpha))
-                pen.setWidth(width)
-                painter.setPen(pen)
-                painter.drawLine(x, 0, x + height, height)
-            
-            step = width - rng.bounded(5, 15)
-            x += step
-        
-        painter.end()
-
-        # Add blur
-
-        scene = QGraphicsScene()
-
-        pixmap_item = QGraphicsPixmapItem(pixmap)
-        scene.addItem(pixmap_item)
-
-        blur_effect = QGraphicsBlurEffect()
-        blur_effect.setBlurHints(QGraphicsBlurEffect.BlurHint.QualityHint)
-        blur_effect.setBlurRadius(self.blur_radius)
-        pixmap_item.setGraphicsEffect(blur_effect)
-
-        scene.setSceneRect(pixmap.rect())
-
-        blurred = QPixmap(pixmap.size())
-        blurred.fill(Qt.transparent)
-
-        painter = QPainter(blurred)
-        scene.render(painter, pixmap.rect(), pixmap.rect())
-        painter.end()
-
-        self.pixmap = blurred
-
-        self.comm.emit("sfmgr_bg_updated")
-
-    def find_brightest_spot(self, pixmap: QPixmap) -> BrightestSpot:
-
-        if pixmap is None or pixmap.isNull() or pixmap.width() <= 0 or pixmap.height() <= 0:
-            return BrightestSpot((0, 0), 0.0, 0.0, QColor(0, 0, 0), is_pronounced=False, confidence=0.0)
-
-        w, h = pixmap.width(), pixmap.height()
-        image = pixmap.toImage().convertToFormat(QImage.Format.Format_RGB888)
-
-        bytes_per_line = image.bytesPerLine()
-
-        img_array = np.array(image.bits(), dtype=np.uint8).reshape((h, bytes_per_line))
-
-        img_array = img_array[:, :w * 3]
-
-        img_array = img_array.reshape((h, w, 3)).copy()
-
-        r = img_array[:, :, 0].astype(np.float32)
-        g = img_array[:, :, 1].astype(np.float32)
-        b = img_array[:, :, 2].astype(np.float32)
-        gray_f = 0.299 * r + 0.587 * g + 0.114 * b
-        gray = gray_f.astype(np.uint8)
-
-        ambient_brightness = float(np.mean(gray))
-        std_deviation = float(np.std(gray))
-
-        thresh = np.where(gray > 225, np.uint8(255), np.uint8(0))
-
-        num_labels, labels, stats, centroids = _connected_components_with_stats(thresh)
-
-        best_label = -1
-        best_score = -1
-
-        if num_labels > 1:
-            for i in range(1, num_labels):
-                area = int(stats[i, CC_STAT_AREA])
-
-                if area < 4:
-                    continue
-
-                mask = (labels == i)
-
-                mean_val = float(gray[mask].mean())
-
-                score = area * (mean_val ** 2)
-
-                if score > best_score:
-                    best_score = score
-                    best_label = i
-
-        if best_label == -1:
-            max_idx = np.argmax(gray)
-            center_y, center_x = np.unravel_index(max_idx, gray.shape)
-            target_area = 1
-        else:
-            target_area = int(stats[best_label, CC_STAT_AREA])
-            target_mask = (labels == best_label)
-            masked_gray = np.zeros_like(gray)
-            masked_gray[target_mask] = gray[target_mask]
-            max_idx = np.argmax(masked_gray)
-            center_y, center_x = np.unravel_index(max_idx, gray.shape)
-
-        max_brightness = float(gray[center_y, center_x])
-        relative_brightness = max_brightness - ambient_brightness
-
-        if std_deviation < 5.0:
-            confidence = 0.0
-        else:
-            contrast_factor = relative_brightness / (std_deviation + 1e-5)
-            area_factor = target_area / (w * h)
-            confidence = contrast_factor * (1.0 + np.log1p(area_factor * 3000))
-
-        is_light_source = (
-            confidence > 3.5 and
-            max_brightness >= 235.0 and
-            relative_brightness > 45.0
-        )
-
-        is_pronounced = bool(is_light_source)
-
-        threshold = max_brightness * 0.92
-        row_center = gray[center_y, :]
-        core_pixels_x = np.where(row_center > threshold)[0]
-        col_center = gray[:, center_x]
-        core_pixels_y = np.where(col_center > threshold)[0]
-
-        core_width = (core_pixels_x[-1] - core_pixels_x[0]) if len(core_pixels_x) > 0 else 1
-        core_height = (core_pixels_y[-1] - core_pixels_y[0]) if len(core_pixels_y) > 0 else 1
-        core_radius = max(core_width, core_height) // 2
-
-        search_radius = int(core_radius * 1.5)
-        min_allowed_radius = max(8, int(min(w, h) * 0.015))
-        max_allowed_radius = int(min(w, h) * 0.12)
-        search_radius = max(min_allowed_radius, min(search_radius, max_allowed_radius))
-
-        y_min = max(0, center_y - search_radius)
-        y_max = min(h, center_y + search_radius + 1)
-        x_min = max(0, center_x - search_radius)
-        x_max = min(w, center_x + search_radius + 1)
-
-        best_color = QColor(int(img_array[center_y, center_x, 0]),
-                            int(img_array[center_y, center_x, 1]),
-                            int(img_array[center_y, center_x, 2]))
-        max_saturation = -1
-
-        y_indices, x_indices = np.ogrid[y_min:y_max, x_min:x_max]
-        inside_circle = (x_indices - center_x) ** 2 + (y_indices - center_y) ** 2 <= search_radius ** 2
-        sub_array = img_array[y_min:y_max, x_min:x_max]
-
-        sub_r = sub_array[:, :, 0].astype(np.int32)
-        sub_g = sub_array[:, :, 1].astype(np.int32)
-        sub_b = sub_array[:, :, 2].astype(np.int32)
-
-        sub_max = np.maximum(np.maximum(sub_r, sub_g), sub_b)
-        sub_min = np.minimum(np.minimum(sub_r, sub_g), sub_b)
-        sub_delta = sub_max - sub_min
-
-        with np.errstate(divide='ignore', invalid='ignore'):
-            sat = np.where(sub_max == 0, 0, (sub_delta * 255) // sub_max)
-        sat = sat.astype(np.int32)
-
-        sat_masked = np.where(inside_circle, sat, -1)
-
-        if sat_masked.size > 0:
-            flat_idx = int(np.argmax(sat_masked))
-            best_y_local, best_x_local = np.unravel_index(flat_idx, sat_masked.shape)
-            max_saturation = int(sat_masked[best_y_local, best_x_local])
-            if max_saturation >= 0:
-                best_color = QColor(int(sub_array[best_y_local, best_x_local, 0]),
-                                    int(sub_array[best_y_local, best_x_local, 1]),
-                                    int(sub_array[best_y_local, best_x_local, 2]))
-
-        return BrightestSpot(
-            coords=(int(center_x), int(center_y)),
-            max_brightness=max_brightness,
-            relative_brightness=relative_brightness,
-            color=best_color,
-            is_pronounced=is_pronounced,
-            confidence=float(confidence)
-        )
-
-    def reg_surface(self, surface):
-
-        self.surfaces.append(surface)
-
-    def unreg_surface(self, surface):
-
-        self.surfaces.remove(surface)
-
-    def do_raycast(self):
-
-        need_raycast = self.brightest_spot.is_pronounced
-
-        for s in self.surfaces:
-            pos = s.pos()
-            size = s.size()
-
-            if s.need_raycast:
-
-                bx, by = self.brightest_spot.coords
-                
-                px, py = float(pos.x()), float(pos.y())
-                pw, ph = float(size.width()), float(size.height())
-                
-                if px <= bx <= px + pw and py <= by <= py + ph:
-                    need_raycast = False
-
-        if need_raycast:
-            self.hits = self.rc.raycast(self.brightest_spot.coords, self.surfaces)
-        else:
-            self.hits = []
-        
-        for s in self.surfaces:
-            s.update()
-    
-    def get_pixmap(self):
-        return self.pixmap
-
-    def get_brightest_spot(self):
-        return self.brightest_spot
-
-    def get_hits(self):
-        return self.hits
+        try:
+            painter.setRenderHint(
+                QPainter.RenderHint.Antialiasing, True)
+            painter.setRenderHint(
+                QPainter.RenderHint.SmoothPixmapTransform, True)
+
+            if self._wallpaper_image is not None:
+                wi = self._wallpaper_image
+                if wi.width() > 0 and wi.height() > 0:
+                    scaled = wi.scaled(
+                        W, H,
+                        Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                        Qt.TransformationMode.SmoothTransformation)
+                    sx = max(0, (scaled.width() - W) // 2)
+                    sy = max(0, (scaled.height() - H) // 2)
+                    painter.drawImage(
+                        QRectF(0, 0, W, H), scaled,
+                        QRectF(sx, sy, W, H))
+                else:
+                    painter.fillRect(self.rect(), QColor(5, 5, 8))
+            else:
+                painter.fillRect(self.rect(), QColor(5, 5, 8))
+
+            for r in self._collect_visible():
+                self._paint_window(painter, r, W, H)
+        finally:
+            painter.end()
+
+        self._frames += 1
+        now = time.perf_counter()
+        if now - self._fps_t >= FPS_REFRESH_S:
+            self._fps = self._frames / (now - self._fps_t)
+            self._frames = 0
+            self._fps_t = now
+            win = self.window()
+            if SHOW_FPS and win is not None and win is not self:
+                base = (getattr(win, "_base_title", None)
+                        or win.windowTitle())
+                win._base_title = base
+                win.setWindowTitle(f"{base} — {self._fps:.0f} FPS")
+
+    def _paint_window(self, painter, r, W, H):
+        w = r.widget
+        if not _alive(w):
+            return
+        x, y, ww, wh = r.geom
+        if ww <= 0 or wh <= 0:
+            return
+
+        if (r.img is None
+                or r.img.width() != ww
+                or r.img.height() != wh
+                or r.dirty):
+            self._refresh_surface_img(r)
+
+        opacity = self._opacity(w)
+        tint_scale = self._tint_scale(w)
+        tint_override = self._tint_color(w)
+
+        self._draw_shadow(painter, x, y, ww, wh, opacity)
+
+        if r.glass:
+            tr, tg, tb = self.config.tint
+            tr = max(0.0, min(1.0, float(tr) * tint_override[0]))
+            tg = max(0.0, min(1.0, float(tg) * tint_override[1]))
+            tb = max(0.0, min(1.0, float(tb) * tint_override[2]))
+            strength = (float(self.config.tint_amount) * 1.5
+                        * tint_scale * opacity)
+            a = int(max(0.0, min(1.0, strength)) * 255)
+            if a > 0:
+                bg = QColor(
+                    int(tr * 255), int(tg * 255), int(tb * 255), a)
+                painter.save()
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(bg)
+                painter.drawRect(QRectF(x, y, ww, wh))
+                painter.restore()
+
+        if r.img is not None and not r.img.isNull():
+            painter.save()
+            painter.setOpacity(opacity)
+            painter.drawImage(x, y, r.img)
+            painter.restore()

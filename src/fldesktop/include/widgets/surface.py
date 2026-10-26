@@ -1,7 +1,7 @@
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QWidget
 
-from fldesktop.include.superfx.glrender import (
+from fldesktop.include.superfx import (
     PROP_ENABLE_GLOW,
     PROP_HOVER_MAT,
     PROP_LAYER,

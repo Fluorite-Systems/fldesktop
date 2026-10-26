@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QColor
 
-from fldesktop.include.superfx import glrender
+from fldesktop.include.superfx.container import *
 
 
 class SuperFX:
@@ -10,7 +10,7 @@ class SuperFX:
         self.desktop = None
         self.container = None
         self.backend = None
-        self.config = glrender.GlassConfig()
+        self.config = GlassConfig()
 
         self.comm.register("superfx", {
             "add_surface": self.add_surface,
@@ -33,8 +33,7 @@ class SuperFX:
     def create_backend(self):
         self.desktop = self.comm.request("desktop", "get_instance")
 
-        self.container = glrender.Container(self.desktop, self.config)
-        self.backend = self.container.gl
+        self.container = Container(self.desktop, self.config)
 
         self.container.show()
         QWidget.raise_(self.container)
@@ -45,7 +44,6 @@ class SuperFX:
         w = self.desktop.width()
         h = self.desktop.height()
         self.container.setGeometry(0, 0, w, h)
-        self.backend.setGeometry(0, 0, w, h)
 
     def reconfigure(self):
 

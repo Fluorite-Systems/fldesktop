@@ -3,7 +3,7 @@ from PySide6.QtCore import QEventLoop, QTimer
 from PySide6.QtGui import QColor, QPainter
 
 from fldesktop.include.widgets.surface import Surface
-from fldesktop.include.superfx.glrender import PROP_OPACITY
+from fldesktop.include.superfx import PROP_OPACITY
 
 
 import time
