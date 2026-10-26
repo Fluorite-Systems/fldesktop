@@ -29,7 +29,7 @@ SERVICES = {
             "export XDG_SEAT=seat0 && "
             "export SEATD_VTBOUND=0 && "
             "export LIBSEAT_BACKEND=builtin && "
-            "exec weston --shell=desktop-shell.so --socket=wayland-0"
+            "exec weston --shell=desktop-shell.so --backend=drm --socket=wayland-0"
         ),
         "wait": "while [ ! -S /run/user/0/wayland-0 ]; do sleep 0.05; done",
         "user": 0,
