@@ -5,7 +5,7 @@ from PySide6.QtGui import QPixmap, QPainter
 from PySide6.QtWidgets import QWidget
 
 from fldesktop.include.widgets.surface import Surface
-from fldesktop.include.superfx.glrender import PROP_OPACITY
+from fldesktop.include.superfx import PROP_OPACITY
 
 
 def _out_quart(t):
