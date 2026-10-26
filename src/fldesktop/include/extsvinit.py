@@ -42,7 +42,7 @@ SERVICES = {
         "user": 0,
     },
     "bluetooth": {
-        "exec": "exec /usr/lib/bluetooth/bluetoothd --nodetach",
+        "exec": "exec /usr/sbin/bluetoothd --nodetach",
         "wait": "while [ ! -S /run/dbus/system_bus_socket ]; do sleep 0.05; done",
         "user": 0
     },
@@ -165,15 +165,19 @@ class Service:
                 except (ProcessLookupError, PermissionError):
                     pass
 
-    def wait_ready(self):
+    def wait_ready(self, timeout: float = 10.0) -> bool:
         if not self.wait:
             self.is_ready = True
-            return
+            return True
+
+        deadline = time.monotonic() + timeout
 
         while not self.shutdown.is_set():
+            if time.monotonic() >= deadline:
+                break
+
             if self.proc is None or self.proc.poll() is not None:
-                if self.shutdown.wait(0.1):
-                    return
+                self.shutdown.wait(0.1)
                 continue
 
             try:
@@ -182,49 +186,49 @@ class Service:
                     shell=True,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
+                    timeout=max(0.1, deadline - time.monotonic()),
                 )
+            except subprocess.TimeoutExpired:
+                break
             except Exception:
                 logging.exception(f"[{self.name}] wait spawn failed")
-                if self.shutdown.wait(1):
-                    return
+                self.shutdown.wait(1)
                 continue
 
             if self.proc is None or self.proc.poll() is not None:
                 continue
 
-            if r.returncode == 0:
-                for _ in range(10):
-                    if self.shutdown.is_set():
-                        return
-                    if self.proc is None or self.proc.poll() is not None:
-                        break
-                    time.sleep(0.1)
-                if self.proc is not None and self.proc.poll() is None:
-                    self.is_ready = True
-                    return
+            if r.returncode != 0:
+                out = r.stdout.decode(errors="replace").rstrip()
+                logging.warning(
+                    f"[{self.name}] wait failed (rc={r.returncode} {out!r})"
+                )
+                self.shutdown.wait(0.1)
                 continue
 
-            out = r.stdout.decode(errors="replace").rstrip()
-            logging.warning(
-                f"[{self.name}] wait failed rc={r.returncode} {out!r}, retrying"
-            )
-            if self.shutdown.wait(0.1):
-                return
+            if self.shutdown.wait(1):
+                break
+            if self.proc is not None and self.proc.poll() is None:
+                self.is_ready = True
+                return True
 
-    def start(self, blocking: bool = True):
+        if not self.shutdown.is_set():
+            logging.warning(
+                f"[{self.name}] timed out after {timeout:g}s"
+            )
+        return False
+
+    def start(self, blocking: bool = True, timeout: float = 10.0) -> bool:
         if self.thread.is_alive():
             if blocking and not self.is_ready:
-                self.wait_ready()
-            return
+                return self.wait_ready(timeout)
+            return self.is_ready
 
         logging.debug(f"Starting external service {self.name}...")
-
         self.shutdown.clear()
         self.is_ready = False
         self.thread.start()
-
-        if blocking:
-            self.wait_ready()
+        return self.wait_ready(timeout) if blocking else True
 
     def stop(self):
         if not self.thread.is_alive():
