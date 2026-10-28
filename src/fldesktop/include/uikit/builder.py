@@ -91,10 +91,6 @@ class Builder:
             if method in self.objects[id].callables:
                 return self.objects[id].callables[method](**kwargs)
 
-        if id in self.objects:
-            if method in self.objects[id].callables:
-                return self.objects[id].callables[method](**kwargs)
-
     def event(self, node, **kwargs):
 
         if "Attrs.UI.ClientHandlerUUID" not in node.attrs:
@@ -107,3 +103,10 @@ class Builder:
             node.attrs["Attrs.UI.ClientHandlerUUID"],
             kwargs
         )
+
+    def cleanup(self):
+
+        for name, obj in self.objects.items():
+            if hasattr(obj, "_cleanup"):
+                logging.debug(f"Cleaning up object {name}")
+                obj._cleanup()

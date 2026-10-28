@@ -95,8 +95,9 @@ class ClientManager(QObject):
             )
 
         elif data["cmd"] == "request":
-            reply = self.builder.call_method(
-                data["id"], data["method"], data["args"]
+            reply = self.comm.request(
+                "uikit", "request", data["id"],
+                data["method"], data["args"]
             )
         else:
             callback({"status": "invalid_command"})

@@ -6,6 +6,12 @@ class UIKit:
 
         self.comm = comm
 
+        self.comm.register(
+            "uikit", {
+                "request": self.request
+            }
+        )
+
         self.comm.subscribe("fs3_node_created", self.on_fs3_node_created)
         self.comm.subscribe("fs3_node_modified", self.on_fs3_node_modified)
         self.comm.subscribe("fs3_node_deleted", self.on_fs3_node_deleted)
@@ -46,3 +52,11 @@ class UIKit:
         self.comm.request(
             "appserver", "handler_callback", handler_uuid, data
         )
+
+    def request(self, id: str, method: str, kwargs: dict):
+
+        return self.builder.request(id, method, kwargs)
+
+    def srv_cleanup(self):
+
+        self.builder.cleanup()
