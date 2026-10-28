@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QPainter, QImage, QKeySequence
-from PySide6.QtCore import Qt, Signal, QThread, QSize
+from PySide6.QtCore import Qt, Signal, QThread, QSize, QRect
 from fldesktop.include.uikit.widgets.base import Widget
 import mmap
 import os
@@ -9,215 +9,243 @@ import struct
 import uuid
 
 
+HEADER_SIZE = 16
+_HDR        = struct.Struct('<IIII')
+_EMPTY_HDR  = _HDR.pack(0, 0, 0, 0)
+_DIRTY      = 0x1
+_HALF       = 0x80000000
+
+
+def _is_newer(a: int, b: int) -> bool:
+    d = (a - b) & 0xFFFFFFFF
+    return 0 < d < _HALF
+
+
 class ImageViewer(QWidget):
     frameReceived = Signal(object)
     sizeChanged = Signal(QSize)
     inputEvent = Signal(dict)
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.setAttribute(Qt.WA_OpaquePaintEvent)
-        self.setAttribute(Qt.WA_NoSystemBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMouseTracking(True)
+
         self._image_data = None
+        self._qimg = None
+        self._img_rect = None
         self._width = 640
         self._height = 480
 
-    def set_image(self, data: bytes, width: int, height: int):
+    def set_image(self, data: bytes, width: int, height: int) -> None:
         self._image_data = data
         self._width = width
         self._height = height
+        self._qimg = QImage(
+            data, width, height, 3 * width, QImage.Format.Format_RGB888
+        )
+        self._img_rect = None
         self.frameReceived.emit(data)
         self.update()
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event) -> None:
+        self._img_rect = None
         self.sizeChanged.emit(event.size())
         super().resizeEvent(event)
 
-    def paintEvent(self, event):
-        def draw_blank(self):
-            p = QPainter(self)
-            p.fillRect(self.rect(), Qt.darkGray)
-            p.end()
-
-        if self._image_data is None:
-            draw_blank(self)
-            return
-
-        bpl = 3 * self._width
-        qimg = QImage(self._image_data, self._width, self._height,
-                      bpl, QImage.Format_RGB888)
-        if qimg.isNull():
-            draw_blank(self)
-            return
-
+    def paintEvent(self, event) -> None:
         p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing, False)
-        p.fillRect(self.rect(), Qt.black)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
-        scaled = qimg.scaled(self.size(), Qt.KeepAspectRatio, Qt.FastTransformation)
-        x = (self.width() - scaled.width()) // 2
-        y = (self.height() - scaled.height()) // 2
-        p.drawImage(x, y, scaled)
+        qimg = self._qimg
+        if qimg is None or qimg.isNull():
+            p.fillRect(self.rect(), Qt.GlobalColor.darkGray)
+            p.end()
+            return
+
+        if self._img_rect is None:
+            iw, ih = qimg.width(), qimg.height()
+            dw, dh = self.width(), self.height()
+            if iw <= 0 or ih <= 0 or dw <= 0 or dh <= 0:
+                p.fillRect(self.rect(), Qt.GlobalColor.black)
+                p.end()
+                return
+            if iw * dh > ih * dw:
+                sw = dw
+                sh = max(1, ih * dw // iw)
+            else:
+                sw = max(1, iw * dh // ih)
+                sh = dh
+            self._img_rect = QRect((dw - sw) // 2, (dh - sh) // 2, sw, sh)
+
+        p.fillRect(self.rect(), Qt.GlobalColor.black)
+        p.drawImage(self._img_rect, qimg)
         p.end()
 
-    def keyPressEvent(self, event):
-        self.inputEvent.emit(
-            {
-                "event_type": "key_press",
-                "code": event.key(),
-                "key": QKeySequence(event.keyCombination()).toString(
-                            QKeySequence.SequenceFormat.PortableText
-                        ) if not event.text().isprintable() \
-                        and event.text() != "" else event.text()
-            }
+    def _key_text(self, event) -> str:
+        text = event.text()
+        if text and text.isprintable():
+            return text
+        return QKeySequence(event.keyCombination()).toString(
+            QKeySequence.SequenceFormat.PortableText
         )
 
-    def keyReleaseEvent(self, event):
-        self.inputEvent.emit(
-            {
-                "event_type": "key_release",
-                "code": event.key(),
-                "key": QKeySequence(event.keyCombination()).toString(
-                            QKeySequence.SequenceFormat.PortableText
-                        ) if not event.text().isprintable() \
-                        and event.text() != "" else event.text()
-            }
-        )
+    def keyPressEvent(self, event) -> None:
+        self.inputEvent.emit({
+            "event_type": "key_press",
+            "code": event.key(),
+            "key": self._key_text(event),
+        })
 
-    def mousePressEvent(self, event):
-        self.inputEvent.emit(
-            {
-                "event_type": "mouse_press",
-                "button": event.button().value,
-                "x": event.position().toPoint().x(),
-                "y": event.position().toPoint().y()
-            }
-        )
+    def keyReleaseEvent(self, event) -> None:
+        self.inputEvent.emit({
+            "event_type": "key_release",
+            "code": event.key(),
+            "key": self._key_text(event),
+        })
 
-    def mouseReleaseEvent(self, event):
-        self.inputEvent.emit(
-            {
-                "event_type": "mouse_release",
-                "button": event.button().value,
-                "x": event.position().toPoint().x(),
-                "y": event.position().toPoint().y()
-            }
-        )
+    def mousePressEvent(self, event) -> None:
+        pt = event.position().toPoint()
+        self.inputEvent.emit({
+            "event_type": "mouse_press",
+            "button": event.button().value,
+            "x": pt.x(), "y": pt.y(),
+        })
 
-    def mouseMoveEvent(self, event):
-        self.inputEvent.emit(
-            {
-                "event_type": "mouse_move",
-                "x": int(event.position().x()),
-                "y": int(event.position().y())
-            }
-        )
+    def mouseReleaseEvent(self, event) -> None:
+        pt = event.position().toPoint()
+        self.inputEvent.emit({
+            "event_type": "mouse_release",
+            "button": event.button().value,
+            "x": pt.x(), "y": pt.y(),
+        })
 
-    def wheelEvent(self, event):
-        self.inputEvent.emit(
-            {
-                "event_type": "mouse_wheel",
-                "delta": -int(event.angleDelta().y())
-            }
-        )
+    def mouseMoveEvent(self, event) -> None:
+        pos = event.position()
+        self.inputEvent.emit({
+            "event_type": "mouse_move",
+            "x": int(pos.x()), "y": int(pos.y()),
+        })
+
+    def wheelEvent(self, event) -> None:
+        self.inputEvent.emit({
+            "event_type": "mouse_wheel",
+            "delta": -int(event.angleDelta().y()),
+        })
 
 
 class SharedMemoryReceiver:
-    def __init__(self, buffer_size: int):
+    def __init__(self, buffer_size: int) -> None:
         self.buffer_size = buffer_size
-        self.header_size = 8
-        self.shm_path = f"/dev/shm/{str(uuid.uuid4())}"
+        self.header_size = HEADER_SIZE
+        self.shm_path = f"/dev/shm/{uuid.uuid4()}"
         self.mmap = None
         self.fd = None
         self.connected = False
-        self._shm_size = 0
+        self._last_seq = 0
 
     def connect(self) -> bool:
-        self.close()
-
-        logging.debug(f"Creating SHM at {self.shm_path}")
-
+        self.close(unlink=False)
+        fd = None
+        mm = None
         try:
-            self.fd = os.open(self.shm_path, os.O_RDWR | os.O_CREAT, 0o666)
-            os.ftruncate(self.fd, self.buffer_size * 2)
-            self._shm_size = os.fstat(self.fd).st_size
-
-            if self._shm_size < self.buffer_size * 2:
-                os.close(self.fd)
-                self.fd = None
+            fd = os.open(self.shm_path, os.O_RDWR | os.O_CREAT, 0o666)
+            try:
+                os.ftruncate(fd, self.buffer_size * 2)
+                size = os.fstat(fd).st_size
+                if size < self.buffer_size * 2:
+                    os.close(fd)
+                    return False
+                mm = mmap.mmap(
+                    fd, size,
+                    mmap.MAP_SHARED,
+                    mmap.PROT_READ | mmap.PROT_WRITE,
+                )
+            except Exception:
+                try:
+                    os.close(fd)
+                except Exception:
+                    pass
                 return False
 
-            self.mmap = mmap.mmap(self.fd, self._shm_size,
-                                 mmap.MAP_SHARED, mmap.PROT_READ)
+            mm[0:HEADER_SIZE] = _EMPTY_HDR
+            mm[self.buffer_size:self.buffer_size + HEADER_SIZE] = _EMPTY_HDR
+
+            self.fd = fd
+            self.mmap = mm
+            self._last_seq = 0
             self.connected = True
+            logging.debug("Receiver SHM: %s", self.shm_path)
             return True
-        except:
+        except Exception:
+            if mm is not None:
+                try: mm.close()
+                except Exception: pass
+            if fd is not None:
+                try: os.close(fd)
+                except Exception: pass
             return False
 
     def receive(self):
-        if not self.connected or self.mmap is None:
+        mm = self.mmap
+        if not self.connected or mm is None:
             return None
+        bs = self.buffer_size
 
         try:
-            try:
-                shm_size = self.mmap.size()
-            except:
+            best_diff = 0
+            best_idx = -1
+            best_seq = best_w = best_h = 0
+
+            for i in (0, 1):
+                off = i * bs
+                seq, w, h, flags = _HDR.unpack(mm[off:off + HEADER_SIZE])
+                if flags & _DIRTY:
+                    continue
+                if w == 0 or h == 0:
+                    continue
+                size = w * h * 3
+                if HEADER_SIZE + size > bs:
+                    continue
+                if not _is_newer(seq, self._last_seq):
+                    continue
+                diff = (seq - self._last_seq) & 0xFFFFFFFF
+                if diff > best_diff:
+                    best_diff = diff
+                    best_idx = i
+                    best_seq, best_w, best_h = seq, w, h
+
+            if best_idx < 0:
                 return None
 
-            for buf_idx in range(2):
-                offset = buf_idx * self.buffer_size
+            off = best_idx * bs
+            size = best_w * best_h * 3
+            data = mm[off + HEADER_SIZE: off + HEADER_SIZE + size]
 
-                if offset + self.header_size > shm_size:
-                    continue
+            seq2, w2, h2, flags2 = _HDR.unpack(mm[off:off + HEADER_SIZE])
+            if (flags2 & _DIRTY) or seq2 != best_seq \
+               or w2 != best_w or h2 != best_h:
+                return None
 
-                try:
-                    self.mmap.seek(offset)
-                    header = self.mmap.read(self.header_size)
-
-                    if len(header) != self.header_size:
-                        continue
-
-                    width, height = struct.unpack('II', header)
-
-                    if width <= 0 or height <= 0:
-                        continue
-
-                    data_size = width * height * 3
-
-                    if offset + self.header_size + data_size > shm_size:
-                        continue
-
-                    data = self.mmap.read(data_size)
-
-                    if len(data) == data_size and any(data):
-                        return data, width, height
-
-                except (OSError, ValueError, struct.error):
-                    continue
-
-            return None
-        except:
+            self._last_seq = best_seq
+            return data, best_w, best_h
+        except Exception:
             return None
 
-    def close(self): 
-        if self.mmap:
-            try:
-                self.mmap.close()
-            except:
-                pass
+    def close(self, unlink: bool = False) -> None:
+        if self.mmap is not None:
+            try: self.mmap.close()
+            except Exception: pass
             self.mmap = None
-        if self.fd:
-            try:
-                os.close(self.fd)
-            except:
-                pass
+        if self.fd is not None:
+            try: os.close(self.fd)
+            except Exception: pass
             self.fd = None
-        try:
-            os.unlink(self.shm_path)
-        except:
-            pass
+        if unlink:
+            try: os.unlink(self.shm_path)
+            except OSError: pass
         self.connected = False
 
 
@@ -225,55 +253,64 @@ class ReceiverThread(QThread):
     frameReceived = Signal(bytes, int, int)
     errorOccurred = Signal(str)
 
-    def __init__(self, buffer_size: int):
+    def __init__(self, buffer_size: int) -> None:
         super().__init__()
         self.rx = SharedMemoryReceiver(buffer_size)
         self.running = False
+        self._idle_sleep_us = 15000
+        self._busy_sleep_us = 2000
 
-    def run(self):
-        self.setPriority(QThread.LowPriority)
+    def run(self) -> None:
+        self.setPriority(QThread.Priority.InheritPriority)
 
         if not self.rx.connect():
             self.errorOccurred.emit("Connect fail")
+            self.rx.close(unlink=True)
             return
 
         self.running = True
-
         while self.running:
             try:
                 result = self.rx.receive()
                 if result is not None:
-                    data, width, height = result
-                    self.frameReceived.emit(data, width, height)
-                QThread.usleep(15000)
-            except:
-                self.rx.close()
+                    self.frameReceived.emit(*result)
+                    QThread.usleep(self._busy_sleep_us)
+                else:
+                    QThread.usleep(self._idle_sleep_us)
+            except Exception as e:
+                self.rx.close(unlink=False)
                 if not self.rx.connect():
-                    self.errorOccurred.emit("Reconnect fail")
+                    self.errorOccurred.emit(f"Reconnect fail: {e}")
                     self.running = False
+                    break
 
-    def stop(self):
+        self.rx.close(unlink=True)
+
+    def stop(self) -> None:
         self.running = False
-        self.rx.close()
         self.quit()
         self.wait()
 
 
 class Receiver:
-    def __init__(self, buffer_size: int):
+    def __init__(self, buffer_size: int) -> None:
         self.thread = ReceiverThread(buffer_size)
         self.thread.errorOccurred.connect(self._on_error)
         self._running = False
 
-    def _on_error(self, text: str):
-        logging.warning(f"Receiver error: {text}")
+    @property
+    def shm_path(self) -> str:
+        return self.thread.rx.shm_path
 
-    def start(self):
+    def _on_error(self, text: str) -> None:
+        logging.warning("Receiver error: %s", text)
+
+    def start(self) -> None:
         if not self._running:
             self.thread.start()
             self._running = True
 
-    def stop(self):
+    def stop(self) -> None:
         if self._running:
             self.thread.stop()
             self._running = False
