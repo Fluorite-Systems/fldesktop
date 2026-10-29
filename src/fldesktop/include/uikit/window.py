@@ -16,6 +16,10 @@ class Window(UI):
             }
         )
 
+        self.callables = {
+            "spawn_effect": self.spawn_effect
+        }
+
         self.widget = QWidget()
         self.qlayout = QVBoxLayout(self.widget)
 
@@ -47,3 +51,8 @@ class Window(UI):
     def delete(self):
 
         self.comm.request("wm", "close_window", self.winid)
+
+    def spawn_effect(self, effect: str = "confetti"):
+
+        if effect == "confetti":
+            self.comm.request("wm", "spawn_effect", self.winid, "confetti")
