@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QCoreApplication, Qt
 
 import subprocess
 import logging
@@ -6,6 +7,7 @@ import logging
 
 class QApp:
     def __init__(self, _):
+        QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts, True)
         self.app = QApplication()
 
     def srv_cleanup(self):
