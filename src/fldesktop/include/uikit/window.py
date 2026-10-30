@@ -5,9 +5,9 @@ from fldesktop.include.uikit.dnd import DragFilter, DropFilter
 
 
 class Window(UI):
-    def __init__(self, comm, attrs):
+    def __init__(self, comm, name, attrs):
         super().__init__(
-            comm, attrs, {
+            comm, name, attrs, {
                 "Attr.UI.Window.Package": "none",
                 "Attr.UI.Window.Title": "Application",
                 "Attr.UI.Window.Width": 600,
@@ -28,8 +28,12 @@ class Window(UI):
     
         # Create a window
         self.winid, self.on_close = self.comm.request(
-            "wm", "create_window", self.attrs["Attr.UI.Window.Title"], self.widget,
-            self.get_win_icon(), self.attrs["Attr.UI.Window.Package"], (400, 400), self.attrs["Attr.UI.Window.Type"]
+            "wm", "create_window", self.attrs["Attr.UI.Window.Title"],
+            self.widget, self.get_win_icon(),
+            self.attrs["Attr.UI.Window.Package"],
+            (self.attrs["Attr.UI.Window.Width"],
+             self.attrs["Attr.UI.Window.Height"]),
+            self.attrs["Attr.UI.Window.Type"]
         )
 
         self.on_close.connect(lambda: self.event(type="close"))

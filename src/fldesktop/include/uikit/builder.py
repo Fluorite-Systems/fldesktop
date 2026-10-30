@@ -36,7 +36,7 @@ class Builder:
 
     def create_window(self, node_id: str, node_attrs: dict):
 
-        self.objects[node_id] = Window(self.comm, node_attrs)
+        self.objects[node_id] = Window(self.comm, node_id, node_attrs)
 
     def process_relation(self, node_id: int, node_attrs: dict):
 
